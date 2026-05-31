@@ -301,6 +301,8 @@ export interface ForumTopic {
   author_name: string;
   author_role: string;
   author_avatar?: string;
+  author_specialty?: string;
+  author_crp?: string;
   content: string;
   likes: number;
   likedBy: string[];
@@ -322,6 +324,8 @@ export interface ForumReply {
   author_name: string;
   author_role: string;
   author_avatar?: string;
+  author_specialty?: string;
+  author_crp?: string;
   content: string;
   is_expert_reply: number;
   likes: number;
@@ -371,6 +375,10 @@ export const forumApi = {
   like: (id: string) => post<{ likes: number; liked: boolean }>(`/forum/${id}/like`, {}),
   createReply: (topicId: string, content: string) =>
     post<{ id: string; isExpertReply: boolean }>(`/forum/${topicId}/replies`, { content }),
+  updateReply: (topicId: string, replyId: string, content: string) =>
+    put<void>(`/forum/${topicId}/replies/${replyId}`, { content }),
+  deleteReply: (topicId: string, replyId: string) =>
+    del<void>(`/forum/${topicId}/replies/${replyId}`),
   likeReply: (topicId: string, replyId: string) =>
     post<{ likes: number; liked: boolean }>(`/forum/${topicId}/replies/${replyId}/like`, {}),
 };
@@ -526,6 +534,14 @@ export interface Professional {
   location: string;
   accent_color?: string;
   languages: string[];
+  // Social links
+  instagram?: string;
+  linkedin?: string;
+  facebook?: string;
+  tiktok?: string;
+  twitter?: string;
+  website?: string;
+  extra_links?: Array<{ label: string; url: string }>;
 }
 
 function toNumericValue(value: unknown, fallback = 0): number {
@@ -561,7 +577,38 @@ export const professionalsApi = {
       location: data.location,
       accentColor: data.accent_color,
       languages: data.languages,
+      instagram: data.instagram,
+      linkedin: data.linkedin,
+      facebook: data.facebook,
+      tiktok: data.tiktok,
+      twitter: data.twitter,
+      website: data.website,
+      extraLinks: data.extra_links,
     }),
+};
+
+// ─── Member Requests ─────────────────────────────────────────────────────────
+
+export interface MemberRequest {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  specialty?: string;
+  gender?: string;
+  observation?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+}
+
+export const memberRequestsApi = {
+  create: (data: { name: string; email: string; phone?: string; specialty?: string; gender?: string; observation?: string }) =>
+    post<{ id: string }>('/member-requests', data),
+  list: (params?: { status?: string; search?: string }) =>
+    getPaged<MemberRequest>('/member-requests', params),
+  approve: (id: string) => patch<void>(`/member-requests/${id}/approve`, {}),
+  reject: (id: string) => patch<void>(`/member-requests/${id}/reject`, {}),
+  delete: (id: string) => del<void>(`/member-requests/${id}`),
 };
 
 // ─── Invite Links ─────────────────────────────────────────────────────────────

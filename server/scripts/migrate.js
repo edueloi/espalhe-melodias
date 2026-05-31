@@ -119,22 +119,24 @@ CREATE TABLE IF NOT EXISTS professional_profiles (
 
 -- ── Forum Topics ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS forum_topics (
-  id           CHAR(36)     NOT NULL PRIMARY KEY,
-  title        VARCHAR(300) NOT NULL,
-  category     VARCHAR(100) NOT NULL,
-  author_id    CHAR(36)     NOT NULL,
-  author_name  VARCHAR(150) NOT NULL,
-  author_role  ENUM('super-admin','professional','member') NOT NULL,
-  author_avatar TEXT,
-  content      TEXT         NOT NULL,
-  likes        INT          NOT NULL DEFAULT 0,
-  liked_by     JSON,
-  views        INT          NOT NULL DEFAULT 0,
-  is_solved    TINYINT(1)   NOT NULL DEFAULT 0,
-  is_pinned    TINYINT(1)   NOT NULL DEFAULT 0,
-  is_locked    TINYINT(1)   NOT NULL DEFAULT 0,
-  created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  id                CHAR(36)     NOT NULL PRIMARY KEY,
+  title             VARCHAR(300) NOT NULL,
+  category          VARCHAR(100) NOT NULL,
+  author_id         CHAR(36)     NOT NULL,
+  author_name       VARCHAR(150) NOT NULL,
+  author_role       ENUM('super-admin','professional','member') NOT NULL,
+  author_avatar     TEXT,
+  author_specialty  VARCHAR(150),
+  author_crp        VARCHAR(50),
+  content           TEXT         NOT NULL,
+  likes             INT          NOT NULL DEFAULT 0,
+  liked_by          JSON,
+  views             INT          NOT NULL DEFAULT 0,
+  is_solved         TINYINT(1)   NOT NULL DEFAULT 0,
+  is_pinned         TINYINT(1)   NOT NULL DEFAULT 0,
+  is_locked         TINYINT(1)   NOT NULL DEFAULT 0,
+  created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
   INDEX idx_forum_category  (category),
   INDEX idx_forum_author    (author_id),
@@ -144,17 +146,19 @@ CREATE TABLE IF NOT EXISTS forum_topics (
 
 -- ── Forum Replies ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS forum_replies (
-  id              CHAR(36)  NOT NULL PRIMARY KEY,
-  topic_id        CHAR(36)  NOT NULL,
-  author_id       CHAR(36)  NOT NULL,
-  author_name     VARCHAR(150) NOT NULL,
-  author_role     ENUM('super-admin','professional','member') NOT NULL,
-  author_avatar   TEXT,
-  content         TEXT      NOT NULL,
-  is_expert_reply TINYINT(1) NOT NULL DEFAULT 0,
-  likes           INT        NOT NULL DEFAULT 0,
-  liked_by        JSON,
-  created_at      DATETIME   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  id                CHAR(36)  NOT NULL PRIMARY KEY,
+  topic_id          CHAR(36)  NOT NULL,
+  author_id         CHAR(36)  NOT NULL,
+  author_name       VARCHAR(150) NOT NULL,
+  author_role       ENUM('super-admin','professional','member') NOT NULL,
+  author_avatar     TEXT,
+  author_specialty  VARCHAR(150),
+  author_crp        VARCHAR(50),
+  content           TEXT      NOT NULL,
+  is_expert_reply   TINYINT(1) NOT NULL DEFAULT 0,
+  likes             INT        NOT NULL DEFAULT 0,
+  liked_by          JSON,
+  created_at        DATETIME   NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   INDEX idx_reply_topic  (topic_id),
   INDEX idx_reply_author (author_id),
@@ -307,6 +311,22 @@ CREATE TABLE IF NOT EXISTS event_item_lists (
   CONSTRAINT fk_eil_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ── Member Requests ──────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS member_requests (
+  id            CHAR(36)     NOT NULL PRIMARY KEY,
+  name          VARCHAR(200) NOT NULL,
+  email         VARCHAR(200) NOT NULL UNIQUE,
+  phone         VARCHAR(20),
+  specialty     VARCHAR(200),
+  gender        ENUM('masculino','feminino','nao_declarado'),
+  observation   TEXT,
+  status        ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_mr_status (status),
+  INDEX idx_mr_email  (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ── Invite Links ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS invite_links (
   id             CHAR(36)     NOT NULL PRIMARY KEY,
@@ -390,6 +410,11 @@ async function migrate() {
       { table: 'health_events', column: 'allow_guests',  def: 'TINYINT(1) NOT NULL DEFAULT 0' },
       { table: 'health_events', column: 'item_division', def: 'TINYINT(1) NOT NULL DEFAULT 0' },
       { table: 'event_rsvps',   column: 'attendance',   def: "ENUM('confirmed','present','absent') NOT NULL DEFAULT 'confirmed'" },
+      // forum specialty/crp
+      { table: 'forum_topics',  column: 'author_specialty', def: 'VARCHAR(150)' },
+      { table: 'forum_topics',  column: 'author_crp',       def: 'VARCHAR(50)' },
+      { table: 'forum_replies', column: 'author_specialty', def: 'VARCHAR(150)' },
+      { table: 'forum_replies', column: 'author_crp',       def: 'VARCHAR(50)' },
     ];
     for (const { table, column, def } of extraCols) {
       const [rows] = await conn.query(

@@ -6,6 +6,7 @@ interface PanelCardProps extends React.HTMLAttributes<HTMLElement> {
   description?: string;
   icon?: React.ElementType;
   action?: React.ReactNode;
+  children?: React.ReactNode;
   contentClassName?: string;
   headerClassName?: string;
   iconWrapClassName?: string;

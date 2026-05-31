@@ -24,9 +24,13 @@ import {
   Globe,
   Sparkles,
   Play,
-  Quote
+  Quote,
+  CheckCircle2,
+  Loader2,
+  Send,
 } from 'lucide-react';
 import { BlogPost, HealthEvent } from '../types';
+import { memberRequestsApi } from '../lib/api';
 
 interface PublicSiteProps {
   blogs: BlogPost[];
@@ -96,11 +100,70 @@ const PAST_EVENTS_GALLERY = [
   },
 ];
 
+const ESPECIALIDADES_PUBLIC = [
+  { value: 'Psicólogo(a)',            label: 'Psicólogo(a)' },
+  { value: 'Psicopedagogo(a)',        label: 'Psicopedagogo(a)' },
+  { value: 'Pediatra',               label: 'Pediatra' },
+  { value: 'Psiquiatra',             label: 'Psiquiatra' },
+  { value: 'Terapeuta Ocupacional',  label: 'Terapeuta Ocupacional' },
+  { value: 'Médico(a)',              label: 'Médico(a)' },
+  { value: 'outro',                  label: 'Outro...' },
+];
+
+interface RequestForm {
+  name: string;
+  email: string;
+  phone: string;
+  specialty: string;
+  specialtyCustom: string;
+  gender: string;
+  observation: string;
+}
+
 export default function PublicSite({ blogs, events, onGoToLogin }: PublicSiteProps) {
   const [activeSection, setActiveSection] = useState<'home' | 'blog' | 'gallery' | 'events' | 'about'>('home');
   const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // ── Formulário de solicitação de membros ──────────────────────────────────
+  const [requestForm, setRequestForm] = useState<RequestForm>({
+    name: '', email: '', phone: '', specialty: '', specialtyCustom: '', gender: '', observation: '',
+  });
+  const [requestLoading, setRequestLoading] = useState(false);
+  const [requestSuccess, setRequestSuccess] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+
+  const handleRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!requestForm.name.trim() || !requestForm.email.trim()) {
+      setRequestError('Nome e e-mail são obrigatórios.');
+      return;
+    }
+    setRequestLoading(true);
+    setRequestError(null);
+    try {
+      const specialtyFinal = requestForm.specialty === 'outro'
+        ? requestForm.specialtyCustom.trim()
+        : requestForm.specialty;
+      await memberRequestsApi.create({
+        name:        requestForm.name.trim(),
+        email:       requestForm.email.trim(),
+        phone:       requestForm.phone.trim() || undefined,
+        specialty:   specialtyFinal || undefined,
+        gender:      requestForm.gender || undefined,
+        observation: requestForm.observation.trim() || undefined,
+      });
+      setRequestSuccess(true);
+    } catch (err: unknown) {
+      setRequestError(err instanceof Error ? err.message : 'Erro ao enviar solicitação. Tente novamente.');
+    } finally {
+      setRequestLoading(false);
+    }
+  };
+
+  const setF = (key: keyof RequestForm, value: string) =>
+    setRequestForm(prev => ({ ...prev, [key]: value }));
 
   const navLinks = [
     { id: 'home', label: 'Início' },
@@ -436,28 +499,166 @@ export default function PublicSite({ blogs, events, onGoToLogin }: PublicSitePro
             </div>
           </section>
 
-          {/* CTA */}
+          {/* CTA — Formulário de Solicitação */}
           <section className="py-20">
-            <div className="max-w-3xl mx-auto px-6 text-center">
-              <div className="bg-gradient-to-br from-brand-navy to-brand-navy-dark rounded-3xl p-12 relative overflow-hidden">
+            <div className="max-w-2xl mx-auto px-6">
+              <div className="bg-gradient-to-br from-brand-navy to-brand-navy-dark rounded-3xl relative overflow-hidden">
+                {/* Decoração */}
                 <div className="absolute inset-0 opacity-10 pointer-events-none">
                   <div className="absolute top-4 right-8 text-6xl font-script text-brand-clay">♩</div>
                   <div className="absolute bottom-4 left-8 text-5xl font-script text-brand-moss">♫</div>
                 </div>
-                <div className="relative z-10">
-                  <p className="font-script text-4xl text-brand-clay-light mb-4">Compartilhar é cuidar!</p>
-                  <h2 className="font-serif text-2xl font-bold text-brand-cream mb-4">Faça parte da nossa comunidade</h2>
-                  <p className="text-slate-400 text-sm leading-relaxed mb-8 max-w-md mx-auto">
-                    Juntos, construímos uma rede de apoio, troca e desenvolvimento para todos os profissionais da saúde mental.
-                  </p>
-                  <button
-                    onClick={onGoToLogin}
-                    className="inline-flex items-center space-x-2 bg-brand-clay text-white px-8 py-3.5 rounded-xl font-bold hover:bg-brand-clay-dark transition shadow-lg"
-                  >
-                    <LogIn className="w-4.5 h-4.5" />
-                    <span>Acessar Área de Membros</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+
+                <div className="relative z-10 p-8 sm:p-12">
+                  {/* Header */}
+                  <div className="text-center mb-8">
+                    <p className="font-script text-3xl sm:text-4xl text-brand-clay-light mb-3">Compartilhar é cuidar!</p>
+                    <h2 className="font-serif text-xl sm:text-2xl font-bold text-brand-cream mb-3">Faça parte da nossa comunidade</h2>
+                    <p className="text-slate-400 text-sm leading-relaxed max-w-md mx-auto">
+                      Preencha os dados abaixo e nossa equipe entrará em contato após a aprovação.
+                    </p>
+                  </div>
+
+                  {/* Formulário ou Sucesso */}
+                  {requestSuccess ? (
+                    <div className="flex flex-col items-center gap-4 py-6 text-center">
+                      <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                        <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                      </div>
+                      <div>
+                        <p className="font-serif text-lg font-bold text-brand-cream mb-1">Solicitação enviada!</p>
+                        <p className="text-slate-400 text-sm max-w-xs mx-auto">
+                          Recebemos seus dados. Nossa equipe analisará sua solicitação em breve e você receberá um retorno.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleRequestSubmit} className="space-y-4">
+                      {/* Nome e E-mail */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1.5">Nome completo <span className="text-brand-clay">*</span></label>
+                          <input
+                            type="text"
+                            required
+                            value={requestForm.name}
+                            onChange={e => setF('name', e.target.value)}
+                            placeholder="Seu nome completo"
+                            className="w-full text-sm bg-white/10 border border-white/20 text-brand-cream placeholder-slate-500 px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/60 transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1.5">E-mail <span className="text-brand-clay">*</span></label>
+                          <input
+                            type="email"
+                            required
+                            value={requestForm.email}
+                            onChange={e => setF('email', e.target.value)}
+                            placeholder="seu@email.com"
+                            className="w-full text-sm bg-white/10 border border-white/20 text-brand-cream placeholder-slate-500 px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/60 transition"
+                          />
+                        </div>
+                      </div>
+
+                      {/* WhatsApp e Especialidade */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1.5">WhatsApp / Telefone</label>
+                          <input
+                            type="tel"
+                            value={requestForm.phone}
+                            onChange={e => setF('phone', e.target.value)}
+                            placeholder="(00) 00000-0000"
+                            className="w-full text-sm bg-white/10 border border-white/20 text-brand-cream placeholder-slate-500 px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/60 transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1.5">Especialidade</label>
+                          <select
+                            value={requestForm.specialty}
+                            onChange={e => setF('specialty', e.target.value)}
+                            className="w-full text-sm bg-white/10 border border-white/20 text-brand-cream px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/60 transition appearance-none"
+                          >
+                            <option value="" className="text-brand-navy bg-white">Selecione...</option>
+                            {ESPECIALIDADES_PUBLIC.map(e => (
+                              <option key={e.value} value={e.value} className="text-brand-navy bg-white">{e.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Especialidade Custom */}
+                      {requestForm.specialty === 'outro' && (
+                        <div>
+                          <label className="block text-xs font-bold text-slate-300 mb-1.5">Qual é a sua especialidade?</label>
+                          <input
+                            type="text"
+                            value={requestForm.specialtyCustom}
+                            onChange={e => setF('specialtyCustom', e.target.value)}
+                            placeholder="Digite sua especialidade"
+                            className="w-full text-sm bg-white/10 border border-white/20 text-brand-cream placeholder-slate-500 px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/60 transition"
+                          />
+                        </div>
+                      )}
+
+                      {/* Gênero */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1.5">Gênero</label>
+                        <select
+                          value={requestForm.gender}
+                          onChange={e => setF('gender', e.target.value)}
+                          className="w-full text-sm bg-white/10 border border-white/20 text-brand-cream px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/60 transition appearance-none"
+                        >
+                          <option value="" className="text-brand-navy bg-white">Não declarado</option>
+                          <option value="masculino" className="text-brand-navy bg-white">Masculino</option>
+                          <option value="feminino" className="text-brand-navy bg-white">Feminino</option>
+                        </select>
+                      </div>
+
+                      {/* Observação */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1.5">Mensagem / Apresentação</label>
+                        <textarea
+                          value={requestForm.observation}
+                          onChange={e => setF('observation', e.target.value)}
+                          placeholder="Alguma mensagem ou apresentação..."
+                          rows={3}
+                          className="w-full text-sm bg-white/10 border border-white/20 text-brand-cream placeholder-slate-500 px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/60 transition resize-none"
+                        />
+                      </div>
+
+                      {/* Error */}
+                      {requestError && (
+                        <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 px-3 py-2 rounded-lg">
+                          {requestError}
+                        </p>
+                      )}
+
+                      {/* Submit */}
+                      <button
+                        type="submit"
+                        disabled={requestLoading}
+                        className="w-full flex items-center justify-center gap-2 bg-brand-clay hover:bg-brand-clay-dark disabled:opacity-60 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl font-bold transition shadow-lg text-sm"
+                      >
+                        {requestLoading
+                          ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</>
+                          : <><Send className="w-4 h-4" />Enviar Solicitação</>
+                        }
+                      </button>
+                    </form>
+                  )}
+
+                  {/* Botão Acessar */}
+                  <div className="mt-6 text-center">
+                    <button
+                      onClick={onGoToLogin}
+                      className="inline-flex items-center gap-2 text-slate-400 hover:text-brand-cream text-sm font-semibold transition"
+                    >
+                      <LogIn className="w-4 h-4" />
+                      Acessar Área de Membros
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

@@ -34,6 +34,8 @@ router.post(
   asyncHandler(ctrl.createReply),
 );
 
+router.put('/:id/replies/:replyId',       authenticate, asyncHandler(ctrl.updateReply));
+router.delete('/:id/replies/:replyId',    authenticate, asyncHandler(ctrl.deleteReply));
 router.post('/:id/replies/:replyId/like', authenticate, asyncHandler(ctrl.likeReply));
 
 export default router;

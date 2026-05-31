@@ -18,9 +18,10 @@ import LoginView from './components/LoginView';
 import PublicSite from './components/PublicSite';
 import InviteRegisterView from './components/InviteRegisterView';
 import EventPublicView from './components/EventPublicView';
+import ProfessionalPublicPage from './components/ProfessionalPublicPage';
 import { ToastProvider } from './components/ui';
 
-type AppView = 'public' | 'login' | 'member-area' | 'invite' | 'event-public';
+type AppView = 'public' | 'login' | 'member-area' | 'invite' | 'event-public' | 'prof-public';
 
 // Mapa tab → segmento de URL
 const TAB_TO_PATH: Record<string, string> = {
@@ -48,18 +49,25 @@ function getPath() {
   return window.location.pathname;
 }
 
-function detectView(): { view: AppView; tab: string; inviteToken: string; eventPublicId: string } {
+function detectView(): { view: AppView; tab: string; inviteToken: string; eventPublicId: string; profPublicId: string; forumTopicId: string } {
   const path = getPath();
-  if (path === '/login') return { view: 'login', tab: 'projetos-melodias', inviteToken: '', eventPublicId: '' };
+  const empty = { inviteToken: '', eventPublicId: '', profPublicId: '', forumTopicId: '' };
+  if (path === '/login') return { view: 'login', tab: 'projetos-melodias', ...empty };
   if (path.startsWith('/convite/')) {
-    return { view: 'invite', tab: 'projetos-melodias', inviteToken: path.replace('/convite/', ''), eventPublicId: '' };
+    return { view: 'invite', tab: 'projetos-melodias', ...empty, inviteToken: path.replace('/convite/', '') };
   }
   if (path.startsWith('/evento/')) {
-    return { view: 'event-public', tab: 'projetos-melodias', inviteToken: '', eventPublicId: path.replace('/evento/', '') };
+    return { view: 'event-public', tab: 'projetos-melodias', ...empty, eventPublicId: path.replace('/evento/', '') };
+  }
+  if (path.startsWith('/profissional/')) {
+    return { view: 'prof-public', tab: 'projetos-melodias', ...empty, profPublicId: path.replace('/profissional/', '') };
+  }
+  if (path.startsWith('/forum/')) {
+    return { view: 'member-area', tab: 'forum', ...empty, forumTopicId: path.replace('/forum/', '') };
   }
   const tab = PATH_TO_TAB[path];
-  if (tab) return { view: 'member-area', tab, inviteToken: '', eventPublicId: '' };
-  return { view: 'public', tab: 'projetos-melodias', inviteToken: '', eventPublicId: '' };
+  if (tab) return { view: 'member-area', tab, ...empty };
+  return { view: 'public', tab: 'projetos-melodias', ...empty };
 }
 
 // ─── Inner app (needs AuthContext) ────────────────────────────────────────────
@@ -72,6 +80,8 @@ function AppInner() {
   const [currentTab,   setCurrentTabRaw] = useState<string>(initial.tab);
   const [inviteToken,    setInviteToken]    = useState<string>(initial.inviteToken);
   const [eventPublicId,  setEventPublicId]  = useState<string>(initial.eventPublicId);
+  const [profPublicId,   setProfPublicId]   = useState<string>(initial.profPublicId);
+  const [forumTopicId,   setForumTopicId]   = useState<string>(initial.forumTopicId);
   const [searchTerm,   setSearchTerm]   = useState('');
   const [sidebarOpen,  setSidebarOpen]  = useState(false);
 
@@ -103,6 +113,8 @@ function AppInner() {
       setCurrentTabRaw(detected.tab);
       setInviteToken(detected.inviteToken);
       setEventPublicId(detected.eventPublicId);
+      setProfPublicId(detected.profPublicId);
+      setForumTopicId(detected.forumTopicId);
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
@@ -132,6 +144,12 @@ function AppInner() {
 
   if (appView === 'event-public') {
     return <EventPublicView eventId={eventPublicId} />;
+  }
+
+  // ── PROFISSIONAL PÚBLICO ──────────────────────────────────────────────────────
+
+  if (appView === 'prof-public') {
+    return <ProfessionalPublicPage userId={profPublicId} />;
   }
 
   // ── INVITE REGISTER ──────────────────────────────────────────────────────────
@@ -273,7 +291,18 @@ function AppInner() {
           )}
 
           {currentTab === 'forum' && (
-            <ForumView currentUser={userForComponents as never} />
+            <ForumView
+              currentUser={userForComponents as never}
+              initialTopicId={forumTopicId || undefined}
+              onTopicOpen={id => {
+                setForumTopicId(id);
+                window.history.pushState(null, '', `/forum/${id}`);
+              }}
+              onTopicClose={() => {
+                setForumTopicId('');
+                window.history.pushState(null, '', '/forum');
+              }}
+            />
           )}
 
           {currentTab === 'admin-materiais' && (

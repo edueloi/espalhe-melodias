@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   UserCheck, UserPlus2, Key, Search, Crown,
   Stethoscope, Users, Clock, CheckCircle2, AlertCircle,
-  Shield, Sparkles, RefreshCw, ChevronDown, Plus
+  Shield, Sparkles, RefreshCw, ChevronDown, Plus, XCircle,
+  PhoneCall, Briefcase, MessageSquare, User as UserIcon,
 } from 'lucide-react';
-import { usersApi, type User } from '../lib/api';
+import { usersApi, memberRequestsApi, type User, type MemberRequest } from '../lib/api';
 
 type UserRole = 'super-admin' | 'professional' | 'member';
 import { useAuth } from '../lib/auth';
@@ -13,8 +14,11 @@ import { Badge } from './ui/Badge';
 import {
   Button, Modal, ModalFooter,
   Input, Select, FormRow, Divider,
-  useToast,
+  useToast, ConfirmModal,
 } from './ui';
+import { EmptyState } from './ui/EmptyState';
+import { StatCard } from './ui/StatCard';
+import { FilterLineSearch } from './ui/FilterLine';
 
 const ROLE_META: Record<UserRole, { label: string; icon: React.ElementType; badge: 'danger'|'info'|'success' }> = {
   'super-admin': { label: 'Super Admin', icon: Crown,       badge: 'danger'  },
@@ -37,45 +41,107 @@ function RoleBadge({ role }: { role: UserRole }) {
 }
 
 // ── SOLICITAÇÕES ──────────────────────────────────────────────────────────────
+
+type SolicitacoesTab = 'pending' | 'approved' | 'rejected';
+
+const GENDER_LABEL: Record<string, string> = {
+  masculino: 'Masculino',
+  feminino: 'Feminino',
+  nao_declarado: 'Não declarado',
+};
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 function SolicitacoesView() {
-  const { user: me } = useAuth();
-  const [users, setUsers]         = useState<User[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState<string|null>(null);
-  const [approving, setApproving] = useState<string|null>(null);
+  const toast = useToast();
 
-  const load = () => {
+  const [activeTab, setActiveTab]       = useState<SolicitacoesTab>('pending');
+  const [pending, setPending]           = useState<MemberRequest[]>([]);
+  const [approved, setApproved]         = useState<MemberRequest[]>([]);
+  const [rejected, setRejected]         = useState<MemberRequest[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState<string | null>(null);
+  const [search, setSearch]             = useState('');
+  const [actioning, setActioning]       = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<MemberRequest | null>(null);
+
+  const loadAll = useCallback(async () => {
     setLoading(true);
-    usersApi.list({ status: 'pending', limit: 50 })
-      .then(res => { setUsers(res.data); setError(null); })
-      .catch(() => setError('Erro ao carregar solicitações.'))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const handleApprove = async (u: User) => {
-    setApproving(u.id);
+    setError(null);
     try {
-      await usersApi.setApproval(u.id, 'approved');
-      setUsers(prev => prev.filter(x => x.id !== u.id));
-    } catch { setError('Erro ao aprovar usuário.'); }
-    finally { setApproving(null); }
+      const [pRes, aRes, rRes] = await Promise.all([
+        memberRequestsApi.list({ status: 'pending' }),
+        memberRequestsApi.list({ status: 'approved' }),
+        memberRequestsApi.list({ status: 'rejected' }),
+      ]);
+      setPending(pRes.data);
+      setApproved(aRes.data);
+      setRejected(rRes.data);
+    } catch {
+      setError('Erro ao carregar solicitações. Verifique a conexão com o servidor.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  const handleApprove = async (mr: MemberRequest) => {
+    setActioning(mr.id);
+    try {
+      await memberRequestsApi.approve(mr.id);
+      toast.success('Membro aprovado! Senha padrão: Melodias@2025');
+      setPending(prev => prev.filter(x => x.id !== mr.id));
+      setApproved(prev => [{ ...mr, status: 'approved' }, ...prev]);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao aprovar solicitação.');
+    } finally {
+      setActioning(null);
+    }
   };
 
-  const pending  = users;
-  const [approved, setApproved] = useState<User[]>([]);
+  const handleReject = async (mr: MemberRequest) => {
+    setActioning(mr.id);
+    try {
+      await memberRequestsApi.reject(mr.id);
+      toast.success('Solicitação rejeitada.');
+      setPending(prev => prev.filter(x => x.id !== mr.id));
+      setRejected(prev => [{ ...mr, status: 'rejected' }, ...prev]);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao rejeitar solicitação.');
+    } finally {
+      setActioning(null);
+      setRejectTarget(null);
+    }
+  };
 
-  useEffect(() => {
-    usersApi.list({ status: 'approved', limit: 50 })
-      .then(res => setApproved(res.data))
-      .catch(() => {});
-  }, [users.length]);
+  // Filtro de busca aplicado à tab ativa
+  const filterList = (list: MemberRequest[]) => {
+    if (!search.trim()) return list;
+    const q = search.toLowerCase();
+    return list.filter(
+      r => r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q),
+    );
+  };
+
+  const currentList = filterList(
+    activeTab === 'pending' ? pending : activeTab === 'approved' ? approved : rejected,
+  );
+
+  const tabs: Array<{ key: SolicitacoesTab; label: string; count: number }> = [
+    { key: 'pending',  label: 'Pendentes',  count: pending.length  },
+    { key: 'approved', label: 'Aprovados',  count: approved.length },
+    { key: 'rejected', label: 'Rejeitados', count: rejected.length },
+  ];
 
   return (
     <PageWrapper id="membership-requests-dashboard">
       <div className="space-y-5 sm:space-y-6 animate-fadeIn">
 
+        {/* Header */}
         <ContentCard padding="md" id="solicitacoes-header">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-start gap-3">
@@ -84,85 +150,196 @@ function SolicitacoesView() {
               </div>
               <div>
                 <h2 className="text-lg sm:text-xl font-serif font-bold text-brand-navy">Solicitações de Cadastro</h2>
-                <p className="text-xs text-slate-400 mt-0.5 max-w-lg">Revise os dados antes de habilitar o acesso ao sistema.</p>
+                <p className="text-xs text-slate-400 mt-0.5 max-w-lg">Revise os dados e aprove ou rejeite cada solicitação.</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {pending.length > 0 && (
-                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-xl text-xs font-bold">
-                  <AlertCircle className="w-4 h-4" />{pending.length} pendente{pending.length !== 1 ? 's' : ''}
-                </div>
-              )}
-              <button onClick={load} className="p-2 text-slate-400 hover:text-brand-clay rounded-lg transition">
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
+            <button onClick={loadAll} className="p-2 text-slate-400 hover:text-brand-clay rounded-lg transition self-end sm:self-auto">
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
+
+          {/* Stat cards */}
           <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-brand-sand/60">
-            {[
-              { label: 'Pendentes', value: pending.length,  color: pending.length > 0 ? 'text-amber-600' : 'text-slate-400' },
-              { label: 'Ativos',   value: approved.length, color: 'text-emerald-600' },
-              { label: 'Total',    value: pending.length + approved.length, color: 'text-brand-navy' },
-            ].map(s => (
-              <div key={s.label} className="text-center">
-                <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">{s.label}</p>
-              </div>
-            ))}
+            <StatCard title="Pendentes" value={pending.length}  icon={Clock}       color="warning" delay={0}   />
+            <StatCard title="Aprovados" value={approved.length} icon={CheckCircle2} color="success" delay={0.05}/>
+            <StatCard title="Total"     value={pending.length + approved.length + rejected.length} icon={UserPlus2} color="info" delay={0.1}/>
           </div>
         </ContentCard>
 
+        {/* Error */}
         {error && (
           <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
             <AlertCircle className="w-4 h-4 shrink-0" />{error}
-            <button onClick={load} className="ml-auto text-xs font-bold underline">Tentar novamente</button>
+            <button onClick={loadAll} className="ml-auto text-xs font-bold underline">Tentar novamente</button>
           </div>
         )}
 
+        {/* Tabs + Search */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          {/* Tabs */}
+          <div className="flex gap-1 bg-slate-100 rounded-xl p-1 flex-1 sm:flex-none">
+            {tabs.map(t => (
+              <button
+                key={t.key}
+                onClick={() => setActiveTab(t.key)}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  activeTab === t.key
+                    ? 'bg-white text-brand-navy shadow-sm'
+                    : 'text-slate-500 hover:text-brand-navy'
+                }`}
+              >
+                {t.label}
+                {t.count > 0 && (
+                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
+                    activeTab === t.key
+                      ? t.key === 'pending' ? 'bg-amber-100 text-amber-700' : t.key === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                      : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {t.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Search */}
+          <div className="flex-1">
+            <FilterLineSearch
+              value={search}
+              onChange={setSearch}
+              placeholder="Buscar por nome ou e-mail..."
+            />
+          </div>
+        </div>
+
+        {/* Content */}
         {loading ? (
-          <div className="flex items-center justify-center py-12 text-slate-400 text-sm gap-2">
+          <div className="flex items-center justify-center py-16 text-slate-400 text-sm gap-2">
             <RefreshCw className="w-4 h-4 animate-spin" />Carregando...
           </div>
-        ) : pending.length === 0 ? (
-          <ContentCard padding="lg">
-            <div className="text-center py-8">
-              <CheckCircle2 className="w-12 h-12 text-emerald-100 mx-auto mb-3" />
-              <p className="text-sm font-bold text-brand-navy">Tudo em dia!</p>
-              <p className="text-xs text-slate-400 mt-1">Não há solicitações pendentes.</p>
-            </div>
-          </ContentCard>
-        ) : (
-          <div id="solicitacoes-list" className="space-y-3">
-            <SectionTitle title="Aguardando Aprovação" icon={Clock} />
-            {pending.map(u => (
-              <div key={u.id} id={`request-card-${u.id}`}>
-              <ContentCard padding="md">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
+        ) : currentList.length === 0 ? (
+          <EmptyState
+            icon={activeTab === 'pending' ? Clock : activeTab === 'approved' ? CheckCircle2 : XCircle}
+            title={
+              search
+                ? 'Nenhum resultado encontrado'
+                : activeTab === 'pending'
+                  ? 'Nenhuma solicitação pendente'
+                  : activeTab === 'approved'
+                    ? 'Nenhuma solicitação aprovada'
+                    : 'Nenhuma solicitação rejeitada'
+            }
+            description={search ? `Nenhum resultado para "${search}"` : undefined}
+          />
+        ) : activeTab === 'pending' ? (
+          /* ── Pendentes ── */
+          <div className="space-y-3" id="solicitacoes-list-pending">
+            {currentList.map(mr => (
+              <div key={mr.id}>
+              <ContentCard padding="md" id={`request-card-${mr.id}`}>
+                <div className="flex flex-col gap-4">
+                  {/* Top: avatar + info + status */}
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                    {/* Avatar */}
                     <div className="relative shrink-0">
-                      <img src={u.avatar ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&size=48`}
-                        alt={u.name} className="w-11 h-11 rounded-xl object-cover border-2 border-brand-sand shadow-sm" />
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-100 to-brand-sand flex items-center justify-center border-2 border-brand-sand shadow-sm">
+                        <UserIcon className="w-5 h-5 text-brand-clay" />
+                      </div>
                       <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-amber-400 rounded-full border-2 border-white flex items-center justify-center">
                         <Clock className="w-2.5 h-2.5 text-white" />
                       </span>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-brand-navy">{u.name}</p>
-                      <p className="text-xs text-slate-400 truncate">{u.email}</p>
-                      {u.specialty && <p className="text-[11px] text-brand-clay font-semibold mt-0.5">{u.specialty}</p>}
-                      {u.crp && <p className="text-[11px] text-slate-400 font-mono">{u.crp}</p>}
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-brand-navy">{mr.name}</p>
+                      <p className="text-xs text-slate-400 truncate">{mr.email}</p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {mr.phone && (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
+                            <PhoneCall className="w-3 h-3" />{mr.phone}
+                          </span>
+                        )}
+                        {mr.specialty && (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-brand-clay bg-brand-clay/5 border border-brand-clay/20 px-2 py-0.5 rounded-full">
+                            <Briefcase className="w-3 h-3" />{mr.specialty}
+                          </span>
+                        )}
+                        {mr.gender && mr.gender !== 'nao_declarado' && (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
+                            <UserIcon className="w-3 h-3" />{GENDER_LABEL[mr.gender] ?? mr.gender}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 text-[10px] text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
+                          <Clock className="w-3 h-3" />{formatDate(mr.created_at)}
+                        </span>
+                      </div>
+                      {mr.observation && (
+                        <div className="mt-2 flex items-start gap-1.5 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                          <MessageSquare className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                          <p className="text-[11px] text-slate-500 leading-relaxed">{mr.observation}</p>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-1">
+
+                    {/* Status badge */}
+                    <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-1 self-start">
                       <Clock className="w-3 h-3" />Pendente
                     </span>
-                    <button id={`btn-approve-${u.id}`} onClick={() => handleApprove(u)} disabled={approving === u.id}
-                      className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold uppercase rounded-xl transition ${
-                        approving === u.id ? 'bg-emerald-100 text-emerald-600 cursor-default' : 'bg-brand-clay hover:bg-brand-clay-dark text-white shadow-md shadow-brand-clay/20'
-                      }`}>
-                      {approving === u.id ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Aprovando...</> : <><CheckCircle2 className="w-3.5 h-3.5" />Aprovar</>}
-                    </button>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-brand-sand/60">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setRejectTarget(mr)}
+                      disabled={actioning === mr.id}
+                    >
+                      Rejeitar
+                    </Button>
+                    <Button
+                      size="sm"
+                      iconLeft={<CheckCircle2 size={13} />}
+                      loading={actioning === mr.id}
+                      onClick={() => handleApprove(mr)}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
+                    >
+                      Aprovar
+                    </Button>
+                  </div>
+                </div>
+              </ContentCard>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* ── Aprovados / Rejeitados ── */
+          <div className="space-y-2" id={`solicitacoes-list-${activeTab}`}>
+            {currentList.map(mr => (
+              <div key={mr.id}>
+              <ContentCard padding="sm" id={`request-card-${mr.id}`}>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-slate-100 to-brand-sand flex items-center justify-center border border-brand-sand shrink-0">
+                    <UserIcon className="w-4 h-4 text-slate-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-brand-navy truncate">{mr.name}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{mr.email}</p>
+                    {mr.specialty && <p className="text-[10px] text-brand-clay mt-0.5">{mr.specialty}</p>}
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 ${
+                      mr.status === 'approved'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      {mr.status === 'approved'
+                        ? <><CheckCircle2 className="w-3 h-3" />Aprovado</>
+                        : <><XCircle className="w-3 h-3" />Rejeitado</>
+                      }
+                    </span>
+                    <span className="text-[9px] text-slate-400">{formatDate(mr.created_at)}</span>
                   </div>
                 </div>
               </ContentCard>
@@ -170,26 +347,21 @@ function SolicitacoesView() {
             ))}
           </div>
         )}
-
-        {approved.length > 0 && (
-          <div id="approved-list">
-            <SectionTitle title="Membros Ativos" icon={UserCheck} divider />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
-              {approved.map(u => (
-                <div key={u.id} className="flex items-center gap-3 bg-white border border-brand-sand/60 rounded-xl p-3 hover:shadow-sm transition">
-                  <img src={u.avatar ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&size=36`}
-                    alt={u.name} className="w-9 h-9 rounded-lg object-cover border border-brand-sand shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-brand-navy truncate">{u.name}</p>
-                    <p className="text-[10px] text-slate-400 truncate">{u.email}</p>
-                  </div>
-                  <RoleBadge role={u.role} />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Confirm Reject Modal */}
+      {rejectTarget && (
+        <ConfirmModal
+          isOpen={!!rejectTarget}
+          onClose={() => setRejectTarget(null)}
+          onConfirm={() => handleReject(rejectTarget)}
+          title="Rejeitar solicitação"
+          message={`Tem certeza que deseja rejeitar a solicitação de "${rejectTarget.name}"? Esta ação não pode ser desfeita.`}
+          confirmLabel="Rejeitar"
+          variant="danger"
+          loading={actioning === rejectTarget.id}
+        />
+      )}
     </PageWrapper>
   );
 }

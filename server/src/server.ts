@@ -18,7 +18,8 @@ import helpRoutes          from './routes/help';
 import suggestionsRoutes   from './routes/suggestions';
 import professionalsRoutes from './routes/professionals';
 import blogsRoutes         from './routes/blogs';
-import inviteLinksRoutes   from './routes/inviteLinks';
+import inviteLinksRoutes      from './routes/inviteLinks';
+import memberRequestsRoutes   from './routes/memberRequests';
 
 const app = express();
 
@@ -76,6 +77,7 @@ app.use('/api/suggestions',   suggestionsRoutes);
 app.use('/api/professionals', professionalsRoutes);
 app.use('/api/blogs',         blogsRoutes);
 app.use('/api/invite-links',  inviteLinksRoutes);
+app.use('/api/member-requests', memberRequestsRoutes);
 
 // ─── 404 & Error Handler ──────────────────────────────────────────────────────
 

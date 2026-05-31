@@ -36,8 +36,13 @@ export async function listTopics(req: AuthRequest, res: Response): Promise<void>
   );
 
   const topics = await query<Record<string, unknown>>(
-    `SELECT t.*, (SELECT COUNT(*) FROM forum_replies r WHERE r.topic_id = t.id) AS replies_count
-     FROM forum_topics t ${where} ORDER BY is_pinned DESC, ${orderBy} LIMIT ? OFFSET ?`,
+    `SELECT t.*,
+            COALESCE(t.author_specialty, u.specialty) AS author_specialty,
+            COALESCE(t.author_crp, u.crp) AS author_crp,
+            (SELECT COUNT(*) FROM forum_replies r WHERE r.topic_id = t.id) AS replies_count
+     FROM forum_topics t
+     LEFT JOIN users u ON u.id = t.author_id
+     ${where} ORDER BY t.is_pinned DESC, ${orderBy} LIMIT ? OFFSET ?`,
     [...params, limit, offset],
   );
 
@@ -60,14 +65,20 @@ export async function getTopic(req: AuthRequest, res: Response): Promise<void> {
   const { id } = req.params;
 
   const topic = await queryOne<Record<string, unknown>>(
-    'SELECT * FROM forum_topics WHERE id = ?', [id],
+    `SELECT t.*, COALESCE(t.author_specialty, u.specialty) AS author_specialty,
+            COALESCE(t.author_crp, u.crp) AS author_crp
+     FROM forum_topics t LEFT JOIN users u ON u.id = t.author_id
+     WHERE t.id = ?`, [id],
   );
   if (!topic) throw new AppError('Tópico não encontrado.', 404);
 
   await execute('UPDATE forum_topics SET views = views + 1 WHERE id = ?', [id]);
 
   const replies = await query<Record<string, unknown>>(
-    'SELECT * FROM forum_replies WHERE topic_id = ? ORDER BY created_at ASC', [id],
+    `SELECT r.*, COALESCE(r.author_specialty, u.specialty) AS author_specialty,
+            COALESCE(r.author_crp, u.crp) AS author_crp
+     FROM forum_replies r LEFT JOIN users u ON u.id = r.author_id
+     WHERE r.topic_id = ? ORDER BY r.created_at ASC`, [id],
   );
 
   res.json({
@@ -88,8 +99,8 @@ export async function createTopic(req: AuthRequest, res: Response): Promise<void
     title: string; category: string; content: string;
   };
 
-  const user = await queryOne<{ name: string; avatar: string | null }>(
-    'SELECT name, avatar FROM users WHERE id = ?', [req.user.userId],
+  const user = await queryOne<{ name: string; avatar: string | null; specialty: string | null; crp: string | null }>(
+    'SELECT name, avatar, specialty, crp FROM users WHERE id = ?', [req.user.userId],
   );
   if (!user) throw new AppError('Usuário não encontrado.', 404);
 
@@ -98,9 +109,9 @@ export async function createTopic(req: AuthRequest, res: Response): Promise<void
 
   await execute(
     `INSERT INTO forum_topics
-     (id, title, category, author_id, author_name, author_role, author_avatar, content, liked_by, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,'[]',?,?)`,
-    [id, title, category, req.user.userId, user.name, req.user.role, user.avatar ?? null, content, now, now],
+     (id, title, category, author_id, author_name, author_role, author_avatar, author_specialty, author_crp, content, liked_by, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,'[]',?,?)`,
+    [id, title, category, req.user.userId, user.name, req.user.role, user.avatar ?? null, user.specialty ?? null, user.crp ?? null, content, now, now],
   );
 
   res.status(201).json({ success: true, data: { id, title, category } });
@@ -198,8 +209,8 @@ export async function createReply(req: AuthRequest, res: Response): Promise<void
   if (!topic) throw new AppError('Tópico não encontrado.', 404);
   if (topic.is_locked) throw new AppError('Este tópico está bloqueado para novas respostas.', 403);
 
-  const user = await queryOne<{ name: string; avatar: string | null }>(
-    'SELECT name, avatar FROM users WHERE id = ?', [req.user.userId],
+  const user = await queryOne<{ name: string; avatar: string | null; specialty: string | null; crp: string | null }>(
+    'SELECT name, avatar, specialty, crp FROM users WHERE id = ?', [req.user.userId],
   );
 
   const isExpert = ['super-admin', 'professional'].includes(req.user.role);
@@ -208,12 +219,55 @@ export async function createReply(req: AuthRequest, res: Response): Promise<void
 
   await execute(
     `INSERT INTO forum_replies
-     (id, topic_id, author_id, author_name, author_role, author_avatar, content, is_expert_reply, liked_by, created_at)
-     VALUES (?,?,?,?,?,?,?,?,'[]',?)`,
-    [id, topicId, req.user.userId, user?.name ?? '', req.user.role, user?.avatar ?? null, content, isExpert ? 1 : 0, now],
+     (id, topic_id, author_id, author_name, author_role, author_avatar, author_specialty, author_crp, content, is_expert_reply, liked_by, created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,'[]',?)`,
+    [id, topicId, req.user.userId, user?.name ?? '', req.user.role, user?.avatar ?? null, user?.specialty ?? null, user?.crp ?? null, content, isExpert ? 1 : 0, now],
   );
 
   res.status(201).json({ success: true, data: { id, content, isExpertReply: isExpert } });
+}
+
+// ─── Update Reply ─────────────────────────────────────────────────────────────
+
+export async function updateReply(req: AuthRequest, res: Response): Promise<void> {
+  if (!req.user) throw new AppError('Não autenticado.', 401);
+  const { replyId } = req.params;
+  const { content } = req.body as { content: string };
+
+  const reply = await queryOne<{ author_id: string }>(
+    'SELECT author_id FROM forum_replies WHERE id = ?', [replyId],
+  );
+  if (!reply) throw new AppError('Resposta não encontrada.', 404);
+  if (reply.author_id !== req.user.userId) {
+    throw new AppError('Acesso negado.', 403);
+  }
+
+  await execute(
+    'UPDATE forum_replies SET content = ? WHERE id = ?',
+    [content, replyId],
+  );
+
+  res.json({ success: true, message: 'Resposta atualizada.' });
+}
+
+// ─── Delete Reply ─────────────────────────────────────────────────────────────
+
+export async function deleteReply(req: AuthRequest, res: Response): Promise<void> {
+  if (!req.user) throw new AppError('Não autenticado.', 401);
+  const { replyId } = req.params;
+
+  const reply = await queryOne<{ author_id: string }>(
+    'SELECT author_id FROM forum_replies WHERE id = ?', [replyId],
+  );
+  if (!reply) throw new AppError('Resposta não encontrada.', 404);
+
+  const isAdmin = req.user.role === 'super-admin';
+  if (reply.author_id !== req.user.userId && !isAdmin) {
+    throw new AppError('Acesso negado.', 403);
+  }
+
+  await execute('DELETE FROM forum_replies WHERE id = ?', [replyId]);
+  res.json({ success: true, message: 'Resposta excluída.' });
 }
 
 // ─── Like Reply ───────────────────────────────────────────────────────────────
