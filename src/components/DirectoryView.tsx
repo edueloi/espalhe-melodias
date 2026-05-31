@@ -117,13 +117,17 @@ export default function DirectoryView() {
   const [eName, setEName]             = useState('');
   const [eCrp, setECrp]               = useState('');
   const [eBio, setEBio]               = useState('');
+  const [eAvatar, setEAvatar]         = useState('');
   const [ePrice, setEPrice]           = useState(140);
   const [eLocation, setELocation]     = useState('');
   const [eWhatsapp, setEWhatsapp]     = useState('');
   const [eColor, setEColor]           = useState('#a75a35');
   const [eSpecialties, setESpecialties] = useState<string[]>([]);
   const [eServices, setEServices]     = useState<string[]>([]);
+  const [eLanguages, setELanguages]   = useState<string[]>([]);
+  const [eSchedule, setESchedule]     = useState<string[]>([]);
   const [newService, setNewService]   = useState('');
+  const [newSchedule, setNewSchedule] = useState('');
   const [eInstagram, setEInstagram]   = useState('');
   const [eLinkedin, setELinkedin]     = useState('');
   const [eFacebook, setEFacebook]     = useState('');
@@ -153,16 +157,23 @@ export default function DirectoryView() {
   const isPro = user?.role === 'professional' || user?.role === 'super-admin';
   const topRatedCount = professionals.filter(p => toNumericValue(p.rating) >= 4.8).length;
 
+  const LANGUAGES_OPTIONS = ['Português', 'Inglês', 'Espanhol', 'Francês', 'Italiano', 'Alemão'];
+
   const openEdit = (prof: Professional) => {
     setEName(prof.name);
     setECrp(prof.crp);
     setEBio(prof.bio);
+    setEAvatar(prof.avatar ?? '');
     setEPrice(toNumericValue(prof.price_per_session, 140));
     setELocation(prof.location);
     setEWhatsapp(prof.contact_whatsapp ?? '');
     setEColor(prof.accent_color ?? '#a75a35');
     setESpecialties(prof.specialties);
     setEServices(prof.services);
+    setELanguages(prof.languages ?? []);
+    setESchedule(Array.isArray(prof.schedule)
+      ? prof.schedule.map(s => typeof s === 'string' ? s : `${(s as {day:string;hours:string}).day} ${(s as {day:string;hours:string}).hours}`)
+      : []);
     setEInstagram(prof.instagram ?? '');
     setELinkedin(prof.linkedin ?? '');
     setEFacebook(prof.facebook ?? '');
@@ -181,9 +192,17 @@ export default function DirectoryView() {
     try {
       await professionalsApi.updateMe({
         name: eName, crp: eCrp, bio: eBio,
+        avatar: eAvatar || undefined,
         price_per_session: ePrice, location: eLocation,
         contact_whatsapp: eWhatsapp, accent_color: eColor,
         specialties: eSpecialties, services: eServices,
+        languages: eLanguages,
+        schedule: eSchedule.map(s => {
+          const parts = s.trim().split(/\s+/);
+          const day = parts[0] ?? s;
+          const hours = parts.slice(1).join(' ') || '—';
+          return { day, hours };
+        }),
         instagram: eInstagram, linkedin: eLinkedin, facebook: eFacebook,
         tiktok: eTiktok, twitter: eTwitter, website: eWebsite,
         extra_links: eExtraLinks,
@@ -509,6 +528,29 @@ export default function DirectoryView() {
               </div>
             </PanelCard>
 
+            <PanelCard title="Foto de Perfil" icon={Users} description="URL da sua foto profissional">
+              <div className="flex items-start gap-4">
+                <div className="shrink-0">
+                  {eAvatar ? (
+                    <img src={eAvatar} alt="preview" className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg" />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-slate-200 border-4 border-white shadow-lg flex items-center justify-center text-xl font-black text-slate-500">
+                      {eName.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase() || '?'}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <Input
+                    label="URL da foto"
+                    value={eAvatar}
+                    onChange={e => setEAvatar(e.target.value)}
+                    placeholder="https://..."
+                    hint="Cole o link direto de uma imagem (ex: Unsplash, Google Photos)"
+                  />
+                </div>
+              </div>
+            </PanelCard>
+
             <PanelCard title="Especialidades" icon={Stethoscope} description="Selecione as áreas em que você atua">
               <div className="flex flex-wrap gap-2">
                 {SPECIALTIES.map(s => (
@@ -585,6 +627,50 @@ export default function DirectoryView() {
                   />
                   <Button type="button" variant="outline" iconLeft={<Plus size={14} />}
                     onClick={() => { if (newService.trim()) { setEServices(p => [...p, newService.trim()]); setNewService(''); } }}>
+                    Adicionar
+                  </Button>
+                </div>
+              </div>
+            </PanelCard>
+
+            <PanelCard title="Idiomas de Atendimento" icon={Globe} description="Em quais idiomas você consegue atender?">
+              <div className="flex flex-wrap gap-2">
+                {LANGUAGES_OPTIONS.map(lang => (
+                  <button key={lang} type="button"
+                    onClick={() => setELanguages(prev => prev.includes(lang) ? prev.filter(x => x !== lang) : [...prev, lang])}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl border-2 transition-all ${
+                      eLanguages.includes(lang)
+                        ? 'bg-brand-moss text-white border-brand-moss shadow-sm'
+                        : 'bg-white text-slate-600 border-zinc-200 hover:border-brand-moss hover:text-brand-moss'
+                    }`}>
+                    {lang}
+                  </button>
+                ))}
+              </div>
+            </PanelCard>
+
+            <PanelCard title="Horários Disponíveis" icon={Calendar} description="Adicione seus slots de atendimento (ex: Segunda 09:00)">
+              <div className="space-y-3">
+                {eSchedule.map((s, i) => (
+                  <div key={i} className="flex items-center gap-3 bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5">
+                    <Calendar className="w-4 h-4 text-brand-clay shrink-0" />
+                    <span className="text-sm text-slate-700 flex-1">{s}</span>
+                    <button type="button" onClick={() => setESchedule(prev => prev.filter((_, j) => j !== i))}
+                      className="text-zinc-300 hover:text-red-400 transition">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ex: Segunda 09:00 ou Terça 14:00-18:00"
+                    value={newSchedule}
+                    onChange={e => setNewSchedule(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (newSchedule.trim()) { setESchedule(p => [...p, newSchedule.trim()]); setNewSchedule(''); } } }}
+                    wrapperClassName="flex-1"
+                  />
+                  <Button type="button" variant="outline" iconLeft={<Plus size={14} />}
+                    onClick={() => { if (newSchedule.trim()) { setESchedule(p => [...p, newSchedule.trim()]); setNewSchedule(''); } }}>
                     Adicionar
                   </Button>
                 </div>

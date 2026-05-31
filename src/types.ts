@@ -28,6 +28,13 @@ export interface ProfessionalProfile {
   location: string; // Remote or city
   accentColor: string; // Personal site theme color
   languages: string[];
+  instagram?: string;
+  linkedin?: string;
+  facebook?: string;
+  tiktok?: string;
+  twitter?: string;
+  website?: string;
+  extraLinks?: Array<{ label: string; url: string }>;
 }
 
 export interface ForumTopic {

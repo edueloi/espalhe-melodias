@@ -69,7 +69,10 @@ export const INITIAL_PROFESSIONALS: ProfessionalProfile[] = [
     schedule: ['Segunda 09:00', 'Segunda 14:00', 'Quarta 10:00', 'Quarta 16:00', 'Sexta 11:00'],
     location: 'remoto / São Paulo - SP',
     accentColor: '#581a2e',
-    languages: ['Português', 'Espanhol']
+    languages: ['Português', 'Espanhol'],
+    instagram: '@dra.eliana.mendes',
+    linkedin: 'dra-eliana-mendes',
+    website: 'https://dra-eliana.com.br',
   },
   {
     id: 'prof-2',
@@ -92,7 +95,11 @@ export const INITIAL_PROFESSIONALS: ProfessionalProfile[] = [
     schedule: ['Terça 08:00', 'Terça 15:00', 'Quinta 13:00', 'Quinta 19:00'],
     location: 'remoto / Campinas - SP',
     accentColor: '#1e3a8a',
-    languages: ['Português', 'Inglês']
+    languages: ['Português', 'Inglês'],
+    instagram: '@dr.marcos.toledo',
+    linkedin: 'dr-marcos-toledo',
+    twitter: '@drmarcostoledo',
+    website: 'https://dr-marcos-toledo.com.br',
   },
   {
     id: 'prof-3',
@@ -115,7 +122,10 @@ export const INITIAL_PROFESSIONALS: ProfessionalProfile[] = [
     schedule: ['Segunda 11:00', 'Terça 10:00', 'Quarta 15:00', 'Quinta 16:00'],
     location: 'remoto / Rio de Janeiro - RJ',
     accentColor: '#10b981',
-    languages: ['Português']
+    languages: ['Português'],
+    instagram: '@dra.alinebecker',
+    facebook: 'dra.alinebecker',
+    extraLinks: [{ label: 'Podcast Mulheres que Curam', url: 'https://open.spotify.com' }],
   },
   {
     id: 'prof-4',
@@ -138,7 +148,11 @@ export const INITIAL_PROFESSIONALS: ProfessionalProfile[] = [
     schedule: ['Quarta 08:00', 'Quarta 11:00', 'Sexta 10:00', 'Sexta 14:00', 'Sexta 15:00'],
     location: 'remoto / Curitiba - PR',
     accentColor: '#6d28d9',
-    languages: ['Português', 'Inglês', 'Francês']
+    languages: ['Português', 'Inglês', 'Francês'],
+    instagram: '@dra.camilasantos.psi',
+    tiktok: '@dracamilasantos',
+    website: 'https://camilasantos.psi.br',
+    extraLinks: [{ label: 'Canal YouTube', url: 'https://youtube.com' }],
   }
 ];
 
