@@ -1,29 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Music, 
-  Brain, 
-  Heart, 
-  Lightbulb, 
-  Sparkle, 
-  ArrowLeft, 
-  ArrowRight, 
-  Play, 
-  Pause, 
-  Info, 
-  User, 
-  ShieldCheck, 
-  Check, 
-  Users, 
-  Layers, 
-  MessageSquare, 
-  Share2, 
-  Calendar, 
-  X, 
+import {
+  Music,
+  Brain,
+  Heart,
+  Lightbulb,
+  Sparkle,
+  ArrowLeft,
+  ArrowRight,
+  Play,
+  Pause,
+  Info,
+  User,
+  ShieldCheck,
+  Check,
+  Users,
+  Layers,
+  MessageSquare,
+  Share2,
+  Calendar,
+  X,
   HelpCircle,
   TrendingUp,
   Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { PageWrapper } from './ui/PageWrapper';
 
 // Interfaces for our custom interactive feedback responses
 interface FeedbackNote {
@@ -278,7 +279,8 @@ export default function ProjectsView() {
   ];
 
   return (
-    <div className="space-y-8 animate-fadeIn" id="projects-showcase-root">
+    <PageWrapper mobileBottomPad id="projects-showcase-root">
+    <div className="space-y-6 sm:space-y-8 animate-fadeIn">
       
       {/* SECTION TITLE & MOTORS */}
       <div className="border-b border-brand-sand/60 pb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
@@ -1032,5 +1034,6 @@ export default function ProjectsView() {
       </div>
 
     </div>
+    </PageWrapper>
   );
 }

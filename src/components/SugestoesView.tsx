@@ -1,0 +1,288 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Lightbulb, Send, ThumbsUp, Sparkles, Clock,
+  User, CheckCircle2, Heart, RefreshCw, AlertCircle
+} from 'lucide-react';
+import { suggestionsApi, type Suggestion } from '../lib/api';
+import { useAuth } from '../lib/auth';
+import { PageWrapper, SectionTitle, ContentCard } from './ui/PageWrapper';
+
+const SUGGESTION_TIPS = [
+  'Tema para o próximo encontro mensal',
+  'Nova funcionalidade para a plataforma',
+  'Dinâmica ou atividade para o grupo',
+  'Palestra ou convidado especial',
+];
+
+const STATUS_META: Record<string, { label: string; color: string }> = {
+  'open':       { label: 'Aberta',       color: 'bg-slate-50 text-slate-600 border-slate-200' },
+  'in-progress':{ label: 'Em análise',   color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  'done':       { label: 'Implementada', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  'rejected':   { label: 'Recusada',     color: 'bg-red-50 text-red-600 border-red-200' },
+};
+
+interface SugestoesViewProps {
+  isAdmin?: boolean;
+}
+
+export default function SugestoesView({ isAdmin = false }: SugestoesViewProps) {
+  const { user } = useAuth();
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [text, setText]         = useState('');
+  const [sending, setSending]   = useState(false);
+  const [sent, setSent]         = useState(false);
+  const [liked, setLiked]       = useState<Set<string>>(new Set());
+  const [filter, setFilter]     = useState<'todas' | 'minhas'>('todas');
+  const [error, setError]       = useState<string | null>(null);
+
+  const load = () => {
+    setLoading(true);
+    suggestionsApi.list()
+      .then(res => { setSuggestions(res.data); setError(null); })
+      .catch(() => setError('Não foi possível carregar as sugestões.'))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    setSending(true);
+    try {
+      await suggestionsApi.create(text);
+      setText('');
+      setSent(true);
+      setTimeout(() => setSent(false), 4000);
+      load();
+    } catch {
+      setError('Erro ao enviar sugestão. Tente novamente.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleLike = async (id: string) => {
+    if (liked.has(id)) return;
+    try {
+      await suggestionsApi.like(id);
+      setLiked(prev => new Set([...prev, id]));
+      setSuggestions(prev => prev.map(s => s.id === id ? { ...s, likes: s.likes + 1 } : s));
+    } catch { /* silencioso */ }
+  };
+
+  const displayed = suggestions.filter(s =>
+    filter === 'todas' ? true : s.author_name === user?.name
+  );
+
+  const total     = suggestions.length;
+  const myCount   = suggestions.filter(s => s.author_name === user?.name).length;
+  const totalLikes = suggestions.reduce((sum, s) => sum + s.likes, 0);
+
+  return (
+    <PageWrapper id="sugestoes-view">
+      <div className="space-y-5 sm:space-y-6 animate-fadeIn max-w-4xl mx-auto">
+
+        {/* ── HEADER ── */}
+        <ContentCard padding="md" id="sugestoes-header">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 bg-amber-50 rounded-xl shrink-0">
+                <Lightbulb className="w-5 h-5 text-amber-500" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Comunidade Ativa</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                </div>
+                <h2 className="text-lg sm:text-xl font-serif font-bold text-brand-navy">
+                  {isAdmin ? 'Sugestões dos Associados' : 'Caixa de Sugestões'}
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5 max-w-lg">
+                  {isAdmin
+                    ? 'Acompanhe e gerencie as ideias enviadas pelos membros da comunidade.'
+                    : 'Compartilhe ideias para fortalecer nossa comunidade. Cada sugestão contribui para a sinfonia coletiva.'}
+                </p>
+              </div>
+            </div>
+            <button onClick={load} className="p-2 text-slate-400 hover:text-brand-clay hover:bg-brand-sand/40 rounded-lg transition shrink-0" title="Atualizar">
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-brand-sand/60">
+            {[
+              { label: 'Total',    value: total },
+              { label: 'Minhas',   value: myCount },
+              { label: 'Curtidas', value: totalLikes },
+            ].map(s => (
+              <div key={s.label} className="text-center">
+                <p className="text-2xl font-black text-brand-navy">{s.value}</p>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </ContentCard>
+
+        {error && (
+          <div className="flex items-center gap-2.5 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {error}
+            <button onClick={load} className="ml-auto text-xs font-bold underline">Tentar novamente</button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+          {/* ── FORM (apenas para membros não-admin ou todos) ── */}
+          {!isAdmin && (
+            <ContentCard padding="md" id="sugestoes-form-card" className="lg:col-span-1">
+              <SectionTitle title="Nova Sugestão" icon={Send} divider />
+              <form id="sugestoes-form" onSubmit={handleSubmit} className="space-y-4 mt-4">
+                <textarea
+                  id="sugestao-textarea"
+                  value={text}
+                  onChange={e => setText(e.target.value)}
+                  placeholder="Descreva sua ideia..."
+                  rows={4}
+                  className="w-full text-xs text-brand-navy bg-brand-cream border border-brand-sand px-3 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400 transition resize-none"
+                />
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Inspirações:</p>
+                  {SUGGESTION_TIPS.map(tip => (
+                    <button key={tip} type="button"
+                      onClick={() => setText(tip)}
+                      className="w-full text-left text-[11px] text-brand-clay hover:text-brand-clay-dark py-1.5 px-2.5 rounded-lg hover:bg-brand-clay/5 border border-transparent hover:border-brand-clay/10 transition flex items-center gap-1.5">
+                      <Sparkles className="w-3 h-3 shrink-0" />{tip}
+                    </button>
+                  ))}
+                </div>
+                <button id="btn-submit-suggestion" type="submit" disabled={sending}
+                  className="w-full py-3 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md shadow-amber-500/20 transition flex items-center justify-center gap-2">
+                  {sending ? <><RefreshCw className="w-4 h-4 animate-spin" /> Enviando...</> : <><Send className="w-4 h-4" /> Enviar Sugestão</>}
+                </button>
+              </form>
+              {sent && (
+                <div className="mt-3 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 animate-fadeIn">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold text-emerald-800">Enviada com sucesso!</p>
+                    <p className="text-[11px] text-emerald-600 mt-0.5">Sua ideia está visível para a comunidade.</p>
+                  </div>
+                </div>
+              )}
+            </ContentCard>
+          )}
+
+          {/* ── LIST ── */}
+          <div className={`space-y-4 ${!isAdmin ? 'lg:col-span-2' : 'lg:col-span-3'}`} id="sugestoes-list-section">
+            {/* Filter */}
+            <div className="flex items-center gap-2">
+              {(['todas', 'minhas'] as const).map(f => (
+                <button key={f} id={`filter-sugestoes-${f}`}
+                  onClick={() => setFilter(f)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold border transition ${
+                    filter === f ? 'bg-brand-navy text-white border-transparent' : 'bg-white text-slate-600 border-brand-sand hover:bg-brand-sand/30'
+                  }`}>
+                  {f === 'todas' ? `Todas (${total})` : `Minhas (${myCount})`}
+                </button>
+              ))}
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-12 text-slate-400 text-sm gap-2">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Carregando sugestões...
+              </div>
+            ) : displayed.length === 0 ? (
+              <ContentCard padding="lg">
+                <div className="text-center py-8">
+                  <Lightbulb className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+                  <p className="text-sm font-semibold text-slate-400">
+                    {filter === 'minhas' ? 'Você ainda não enviou sugestões.' : 'Nenhuma sugestão ainda.'}
+                  </p>
+                </div>
+              </ContentCard>
+            ) : (
+              <div id="sugestoes-list" className="space-y-3">
+                {[...displayed].reverse().map((sug, i) => {
+                  const isOwn   = sug.author_name === user?.name;
+                  const hasLiked = liked.has(sug.id);
+                  const meta    = STATUS_META[sug.status] ?? STATUS_META['open'];
+                  return (
+                    <div key={sug.id} id={`suggestion-card-${sug.id}`}
+                      className={`bg-white border rounded-2xl p-4 sm:p-5 transition hover:shadow-md ${
+                        isOwn ? 'border-amber-200 bg-amber-50/30' : 'border-brand-sand/60'
+                      }`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black shrink-0 mt-0.5 ${
+                            i === 0 ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            {displayed.length - i}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">{sug.content}</p>
+                            {sug.admin_note && (
+                              <p className="mt-2 text-[11px] text-brand-moss bg-brand-moss/5 border border-brand-moss/20 rounded-lg px-2.5 py-1.5 italic">
+                                <strong>Nota da equipe:</strong> {sug.admin_note}
+                              </p>
+                            )}
+                            <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                              <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                                <User className="w-3 h-3" />
+                                <span className="font-semibold text-slate-600">{sug.author_name}</span>
+                              </span>
+                              {isOwn && <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full border border-amber-200">Você</span>}
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${meta.color}`}>{meta.label}</span>
+                              <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                                <Clock className="w-3 h-3" />
+                                {new Date(sug.created_at).toLocaleDateString('pt-BR')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          id={`btn-like-sug-${sug.id}`}
+                          onClick={() => handleLike(sug.id)}
+                          disabled={hasLiked}
+                          className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border transition shrink-0 ${
+                            hasLiked
+                              ? 'bg-amber-50 border-amber-200 text-amber-600 cursor-default'
+                              : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-600'
+                          }`}>
+                          <ThumbsUp className={`w-4 h-4 ${hasLiked ? 'fill-amber-500 stroke-amber-500' : ''}`} />
+                          <span className="text-[10px] font-bold">{sug.likes}</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── FOOTER ── */}
+        <div id="sugestoes-callout" className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 to-brand-cream border border-amber-100 p-5 sm:p-6">
+          <div className="absolute top-2 right-6 text-5xl font-script text-amber-300/40 select-none">♩</div>
+          <div className="flex items-start gap-3 relative z-10">
+            <div className="p-2 bg-amber-100 rounded-xl shrink-0">
+              <Heart className="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-brand-navy">Sua voz fortalece nossa conexão!</p>
+              <p className="text-xs text-slate-500 mt-0.5 leading-relaxed max-w-lg">
+                Cada ideia compartilhada é uma nota que contribui para a sinfonia coletiva do Espalhe Melodias.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </PageWrapper>
+  );
+}

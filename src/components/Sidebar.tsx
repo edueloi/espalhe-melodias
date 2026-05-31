@@ -1,20 +1,22 @@
-import { 
-  LayoutDashboard, 
-  GraduationCap, 
-  BookOpen, 
-  MessageSquare, 
-  FolderLock, 
-  Lightbulb, 
-  UserPlus2, 
-  Settings, 
-  HeartPulse, 
-  Users, 
-  CalendarDays, 
+import {
+  LayoutDashboard,
+  GraduationCap,
+  BookOpen,
+  MessageSquare,
+  FolderLock,
+  Lightbulb,
+  UserPlus2,
+  Settings,
+  HeartPulse,
+  Users,
+  CalendarDays,
   LogOut,
   HelpCircle,
   FileHeart,
   Key,
-  Sparkles
+  Sparkles,
+  Globe,
+  Link2,
 } from 'lucide-react';
 import { UserRole } from '../types';
 
@@ -27,6 +29,7 @@ interface SidebarProps {
   pendingRequestsCount: number;
   openHelpRequestsCount: number;
   onLogout: () => void;
+  onGoToPublicSite: () => void;
 }
 
 export default function Sidebar({
@@ -37,7 +40,8 @@ export default function Sidebar({
   userAvatar,
   pendingRequestsCount,
   openHelpRequestsCount,
-  onLogout
+  onLogout,
+  onGoToPublicSite
 }: SidebarProps) {
   
   // Custom navigation items based on permission roles
@@ -63,7 +67,8 @@ export default function Sidebar({
   ];
 
   const superAdminTabs = [
-    { id: 'usuarios-admin', label: 'Usuários do Sistema', icon: Key, minRole: 'super-admin' }
+    { id: 'usuarios-admin', label: 'Usuários do Sistema', icon: Key, minRole: 'super-admin' },
+    { id: 'invite-links',   label: 'Links de Convite',   icon: Link2, minRole: 'super-admin' },
   ];
 
   const hasAccess = (itemMinRole?: string) => {
@@ -232,15 +237,22 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* Toggle Public Website Preview or Logout */}
+        {/* Navigation buttons */}
         <div className="grid grid-cols-1 gap-2">
-          <button 
+          <button
+            onClick={onGoToPublicSite}
+            className="w-full h-9 flex items-center justify-center space-x-2 rounded-lg bg-brand-moss/10 text-brand-moss-light hover:bg-brand-moss/20 hover:text-brand-cream border border-brand-moss/30 text-xs font-semibold transition-all cursor-pointer"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>Ver Site Público</span>
+          </button>
+          <button
             id="btn-logout"
             onClick={onLogout}
             className="w-full h-9 flex items-center justify-center space-x-2 rounded-lg bg-brand-clay/10 text-brand-clay-light hover:bg-brand-clay/20 hover:text-brand-cream border border-brand-clay/30 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>Sair / Redefinir</span>
+            <span>Sair da Conta</span>
           </button>
         </div>
       </div>

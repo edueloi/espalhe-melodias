@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from './lib/auth';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import DashboardView from './components/DashboardView';
@@ -9,520 +10,315 @@ import HelpRequestView from './components/HelpRequestView';
 import EventsView from './components/EventsView';
 import LearningsView from './components/LearningsView';
 import AdminUsersView from './components/AdminUsersView';
+import InviteLinksView from './components/InviteLinksView';
+import ConfigView from './components/ConfigView';
+import SugestoesView from './components/SugestoesView';
 import ProjectsView from './components/ProjectsView';
+import LoginView from './components/LoginView';
+import PublicSite from './components/PublicSite';
+import InviteRegisterView from './components/InviteRegisterView';
+import EventPublicView from './components/EventPublicView';
+import { ToastProvider } from './components/ui';
 
-import { 
-  INITIAL_USERS, 
-  INITIAL_PROFESSIONALS, 
-  INITIAL_FORUM_TOPICS, 
-  INITIAL_MATERIALS, 
-  INITIAL_EVENTS, 
-  INITIAL_SUPPORT_REQUESTS, 
-  INITIAL_SUGGESTIONS, 
-  INITIAL_BLOGS 
-} from './mockData';
+type AppView = 'public' | 'login' | 'member-area' | 'invite' | 'event-public';
 
-import { 
-  AppUser, 
-  ProfessionalProfile, 
-  ForumTopic, 
-  ForumReply, 
-  SupportMaterial, 
-  HealthEvent, 
-  SupportRequest, 
-  SuggestionIdea, 
-  BlogPost, 
-  UserRole 
-} from './types';
+// Mapa tab → segmento de URL
+const TAB_TO_PATH: Record<string, string> = {
+  'projetos-melodias':   '/apresentacao',
+  'dashboard':           '/dashboard',
+  'aprendizados':        '/blog',
+  'materiais-apoio':     '/materiais',
+  'forum':               '/forum',
+  'admin-materiais':     '/admin-materiais',
+  'admin-sugestoes':     '/sugestoes',
+  'admin-solicitacoes':  '/solicitacoes',
+  'admin-configuracoes': '/configuracoes',
+  'preciso-ajuda':       '/ajuda',
+  'diretorio-membros':   '/diretorio',
+  'encontros-eventos':   '/eventos',
+  'usuarios-admin':      '/usuarios',
+  'invite-links':        '/convites',
+};
 
-export default function App() {
-  // Navigation active tab
-  const [currentTab, setCurrentTab] = useState<string>('projetos-melodias');
-  
-  // Search state across widgets
-  const [searchTerm, setSearchTerm] = useState<string>('');
+const PATH_TO_TAB: Record<string, string> = Object.fromEntries(
+  Object.entries(TAB_TO_PATH).map(([tab, path]) => [path, tab])
+);
 
-  // STATEFUL REGISTRIES (Initialized from localStorage to permit true persistence)
-  const [users, setUsers] = useState<AppUser[]>(() => {
-    const saved = localStorage.getItem('melodias_users');
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
-  });
+function getPath() {
+  return window.location.pathname;
+}
 
-  const [professionals, setProfessionals] = useState<ProfessionalProfile[]>(() => {
-    const saved = localStorage.getItem('melodias_professionals');
-    return saved ? JSON.parse(saved) : INITIAL_PROFESSIONALS;
-  });
+function detectView(): { view: AppView; tab: string; inviteToken: string; eventPublicId: string } {
+  const path = getPath();
+  if (path === '/login') return { view: 'login', tab: 'projetos-melodias', inviteToken: '', eventPublicId: '' };
+  if (path.startsWith('/convite/')) {
+    return { view: 'invite', tab: 'projetos-melodias', inviteToken: path.replace('/convite/', ''), eventPublicId: '' };
+  }
+  if (path.startsWith('/evento/')) {
+    return { view: 'event-public', tab: 'projetos-melodias', inviteToken: '', eventPublicId: path.replace('/evento/', '') };
+  }
+  const tab = PATH_TO_TAB[path];
+  if (tab) return { view: 'member-area', tab, inviteToken: '', eventPublicId: '' };
+  return { view: 'public', tab: 'projetos-melodias', inviteToken: '', eventPublicId: '' };
+}
 
-  const [forumTopics, setForumTopics] = useState<ForumTopic[]>(() => {
-    const saved = localStorage.getItem('melodias_forum');
-    return saved ? JSON.parse(saved) : INITIAL_FORUM_TOPICS;
-  });
+// ─── Inner app (needs AuthContext) ────────────────────────────────────────────
 
-  const [materials, setMaterials] = useState<SupportMaterial[]>(() => {
-    const saved = localStorage.getItem('melodias_materials');
-    return saved ? JSON.parse(saved) : INITIAL_MATERIALS;
-  });
+function AppInner() {
+  const { user, loading, logout } = useAuth();
 
-  const [events, setEvents] = useState<HealthEvent[]>(() => {
-    const saved = localStorage.getItem('melodias_events');
-    return saved ? JSON.parse(saved) : INITIAL_EVENTS;
-  });
+  const initial = detectView();
+  const [appView,      setAppView]      = useState<AppView>(initial.view);
+  const [currentTab,   setCurrentTabRaw] = useState<string>(initial.tab);
+  const [inviteToken,    setInviteToken]    = useState<string>(initial.inviteToken);
+  const [eventPublicId,  setEventPublicId]  = useState<string>(initial.eventPublicId);
+  const [searchTerm,   setSearchTerm]   = useState('');
+  const [sidebarOpen,  setSidebarOpen]  = useState(false);
 
-  const [suggestions, setSuggestions] = useState<SuggestionIdea[]>(() => {
-    const saved = localStorage.getItem('melodias_suggestions');
-    return saved ? JSON.parse(saved) : INITIAL_SUGGESTIONS;
-  });
-
-  const [helpRequests, setHelpRequests] = useState<SupportRequest[]>(() => {
-    const saved = localStorage.getItem('melodias_helprequests');
-    return saved ? JSON.parse(saved) : INITIAL_SUPPORT_REQUESTS;
-  });
-
-  const [blogs, setBlogs] = useState<BlogPost[]>(() => {
-    const saved = localStorage.getItem('melodias_blogs');
-    return saved ? JSON.parse(saved) : INITIAL_BLOGS;
-  });
-
-  // Current session dynamic simulation (Starts by default on Super Admin 'Karen Silveira')
-  const [currentUserId, setCurrentUserId] = useState<string>('usr-1');
-  const currentUser = users.find(u => u.id === currentUserId) || users[0];
-
-  // Sync to local storage regularly
+  // Atualiza a URL quando muda de view ou tab (history API, sem #)
   useEffect(() => {
-    localStorage.setItem('melodias_users', JSON.stringify(users));
-  }, [users]);
-
-  useEffect(() => {
-    localStorage.setItem('melodias_professionals', JSON.stringify(professionals));
-  }, [professionals]);
-
-  useEffect(() => {
-    localStorage.setItem('melodias_forum', JSON.stringify(forumTopics));
-  }, [forumTopics]);
-
-  useEffect(() => {
-    localStorage.setItem('melodias_materials', JSON.stringify(materials));
-  }, [materials]);
-
-  useEffect(() => {
-    localStorage.setItem('melodias_events', JSON.stringify(events));
-  }, [events]);
-
-  useEffect(() => {
-    localStorage.setItem('melodias_suggestions', JSON.stringify(suggestions));
-  }, [suggestions]);
-
-  useEffect(() => {
-    localStorage.setItem('melodias_helprequests', JSON.stringify(helpRequests));
-  }, [helpRequests]);
-
-  useEffect(() => {
-    localStorage.setItem('melodias_blogs', JSON.stringify(blogs));
-  }, [blogs]);
-
-  // RESET DATABASE SYSTEM STATE
-  const handleReset = () => {
-    if (confirm('Deseja resetar todas as interações e retornar às configurações originais?')) {
-      localStorage.clear();
-      setUsers(INITIAL_USERS);
-      setProfessionals(INITIAL_PROFESSIONALS);
-      setForumTopics(INITIAL_FORUM_TOPICS);
-      setMaterials(INITIAL_MATERIALS);
-      setEvents(INITIAL_EVENTS);
-      setSuggestions(INITIAL_SUGGESTIONS);
-      setHelpRequests(INITIAL_SUPPORT_REQUESTS);
-      setBlogs(INITIAL_BLOGS);
-      setCurrentUserId('usr-1');
-      setCurrentTab('dashboard');
-      alert('Banco redimensionado com sucesso!');
+    if (appView === 'public') {
+      if (getPath() !== '/') window.history.replaceState(null, '', '/');
+    } else if (appView === 'login') {
+      if (getPath() !== '/login') window.history.replaceState(null, '', '/login');
+    } else if (appView === 'member-area') {
+      const path = TAB_TO_PATH[currentTab] ?? `/${currentTab}`;
+      if (getPath() !== path) window.history.replaceState(null, '', path);
     }
-  };
+  }, [appView, currentTab]);
 
-  // HANDLERS FOR DYNAMIC INTERACTIVE FLOWS
+  // Redireciona quando sessão restaurada na tela de login
+  useEffect(() => {
+    if (!loading && user && appView === 'login') {
+      setAppView('member-area');
+      setCurrentTabRaw('dashboard');
+    }
+  }, [loading, user, appView]);
 
-  // 1. Suggestion handler
-  const handleAddSuggestion = (content: string) => {
-    const newSug: SuggestionIdea = {
-      id: `sug-${Date.now()}`,
-      authorName: currentUser.name,
-      content,
-      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      likes: 0
+  // Navega quando usuário usa botão voltar/avançar do browser
+  useEffect(() => {
+    const onPop = () => {
+      const detected = detectView();
+      setAppView(detected.view);
+      setCurrentTabRaw(detected.tab);
+      setInviteToken(detected.inviteToken);
+      setEventPublicId(detected.eventPublicId);
     };
-    setSuggestions(prev => [...prev, newSug]);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  const setCurrentTab = (tab: string) => {
+    setCurrentTabRaw(tab);
+    setSidebarOpen(false);
+    const path = TAB_TO_PATH[tab] ?? `/${tab}`;
+    window.history.pushState(null, '', path);
   };
 
-  // 2. Event subscription handler
-  const handleEnrollInEvent = (eventId: string) => {
-    setEvents(prev => prev.map(evt => {
-      if (evt.id === eventId) {
-        return {
-          ...evt,
-          isEnrolled: true,
-          participantsCount: evt.participantsCount + 1
-        };
-      }
-      return evt;
-    }));
+  const handleLoginSuccess = () => {
+    setAppView('member-area');
+    setCurrentTabRaw('dashboard');
+    window.history.replaceState(null, '', '/dashboard');
   };
 
-  // 3. Admin create event handler
-  const handleAddEvent = (title: string, category: any, date: string, time: string, desc: string, instructor: string) => {
-    const newEvt: HealthEvent = {
-      id: `evt-${Date.now()}`,
-      title,
-      category,
-      date,
-      time,
-      description: desc,
-      instructorName: instructor,
-      instructorAvatar: currentUser.avatar,
-      status: 'upcoming',
-      participantsCount: 0,
-      isEnrolled: false
-    };
-    setEvents(prev => [...prev, newEvt]);
+  const handleLogout = async () => {
+    await logout();
+    setAppView('public');
+    setCurrentTabRaw('projetos-melodias');
+    window.history.replaceState(null, '', '/');
   };
 
-  // 4. Create support material guide handler
-  const handleAddMaterial = (title: string, category: any, type: any, description: string, restricted: boolean) => {
-    const newMat: SupportMaterial = {
-      id: `mat-${Date.now()}`,
-      title,
-      category,
-      type,
-      description,
-      downloadUrl: '#',
-      authorName: currentUser.name,
-      dateAdded: new Date().toISOString().substring(0, 10),
-      restrictedToMembers: restricted
-    };
-    setMaterials(prev => [...prev, newMat]);
-  };
+  // ── EVENTO PÚBLICO ───────────────────────────────────────────────────────────
 
-  // 5. Submit distress help request handler
-  const handleHelpSubmit = (urgency: 'baixa' | 'media' | 'alta' | 'urgente', desc: string) => {
-    const newReq: SupportRequest = {
-      id: `req-${Date.now()}`,
-      patientName: currentUser.name,
-      patientEmail: currentUser.email,
-      urgency,
-      description: desc,
-      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      status: 'Aberto'
-    };
-    setHelpRequests(prev => [...prev, newReq]);
-  };
+  if (appView === 'event-public') {
+    return <EventPublicView eventId={eventPublicId} />;
+  }
 
-  // 6. Accept, update or close help tickets handler
-  const handleTriageUpdate = (requestId: string, status: 'Aberto' | 'Em Atendimento' | 'Concluído', assignedName?: string) => {
-    setHelpRequests(prev => prev.map(req => {
-      if (req.id === requestId) {
-        return {
-          ...req,
-          status,
-          assignedProfessional: assignedName || req.assignedProfessional
-        };
-      }
-      return req;
-    }));
-  };
+  // ── INVITE REGISTER ──────────────────────────────────────────────────────────
 
-  // 7. Publish Forum Topic
-  const handleAddForumTopic = (title: string, category: string, content: string) => {
-    const newTopic: ForumTopic = {
-      id: `top-${Date.now()}`,
-      title,
-      category,
-      authorName: currentUser.name,
-      authorRole: currentUser.role,
-      authorAvatar: currentUser.avatar,
-      content,
-      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      likes: 0,
-      views: 0,
-      replies: []
-    };
-    setForumTopics(prev => [...prev, newTopic]);
-  };
+  if (appView === 'invite') {
+    return (
+      <InviteRegisterView
+        token={inviteToken}
+        onSuccess={() => {
+          window.location.href = '/dashboard';
+        }}
+      />
+    );
+  }
 
-  // 8. Add Reply to Forum Topic
-  const handleAddReply = (topicId: string, content: string, isExpertReply: boolean) => {
-    const newRep: ForumReply = {
-      id: `rep-${Date.now()}`,
-      authorName: currentUser.name,
-      authorRole: currentUser.role,
-      authorAvatar: currentUser.avatar,
-      content,
-      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      isExpertReply
-    };
-    setForumTopics(prev => prev.map(top => {
-      if (top.id === topicId) {
-        return {
-          ...top,
-          replies: [...top.replies, newRep],
-          isSolved: isExpertReply ? true : top.isSolved
-        };
-      }
-      return top;
-    }));
-  };
+  // ── LOADING ──────────────────────────────────────────────────────────────────
 
-  // 9. Like Topic
-  const handleLikeTopic = (topicId: string) => {
-    setForumTopics(prev => prev.map(top => {
-      if (top.id === topicId) {
-        return {
-          ...top,
-          likes: top.likes + 1
-        };
-      }
-      return top;
-    }));
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-brand-cream flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-clay to-brand-moss flex items-center justify-center shadow-xl mx-auto">
+            <span className="text-2xl text-white font-serif font-black italic">♩Ψ</span>
+          </div>
+          <div className="flex items-center space-x-2 text-slate-500 text-sm">
+            <span className="animate-spin text-lg">⟳</span>
+            <span>Carregando...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  // 10. Approve Pending registration request
-  const handleApproveMembership = (userId: string) => {
-    setUsers(prev => prev.map(usr => {
-      if (usr.id === userId) {
-        return {
-          ...usr,
-          approvalStatus: 'approved'
-        };
-      }
-      return usr;
-    }));
-  };
+  // ── PUBLIC SITE ───────────────────────────────────────────────────────────────
 
-  // 11. Promote/Demote User Role Level in dashboard
-  const handleToggleUserRole = (userId: string, newRole: UserRole) => {
-    setUsers(prev => prev.map(usr => {
-      if (usr.id === userId) {
-        return {
-          ...usr,
-          role: newRole
-        };
-      }
-      return usr;
-    }));
-  };
+  if (appView === 'public') {
+    return (
+      <PublicSite
+        blogs={[]}
+        events={[]}
+        onGoToLogin={() => {
+          setAppView('login');
+          window.history.pushState(null, '', '/login');
+        }}
+      />
+    );
+  }
 
-  // 12. Create blog publication
-  const handleAddBlog = (title: string, excerpt: string, content: string, category: string, imageUrl: string) => {
-    const newBlog: BlogPost = {
-      id: `blog-${Date.now()}`,
-      title,
-      excerpt,
-      content,
-      category,
-      imageUrl,
-      authorName: currentUser.name,
-      authorAvatar: currentUser.avatar,
-      date: new Date().toISOString().substring(0, 10),
-      readTime: '5 min'
-    };
-    setBlogs(prev => [...prev, newBlog]);
-  };
+  // ── LOGIN ─────────────────────────────────────────────────────────────────────
 
-  // 13. Update professional profile details
-  const handleUpdateProfessional = (updatedProf: ProfessionalProfile) => {
-    setProfessionals(prev => {
-      const exists = prev.some(p => p.id === updatedProf.id || p.userId === updatedProf.userId);
-      if (exists) {
-        return prev.map(p => p.userId === updatedProf.userId || p.id === updatedProf.id ? { ...p, ...updatedProf } : p);
-      } else {
-        return [...prev, updatedProf];
-      }
-    });
-  };
+  if (appView === 'login') {
+    return (
+      <LoginView
+        onLoginSuccess={handleLoginSuccess}
+        onGoToPublicSite={() => {
+          setAppView('public');
+          window.history.pushState(null, '', '/');
+        }}
+      />
+    );
+  }
 
-  // BADGE COUNTERS DYNAMIC RETRIEVAL
-  const pendingApprovalsCount = users.filter(u => u.approvalStatus === 'pending').length;
-  const helpRequestsCount = helpRequests.filter(r => r.status === 'Aberto').length;
+  // ── MEMBER AREA ───────────────────────────────────────────────────────────────
+
+  if (!user) {
+    setAppView('login');
+    window.history.replaceState(null, '', '/login');
+    return null;
+  }
+
+  const userForComponents = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    avatar: user.avatar,
+    approvalStatus: (user.approvalStatus as 'approved' | 'pending' | 'rejected') ?? 'approved',
+  };
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans select-none" id="melodias-root-container">
-      
-      {/* SIDEBAR NAVIGATION PANEL */}
-      <Sidebar 
-        currentTab={currentTab}
-        setCurrentTab={setCurrentTab}
-        userRole={currentUser.role}
-        userName={currentUser.name}
-        userAvatar={currentUser.avatar}
-        pendingRequestsCount={pendingApprovalsCount}
-        openHelpRequestsCount={helpRequestsCount}
-        onLogout={handleReset}
-      />
 
-      {/* CORE WORKSPACE CONTENT AREA WITH RESTRICTED SCROLL */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        
-        {/* HEADER TOOL PANEL WITH SWITCHABLE SIMULATED USER */}
-        <Header 
-          currentUser={currentUser}
-          availableUsers={users}
-          onUserSwitch={(userId) => {
-            setCurrentUserId(userId);
-            // Auto switch tabs if the new user is not permitted on the current view to avoid blank views
-            const targetUser = users.find(u => u.id === userId);
-            if (targetUser && targetUser.role === 'member') {
-              if (['admin-materiais', 'admin-solicitacoes', 'admin-configuracoes', 'usuarios-admin'].includes(currentTab)) {
-                setCurrentTab('dashboard');
-              }
-            }
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <div className={`fixed lg:static inset-y-0 left-0 z-50 transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <Sidebar
+          currentTab={currentTab}
+          setCurrentTab={setCurrentTab}
+          userRole={user.role}
+          userName={user.name}
+          userAvatar={user.avatar}
+          pendingRequestsCount={0}
+          openHelpRequestsCount={0}
+          onLogout={handleLogout}
+          onGoToPublicSite={() => {
+            setAppView('public');
+            window.history.pushState(null, '', '/');
           }}
+        />
+      </div>
+
+      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
+
+        <Header
+          currentUser={userForComponents as never}
+          availableUsers={[]}
+          onUserSwitch={() => {}}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
+          onGoToPublicSite={() => {
+            setAppView('public');
+            window.history.pushState(null, '', '/');
+          }}
+          onToggleSidebar={() => setSidebarOpen(v => !v)}
         />
 
-        {/* CONTAINER FOR MAIN VIEWS SCROLLABLE FOR STRETCH REDUCTION */}
-        <main className="flex-1 overflow-y-auto p-12 bg-slate-50/50 custom-scrollbar">
-          
-          {currentTab === 'projetos-melodias' && (
-            <ProjectsView />
-          )}
-          
+        <main className="flex-1 overflow-y-auto bg-slate-50/50 custom-scrollbar">
+
+          {currentTab === 'projetos-melodias' && <ProjectsView />}
+
           {currentTab === 'dashboard' && (
-            <DashboardView 
-              currentUser={currentUser}
-              totalMembersCount={users.length}
-              activeMembersCount={users.filter(u => u.approvalStatus === 'approved').length}
-              pendingApprovalCount={pendingApprovalsCount}
-              enrollmentsCount={events.filter(e => e.isEnrolled).length + 12}
-              materialsCount={materials.length}
-              forumCount={forumTopics.length}
-              suggestionsCount={suggestions.length}
-              suggestions={suggestions}
+            <DashboardView
+              currentUser={userForComponents as never}
               onsetTab={setCurrentTab}
-              onAddSuggestion={handleAddSuggestion}
-              upcomingEventsCount={events.filter(e => e.status==='upcoming').length}
             />
           )}
 
           {currentTab === 'aprendizados' && (
-            <LearningsView 
-              blogs={blogs}
-              currentUser={currentUser}
-              onAddBlog={handleAddBlog}
-            />
+            <LearningsView currentUser={userForComponents as never} />
           )}
 
           {currentTab === 'materiais-apoio' && (
-            <MaterialsView 
-              materials={materials}
-              currentUser={currentUser}
-              onAddMaterial={handleAddMaterial}
-            />
+            <MaterialsView currentUser={userForComponents as never} />
           )}
 
           {currentTab === 'forum' && (
-            <ForumView 
-              topics={forumTopics}
-              currentUser={currentUser}
-              onAddTopic={handleAddForumTopic}
-              onAddReply={handleAddReply}
-              onLikeTopic={handleLikeTopic}
-            />
+            <ForumView currentUser={userForComponents as never} />
           )}
 
-          {/* ADMINISTRATION CATEGORIES */}
           {currentTab === 'admin-materiais' && (
-            <MaterialsView 
-              materials={materials}
-              currentUser={currentUser}
-              onAddMaterial={handleAddMaterial}
-            />
+            <MaterialsView currentUser={userForComponents as never} />
           )}
 
-          {currentTab === 'admin-sugestoes' && (
-            <div className="bg-white border rounded-2xl p-6 shadow-sm space-y-4">
-              <h3 className="text-base font-bold text-slate-800 border-b pb-2">💡 Caixa de Sugestões dos Associados</h3>
-              <p className="text-xs text-slate-450">Listagem de conselhos propostos por membros para a plataforma.</p>
-              <div className="space-y-3">
-                {suggestions.map(sug => (
-                  <div key={sug.id} className="p-4 bg-slate-50 border border-slate-150 rounded-xl space-y-2">
-                    <p className="text-xs text-slate-700 italic">"{sug.content}"</p>
-                    <div className="flex justify-between text-[11px] text-slate-400 font-bold">
-                      <span>Proponente: {sug.authorName}</span>
-                      <span>Enviado em: {sug.createdAt}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {currentTab === 'admin-sugestoes' && <SugestoesView isAdmin />}
 
-          {currentTab === 'admin-solicitacoes' && (
-            <AdminUsersView 
-              users={users}
-              currentUser={currentUser}
-              onApproveUser={handleApproveMembership}
-              onToggleUserRole={handleToggleUserRole}
-              viewType="solicitacoes"
-            />
-          )}
+          {currentTab === 'admin-solicitacoes' && <AdminUsersView viewType="solicitacoes" />}
 
           {currentTab === 'admin-configuracoes' && (
-            <div className="bg-white border p-8 rounded-2xl shadow-sm space-y-6 max-w-2xl">
-              <h3 className="text-base font-bold text-slate-800 pb-3 border-b">⚙️ Configurações Gerais do Sistema Melodias</h3>
-              
-              <div className="space-y-4 text-xs">
-                <div className="p-4 bg-[#581a2e]/5 border border-[#581a2e]/10 rounded-xl">
-                  <p className="font-bold text-slate-850">Backup em Tempo Real</p>
-                  <p className="text-slate-500 mt-1">Todas as sessões abertas de triagem, comentários de fórum e agendamentos estão consolidados localmente no seu navegador para uso demonstrativo imediato.</p>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="font-bold text-slate-700">Integridade dos Profissionais:</p>
-                  <p className="text-slate-500 font-sans leading-relaxed">Cada psicólogo verificado tem responsabilidade técnica sobre suas respostas no fórum, necessitando o registro CRP ativo no conselho regional correspondente.</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* COMMUNITY CHANNELS */}
-          {currentTab === 'preciso-ajuda' && (
-            <HelpRequestView 
-              requests={helpRequests}
-              currentUser={currentUser}
-              onSubmitRequest={handleHelpSubmit}
-              onUpdateStatus={handleTriageUpdate}
+            <ConfigView
+              currentUser={userForComponents as never}
+              onResetData={() => {}}
+              totalUsers={0}
+              totalMaterials={0}
+              totalTopics={0}
+              totalEvents={0}
             />
           )}
 
-          {currentTab === 'diretorio-membros' && (
-            <DirectoryView 
-              professionals={professionals}
-              currentUser={currentUser}
-              onUpdateProfessional={handleUpdateProfessional}
-            />
-          )}
+          {currentTab === 'preciso-ajuda' && <HelpRequestView />}
 
-          {currentTab === 'encontros-eventos' && (
-            <EventsView 
-              events={events}
-              currentUser={currentUser}
-              onEnrollInEvent={handleEnrollInEvent}
-              onAddEvent={handleAddEvent}
-            />
-          )}
+          {currentTab === 'diretorio-membros' && <DirectoryView />}
 
-          {/* SUPER ADMIN LEVEL */}
-          {currentTab === 'usuarios-admin' && (
-            <AdminUsersView 
-              users={users}
-              currentUser={currentUser}
-              onApproveUser={handleApproveMembership}
-              onToggleUserRole={handleToggleUserRole}
-              viewType="usuarios"
-            />
-          )}
+          {currentTab === 'encontros-eventos' && <EventsView />}
+
+          {currentTab === 'usuarios-admin' && <AdminUsersView viewType="usuarios" />}
+
+          {currentTab === 'invite-links' && <InviteLinksView />}
 
         </main>
       </div>
-
     </div>
+  );
+}
+
+// ─── Root com AuthProvider ────────────────────────────────────────────────────
+
+export default function App() {
+  return (
+    <ToastProvider>
+      <AuthProvider>
+        <AppInner />
+      </AuthProvider>
+    </ToastProvider>
   );
 }

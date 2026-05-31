@@ -1,543 +1,412 @@
-import React, { useState } from 'react';
-import { 
-  BookMarked, 
-  Search, 
-  Clock, 
-  ArrowLeft, 
-  PenTool, 
-  ThumbsUp, 
-  Share2, 
-  CheckCircle,
-  HelpCircle,
-  Sparkles,
-  FileText,
-  Image,
-  Layers,
-  Heart,
-  Bookmark
+import React, { useState, useEffect } from 'react';
+import {
+  BookMarked, Search, Clock, ArrowLeft, PenTool,
+  Share2, CheckCircle, FileText, Image,
+  Layers, Heart, X
 } from 'lucide-react';
-import { BlogPost, AppUser } from '../types';
+import { AppUser } from '../types';
+import { PageWrapper, ContentCard } from './ui/PageWrapper';
+import { blogsApi, type BlogPost } from '../lib/api';
 
 interface LearningsViewProps {
-  blogs: BlogPost[];
   currentUser: AppUser;
-  onAddBlog: (title: string, excerpt: string, content: string, category: string, imageUrl: string) => void;
 }
 
-export default function LearningsView({
-  blogs,
-  currentUser,
-  onAddBlog
-}: LearningsViewProps) {
+const PRESET_IMAGES = [
+  { url: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=700&auto=format&fit=crop', label: 'Meditação' },
+  { url: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?q=80&w=700&auto=format&fit=crop', label: 'Luz solar' },
+  { url: 'https://images.unsplash.com/photo-1512438248247-f0f2a5a8b7f0?q=80&w=700&auto=format&fit=crop', label: 'Escrita' },
+  { url: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=700&auto=format&fit=crop', label: 'Yoga' },
+  { url: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=700&auto=format&fit=crop', label: 'Natureza' },
+];
+
+const CATEGORIES = ['todos', 'Informação', 'Estilo de Vida', 'Autoconhecimento', 'Curiosidades'];
+
+const CAT_COLORS: Record<string, string> = {
+  'Informação': 'bg-rose-50 text-rose-700 border-rose-100',
+  'Estilo de Vida': 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  'Autoconhecimento': 'bg-violet-50 text-violet-700 border-violet-100',
+  'Curiosidades': 'bg-amber-50 text-amber-700 border-amber-100',
+};
+
+export default function LearningsView({ currentUser }: LearningsViewProps) {
+  const [blogs, setBlogs] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedBlogId, setSelectedBlogId] = useState<string | null>(null);
+  const [activeBlogFull, setActiveBlogFull] = useState<BlogPost | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string>('todos');
-  
-  // Blog submission states
+  const [activeCategory, setActiveCategory] = useState('todos');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newBlogTitle, setNewBlogTitle] = useState('');
-  const [newBlogExcerpt, setNewBlogExcerpt] = useState('');
-  const [newBlogContent, setNewBlogContent] = useState('');
-  const [newBlogCategory, setNewBlogCategory] = useState('Autoconhecimento');
-  const [selectedPresetImage, setSelectedPresetImage] = useState('https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=700&auto=format&fit=crop');
-  const [successAnimation, setSuccessAnimation] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newExcerpt, setNewExcerpt] = useState('');
+  const [newContent, setNewContent] = useState('');
+  const [newCategory, setNewCategory] = useState('Autoconhecimento');
+  const [presetImg, setPresetImg] = useState(PRESET_IMAGES[0].url);
+  const [publishing, setPublishing] = useState(false);
+  const [liked, setLiked] = useState<Record<string, boolean>>({});
 
-  // Likes/Bookmarked Simulation state
-  const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
-  const [bookmarkedPosts, setBookmarkedPosts] = useState<Record<string, boolean>>({});
+  const loadBlogs = (cat?: string, q?: string) => {
+    setLoading(true);
+    blogsApi.list({ category: cat !== 'todos' ? cat : undefined, search: q || undefined, limit: 50 })
+      .then(res => setBlogs(res.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
 
-  const presetImages = [
-    { url: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=700&auto=format&fit=crop', label: 'Meditação / Equilíbrio' },
-    { url: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?q=80&w=700&auto=format&fit=crop', label: 'Caminho / Luz solar' },
-    { url: 'https://images.unsplash.com/photo-1512438248247-f0f2a5a8b7f0?q=80&w=700&auto=format&fit=crop', label: 'Escrita / Registro' },
-    { url: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=700&auto=format&fit=crop', label: 'Yoga / Relaxamento' },
-    { url: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=700&auto=format&fit=crop', label: 'Natureza / Paz' }
-  ];
+  useEffect(() => { loadBlogs(); }, []);
+  useEffect(() => { loadBlogs(activeCategory, searchQuery); }, [activeCategory, searchQuery]);
 
-  const categories = ['todos', 'Informação', 'Estilo de Vida', 'Autoconhecimento', 'Curiosidades'];
+  const openBlog = async (id: string) => {
+    setSelectedBlogId(id);
+    try {
+      const full = await blogsApi.get(id);
+      setActiveBlogFull(full);
+    } catch { setActiveBlogFull(null); }
+  };
 
-  const filteredBlogs = blogs.filter(b => {
-    const matchesSearch = b.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          b.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          b.content.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = activeCategory === 'todos' || b.category === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const handleLike = async (id: string) => {
+    try {
+      const res = await blogsApi.like(id);
+      setLiked(p => ({ ...p, [id]: res.liked }));
+    } catch { /* ignore */ }
+  };
 
-  const activeBlog = blogs.find(b => b.id === selectedBlogId);
+  const filtered = blogs; // filtering is server-side
 
-  const handleCreateBlog = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newBlogTitle.trim() || !newBlogContent.trim() || !newBlogExcerpt.trim()) {
-      alert('Favor preencher o título, resumo de chamada e conteúdo do artigo!');
-      return;
-    }
-
-    setSuccessAnimation(true);
-    setTimeout(() => {
-      onAddBlog(
-        newBlogTitle,
-        newBlogExcerpt,
-        newBlogContent,
-        newBlogCategory,
-        selectedPresetImage
-      );
-      // Reset forms state
-      setNewBlogTitle('');
-      setNewBlogExcerpt('');
-      setNewBlogContent('');
+    if (!newTitle.trim() || !newExcerpt.trim() || !newContent.trim()) return;
+    setPublishing(true);
+    try {
+      await blogsApi.create({ title: newTitle, excerpt: newExcerpt, content: newContent, category: newCategory, imageUrl: presetImg, readTime: '5 min' });
+      setNewTitle(''); setNewExcerpt(''); setNewContent('');
       setShowAddForm(false);
-      setSuccessAnimation(false);
-    }, 1500);
+      loadBlogs();
+    } catch (err) { console.error(err); }
+    finally { setPublishing(false); }
   };
 
-  const toggleLike = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setLikedPosts(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const toggleBookmark = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setBookmarkedPosts(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  return (
-    <div className="space-y-8 animate-fadeIn" id="blog-main-view">
-      
-      {/* 1. BRAND PLATFORM BANNER HEADER */}
-      <div className="bg-gradient-to-br from-brand-sand/50 via-[#fcfaf7] to-white border border-brand-sand rounded-3xl p-6 md:p-8 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2">
-            <span className="h-2 w-2 rounded-full bg-brand-clay animate-pulse"></span>
-            <span className="text-[10px] font-bold text-brand-clay uppercase tracking-widest font-sans">Blog Científico Oficial</span>
-          </div>
-          <h2 className="text-2xl md:text-3xl font-serif font-bold text-brand-navy tracking-tight">
-            Sinfonias da Mente <span className="font-script text-brand-clay font-normal text-3xl md:text-4xl block sm:inline-block">e Aprendizados</span>
-          </h2>
-          <p className="text-xs text-brand-navy-light max-w-xl leading-relaxed">
-            Nossos psicoterapeutas compartilham saberes sobre equilíbrio emocional, autotransparência e saúde integrativa. Todos os textos são validados academicamente antes da publicação externa.
-          </p>
-        </div>
-
-        {/* Action Button for Professionals and Admins */}
-        {currentUser.role !== 'member' && !showAddForm && (
+  // ── SINGLE ARTICLE VIEW ──────────────────────────────────────────────────
+  if (selectedBlogId) {
+    const post = activeBlogFull;
+    return (
+      <PageWrapper id="blog-article-view">
+        <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
           <button
-            id="btn-trigger-write-article"
-            onClick={() => setShowAddForm(true)}
-            className="px-5 py-3 bg-brand-clay hover:bg-brand-clay-dark text-white text-xs font-bold uppercase tracking-wider rounded-xl flex items-center justify-center space-x-2 shadow-md hover:shadow-lg hover:scale-[1.01] transition-all cursor-pointer grow-0 shrink-0"
+            onClick={() => { setSelectedBlogId(null); setActiveBlogFull(null); }}
+            className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-brand-clay transition"
           >
-            <PenTool className="w-4 h-4 text-brand-sand" />
-            <span>Redigir Novo Artigo</span>
+            <ArrowLeft className="w-4 h-4" />
+            Voltar para Sinfonias da Mente
           </button>
-        )}
-      </div>
 
-      {/* --- PREMIUM BLOG MAKER FORM (FORMULÁRIO LINDO) --- */}
-      {showAddForm && (
-        <div className="bg-white border border-brand-sand rounded-3xl overflow-hidden shadow-xl animate-scaleUp grid grid-cols-1 lg:grid-cols-12">
-          
-          {/* Left Form Editor */}
-          <div className="lg:col-span-7 p-6 md:p-8 space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-brand-sand">
-              <div className="flex items-center space-x-2">
+          {!post ? (
+            <div className="text-center py-16 text-slate-400 text-sm">Carregando artigo...</div>
+          ) : (
+            <ContentCard padding="lg">
+              <div className="space-y-4">
+                <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full border ${CAT_COLORS[post.category] ?? 'bg-slate-50 text-slate-600 border-slate-100'}`}>
+                  {post.category}
+                </span>
+                <h1 className="text-2xl sm:text-3xl font-serif font-bold text-brand-navy leading-tight">{post.title}</h1>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-y border-brand-sand/60 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-brand-clay/10 flex items-center justify-center text-brand-clay font-bold text-lg">
+                      {post.author_name?.charAt(0) ?? '?'}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-brand-navy flex items-center gap-1.5">
+                        {post.author_name}
+                        <span className="text-[9px] bg-brand-moss text-white px-1.5 py-0.5 rounded font-sans uppercase">Pro</span>
+                      </p>
+                      <p className="text-[10px] text-slate-400">Corpo Técnico · Espalhe Melodias</p>
+                    </div>
+                  </div>
+                  <div className="text-right text-[11px] text-slate-400">
+                    <p>{new Date(post.post_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                    <p className="flex items-center justify-end gap-1 text-brand-clay mt-0.5">
+                      <Clock className="w-3 h-3" /> {post.read_time}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {post.image_url && (
+                <img src={post.image_url} alt={post.title}
+                  className="w-full h-64 sm:h-80 rounded-2xl object-cover border border-brand-sand mt-2" />
+              )}
+
+              <div className="border-l-4 border-brand-clay pl-4 italic text-brand-navy/80 font-serif leading-relaxed text-base mt-6">
+                "{post.excerpt}"
+              </div>
+
+              <div className="text-sm text-slate-600 leading-loose space-y-4 mt-4 whitespace-pre-line"
+                dangerouslySetInnerHTML={{ __html: post.content }} />
+
+              <div className="mt-8 p-5 bg-brand-sand/30 border border-brand-sand rounded-2xl text-center text-xs">
+                <p className="font-serif font-bold text-brand-navy">Conectando Profissionais. Fortalecendo Cuidados.</p>
+                <p className="text-brand-navy-light italic mt-1">"Espalhe Melodias — um ecossistema de caminhos acolhedores."</p>
+              </div>
+
+              <div className="pt-5 border-t border-brand-sand/60 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-4">
+                <button
+                  onClick={() => void handleLike(post.id)}
+                  className={`flex items-center gap-2 text-xs font-bold transition ${liked[post.id] ? 'text-brand-clay' : 'text-slate-400 hover:text-brand-clay'}`}
+                >
+                  <Heart className={`w-4 h-4 ${liked[post.id] ? 'fill-brand-clay stroke-brand-clay' : ''}`} />
+                  {liked[post.id] ? `Você gostou! (${(post.likes ?? 0) + 1})` : `Marcar como útil (${post.likes ?? 0})`}
+                </button>
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(window.location.href); alert('📋 Link copiado!'); }}
+                  className="flex items-center gap-2 text-xs font-bold text-brand-moss hover:text-brand-moss-dark transition"
+                >
+                  <Share2 className="w-4 h-4" />
+                  Compartilhar artigo
+                </button>
+              </div>
+            </ContentCard>
+          )}
+        </div>
+      </PageWrapper>
+    );
+  }
+
+  // ── FORM VIEW ────────────────────────────────────────────────────────────
+  if (showAddForm) {
+    return (
+      <PageWrapper id="blog-create-view">
+        <div className="animate-scaleUp">
+          <ContentCard padding="lg">
+            <div className="flex items-center justify-between pb-4 border-b border-brand-sand mb-6">
+              <div className="flex items-center gap-3">
                 <div className="p-2 bg-brand-clay/10 rounded-xl text-brand-clay">
                   <PenTool className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-brand-navy">Redator de Artigos Editoriais</h3>
-                  <p className="text-[10px] text-brand-navy-light">Espalhe melodias e saberes para a comunidade</p>
+                  <h3 className="text-sm font-bold text-brand-navy">Redator de Artigos</h3>
+                  <p className="text-[10px] text-slate-400">Espalhe saberes para a comunidade</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setShowAddForm(false)} 
-                className="text-xs font-bold text-slate-400 hover:text-brand-clay transition cursor-pointer"
-              >
-                Voltar à Listagem
+              <button id="btn-cancel-blog" onClick={() => setShowAddForm(false)}
+                className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-brand-clay transition">
+                <X className="w-4 h-4" /> Cancelar
               </button>
             </div>
 
-            {successAnimation ? (
-              <div className="py-20 flex flex-col items-center justify-center space-y-4 text-center animate-fadeIn">
+            {publishing ? (
+              <div className="py-20 flex flex-col items-center gap-4 text-center animate-fadeIn">
                 <span className="w-16 h-16 rounded-full bg-brand-moss/10 text-brand-moss flex items-center justify-center animate-bounce">
                   <CheckCircle className="w-9 h-9 stroke-[2.5]" />
                 </span>
                 <p className="font-serif font-bold text-brand-navy text-lg">Publicando artigo...</p>
-                <p className="text-xs text-brand-navy-light max-w-xs">Registrando seu ensinamento na plataforma científica "Espalhe Melodias".</p>
+                <p className="text-xs text-slate-400 max-w-xs">Registrando seu ensinamento na plataforma Espalhe Melodias.</p>
               </div>
             ) : (
-              <form onSubmit={handleCreateBlog} className="space-y-5">
-                
-                {/* Block 1: Category and Title */}
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-                  <div className="sm:col-span-8 space-y-1.5">
-                    <label className="text-[10px] font-bold text-brand-navy-light uppercase tracking-wider flex items-center">
-                      <FileText className="w-3.5 h-3.5 text-brand-moss mr-1" /> Título do Artigo
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ex: A sinfonia do sono: regulando o relógio biológico"
-                      value={newBlogTitle}
-                      onChange={(e) => setNewBlogTitle(e.target.value)}
-                      className="w-full text-xs text-brand-navy bg-[#FAF8F5] border border-brand-sand p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/30 focus:border-brand-clay transition-all"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-4 space-y-1.5">
-                    <label className="text-[10px] font-bold text-brand-navy-light uppercase tracking-wider flex items-center">
-                      <Layers className="w-3.5 h-3.5 text-brand-moss mr-1" /> Categoria
-                    </label>
-                    <select
-                      value={newBlogCategory}
-                      onChange={(e) => setNewBlogCategory(e.target.value)}
-                      className="w-full text-xs text-brand-navy bg-[#FAF8F5] border border-brand-sand p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/30 focus:border-brand-clay transition-all"
-                    >
-                      <option value="Informação">Informação</option>
-                      <option value="Estilo de Vida">Estilo de Vida</option>
-                      <option value="Autoconhecimento">Autoconhecimento</option>
-                      <option value="Curiosidades">Curiosidades</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Block 2: Excerpt */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-brand-navy-light uppercase tracking-wider block">
-                    Resumo Curto (Chamada de Capa)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Escreva uma frase marcante e sucinta que chame o leitor para o card principal..."
-                    value={newBlogExcerpt}
-                    onChange={(e) => setNewBlogExcerpt(e.target.value)}
-                    className="w-full text-xs text-brand-navy bg-[#FAF8F5] border border-brand-sand p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/30 focus:border-brand-clay transition-all"
-                  />
-                </div>
-
-                {/* Block 3: Image selector */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-brand-navy-light uppercase tracking-wider flex items-center">
-                    <Image className="w-3.5 h-3.5 text-brand-moss mr-1" /> Escolha a Imagem de Capa
-                  </label>
-                  <div className="grid grid-cols-5 gap-2">
-                    {presetImages.map((img, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setSelectedPresetImage(img.url)}
-                        className={`relative rounded-lg overflow-hidden h-14 border-2 transition-all ${
-                          selectedPresetImage === img.url ? 'border-brand-clay scale-[1.03] shadow-md' : 'border-transparent opacity-70 hover:opacity-100'
-                        }`}
-                      >
-                        <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
-                        <span className="absolute bottom-0 inset-x-0 bg-brand-navy/60 text-[8px] text-white py-0.5 truncate text-center">
-                          {img.label}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Block 4: Long Content */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-brand-navy-light uppercase tracking-wider block">
-                    Corpo do Texto Científico (Suporta parágrafos)
-                  </label>
-                  <textarea
-                    placeholder="Digite o artigo completo. Seja profundo, use analogias musicais e insights práticos de cuidado e respiração..."
-                    rows={10}
-                    required
-                    value={newBlogContent}
-                    onChange={(e) => setNewBlogContent(e.target.value)}
-                    className="w-full text-xs text-brand-navy bg-[#FAF8F5] border border-brand-sand p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/30 focus:border-brand-clay transition-all leading-relaxed"
-                  />
-                </div>
-
-                {/* Buttons controls */}
-                <div className="flex justify-end space-x-3 pt-4 border-t border-brand-sand/50">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddForm(false)}
-                    className="px-4 py-2.5 border border-brand-sand hover:bg-brand-sand/30 rounded-xl text-xs font-bold text-brand-navy uppercase transition cursor-pointer"
-                  >
-                    Voltar
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 bg-brand-moss hover:bg-brand-moss-dark text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md transition cursor-pointer"
-                  >
-                    Publicar no Site Melodias
-                  </button>
-                </div>
-
-              </form>
-            )}
-          </div>
-
-          {/* Right Real-time Live Preview Card Simulation */}
-          <div className="lg:col-span-5 bg-brand-sand/20 p-6 md:p-8 flex flex-col justify-center border-l border-brand-sand/40">
-            <div className="space-y-4 max-w-sm mx-auto">
-              <span className="text-[10px] text-brand-clay font-bold tracking-widest uppercase block text-center mb-1">
-                ✧ Pré-visualização em Tempo Real ✧
-              </span>
-
-              {/* Card visualizer */}
-              <div className="bg-white border border-brand-sand rounded-3xl overflow-hidden shadow-xl max-w-sm">
-                <img 
-                  src={selectedPresetImage} 
-                  alt="preview layout" 
-                  className="w-full h-40 object-cover"
-                />
-                <div className="p-5 space-y-3">
-                  <div className="flex justify-between items-center text-[9px] font-bold">
-                    <span className="bg-brand-moss/10 text-brand-moss-dark px-2.5 py-0.5 rounded-full uppercase">
-                      {newBlogCategory}
-                    </span>
-                    <span className="text-slate-400">Novo Ensinamento</span>
-                  </div>
-
-                  <h4 className="text-sm font-serif font-bold text-brand-navy line-clamp-2 min-h-[40px]">
-                    {newBlogTitle || 'Título que você está digitando no campo esquerda...'}
-                  </h4>
-
-                  <p className="text-xs text-brand-navy-light line-clamp-2 min-h-[32px] leading-relaxed">
-                    {newBlogExcerpt || 'Escreva o resumo curto para ver aqui a síntese cativante do card.'}
-                  </p>
-
-                  <div className="flex items-center justify-between pt-3 border-t border-brand-sand/40">
-                    <div className="flex items-center space-x-2">
-                      <img src={currentUser.avatar} alt="author" className="w-5 h-5 rounded-full object-cover" />
-                      <span className="text-[9px] font-bold text-brand-navy">{currentUser.name}</span>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+                {/* Form */}
+                <form id="blog-create-form" onSubmit={handleCreate} className="lg:col-span-7 space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="sm:col-span-2 space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                        <FileText className="w-3 h-3 text-brand-moss" /> Título do Artigo
+                      </label>
+                      <input id="blog-title-input" type="text" required placeholder="Ex: A sinfonia do sono..."
+                        value={newTitle} onChange={e => setNewTitle(e.target.value)}
+                        className="w-full text-xs text-brand-navy bg-brand-cream border border-brand-sand px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/30 transition" />
                     </div>
-                    <span className="text-[9px] text-[#a75a35] font-bold">Ler Artigo →</span>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                        <Layers className="w-3 h-3 text-brand-moss" /> Categoria
+                      </label>
+                      <select id="blog-category-select" value={newCategory} onChange={e => setNewCategory(e.target.value)}
+                        className="w-full text-xs text-brand-navy bg-brand-cream border border-brand-sand px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/30 transition">
+                        {CATEGORIES.filter(c => c !== 'todos').map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
 
-        </div>
-      )}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Resumo (Chamada de Capa)</label>
+                    <input id="blog-excerpt-input" type="text" required placeholder="Frase marcante que chame o leitor..."
+                      value={newExcerpt} onChange={e => setNewExcerpt(e.target.value)}
+                      className="w-full text-xs text-brand-navy bg-brand-cream border border-brand-sand px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/30 transition" />
+                  </div>
 
-      {/* --- CHOSEN SINGLE ARTICLE DETAILED READ (MEDIUM/NEWSLETTER CARD STYLE) --- */}
-      {selectedBlogId && activeBlog ? (
-        <div className="bg-white border border-brand-sand rounded-3xl p-6 md:p-12 shadow-md max-w-3xl mx-auto animate-scaleUp space-y-6">
-          
-          <button
-            id="back-to-blogs"
-            onClick={() => setSelectedBlogId(null)}
-            className="flex items-center text-xs font-bold text-brand-navy-light hover:text-brand-clay transition cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar para Sinfonias da Mente
-          </button>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                      <Image className="w-3 h-3 text-brand-moss" /> Imagem de Capa
+                    </label>
+                    <div className="grid grid-cols-5 gap-2">
+                      {PRESET_IMAGES.map((img, i) => (
+                        <button key={i} type="button" id={`preset-img-${i}`}
+                          onClick={() => setPresetImg(img.url)}
+                          className={`relative rounded-xl overflow-hidden h-14 border-2 transition-all ${presetImg === img.url ? 'border-brand-clay scale-[1.04] shadow-md' : 'border-transparent opacity-60 hover:opacity-100'}`}>
+                          <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-          <header className="space-y-4">
-            <span className="bg-brand-sand text-brand-clay-dark text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-              {activeBlog.category}
-            </span>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Corpo do Artigo</label>
+                    <textarea id="blog-content-textarea" rows={10} required
+                      placeholder="Digite o artigo completo com insights e referências clínicas..."
+                      value={newContent} onChange={e => setNewContent(e.target.value)}
+                      className="w-full text-xs text-brand-navy bg-brand-cream border border-brand-sand px-3 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/30 transition leading-relaxed resize-none" />
+                  </div>
 
-            <h1 className="text-3xl md:text-4xl font-serif font-bold text-brand-navy tracking-tight leading-tight">
-              {activeBlog.title}
-            </h1>
-
-            {/* Premium Author signature card under title */}
-            <div className="flex items-center justify-between border-y border-brand-sand/60 py-4 my-2">
-              <div className="flex items-center space-x-3">
-                <img 
-                  src={activeBlog.authorAvatar} 
-                  alt={activeBlog.authorName} 
-                  className="w-12 h-12 rounded-2xl object-cover border-2 border-brand-sand shadow-inner"
-                />
-                <div>
-                  <p className="text-xs font-bold text-brand-navy flex items-center">
-                    Escrito por: {activeBlog.authorName}
-                    <span className="ml-1.5 text-[9px] bg-brand-moss text-white px-1.5 py-0.2 rounded font-sans uppercase">Pro</span>
-                  </p>
-                  <p className="text-[10px] text-brand-navy-light">Corpo Técnico de Saúde Mental • Espalhe Melodias</p>
-                </div>
-              </div>
-
-              <div className="text-right text-[10px] text-brand-navy-light font-medium">
-                <p>Publicação: {activeBlog.date}</p>
-                <p className="flex items-center justify-end mt-0.5 text-brand-clay-dark">
-                  <Clock className="w-3 h-3 mr-1" /> {activeBlog.readTime}
-                </p>
-              </div>
-            </div>
-          </header>
-
-          <img 
-            src={activeBlog.imageUrl} 
-            alt={activeBlog.title} 
-            className="w-full h-80 rounded-2xl object-cover shadow-sm border border-brand-sand"
-          />
-
-          {/* Subtitle / Excerpt Intro in high serif blockquote */}
-          <div className="border-l-4 border-brand-clay pl-4 italic text-brand-navy/80 font-serif leading-relaxed text-base">
-            "{activeBlog.excerpt}"
-          </div>
-
-          {/* Core Markdown-emulated text */}
-          <div className="text-sm text-brand-navy-light leading-relaxed font-sans space-y-6 text-justify whitespace-pre-line px-1 md:px-4">
-            {activeBlog.content}
-          </div>
-
-          {/* Special brand callout matching slide theme */}
-          <div className="p-5 bg-brand-sand/30 border border-brand-sand rounded-2xl space-y-2 mt-8 text-center text-xs">
-            <p className="font-serif font-bold text-brand-navy">Conectando Profissionais. Fortalecendo Cuidados.</p>
-            <p className="text-brand-navy-light italic">"Espalhe Melodias é um ecossistema com propósito de criar caminhos acolhedores e sadios."</p>
-          </div>
-
-          {/* Interactive footer for liking blogs */}
-          <div className="pt-5 border-t border-brand-sand/60 flex justify-between items-center text-xs text-brand-navy-light">
-            <button 
-              onClick={(e) => toggleLike(activeBlog.id, e)}
-              className={`flex items-center space-x-1 font-bold transition ${
-                likedPosts[activeBlog.id] ? 'text-brand-clay' : 'hover:text-brand-clay'
-              }`}
-            >
-              <Heart className={`w-4.5 h-4.5 ${likedPosts[activeBlog.id] ? 'fill-brand-clay stroke-brand-clay' : ''}`} />
-              <span>{likedPosts[activeBlog.id] ? 'Você gostou deste artigo!' : 'Marcar como Leitura Útil'}</span>
-            </button>
-            
-            <button 
-              onClick={() => {
-                alert('📋 Copiado link de compartilhamento do artigo científico de Espalhe Melodias!');
-              }}
-              className="font-bold text-brand-moss hover:text-brand-moss-dark flex items-center space-x-1.5 cursor-pointer"
-            >
-              <Share2 className="w-4 h-4" />
-              <span>Gerar Link de Compartilhamento</span>
-            </button>
-          </div>
-
-        </div>
-      ) : (
-        
-        /* --- MAIN BRANDED BLOG GRID LIST --- */
-        <div className="space-y-6">
-          
-          {/* Filtering and search controllers */}
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-            
-            {/* Organic Category badges selector */}
-            <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold tracking-wide border transition-all whitespace-nowrap ${
-                    activeCategory === cat 
-                      ? 'bg-brand-moss text-white border-transparent shadow-sm shadow-brand-moss/10' 
-                      : 'bg-white text-brand-navy-light border-brand-sand/60 hover:bg-brand-sand/30'
-                  }`}
-                >
-                  {cat === 'todos' ? 'Ver Todos os Temas' : `🌿 ${cat}`}
-                </button>
-              ))}
-            </div>
-
-            {/* Keyword Search */}
-            <div className="relative w-full md:w-80 shrink-0">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                <Search className="h-4 w-4 text-brand-navy-light/60" />
-              </span>
-              <input
-                type="text"
-                placeholder="Pesquisar por palavras-chave..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full text-xs text-brand-navy bg-white border border-brand-sand pl-10 pr-4 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-moss"
-              />
-            </div>
-          </div>
-
-          {/* GRID OF COMPLETED ARTICLES */}
-          {filteredBlogs.length === 0 ? (
-            <div className="text-center py-16 bg-white border border-brand-sand rounded-3xl p-6">
-              <p className="text-sm font-semibold text-brand-navy-light">Nenhum artigo científico corresponde aos filtros selecionados.</p>
-              <button 
-                onClick={() => { setSearchQuery(''); setActiveCategory('todos'); }}
-                className="mt-3 text-xs text-brand-clay font-bold underline"
-              >
-                Limpar Filtros e Busca
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredBlogs.map((post) => (
-                <div 
-                  key={post.id}
-                  onClick={() => setSelectedBlogId(post.id)}
-                  className="bg-white border border-brand-sand/60 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between cursor-pointer group hover:border-brand-clay"
-                >
-                  <div className="relative h-48 overflow-hidden bg-slate-50 border-b border-brand-sand/40">
-                    <img 
-                      src={post.imageUrl} 
-                      alt={post.title} 
-                      className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-350"
-                    />
-                    
-                    {/* Floating top category banner */}
-                    <span className="absolute top-3 left-3 bg-brand-sand/90 backdrop-blur-md border border-brand-sand text-brand-navy font-bold text-[9px] px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow">
-                      {post.category}
-                    </span>
-
-                    {/* Bookmark interactive option */}
-                    <button 
-                      onClick={(e) => toggleBookmark(post.id, e)}
-                      className="absolute top-3 right-3 p-1.5 bg-white/85 backdrop-blur-md rounded-full text-brand-navy-light hover:text-brand-clay shadow hover:scale-105 transition"
-                    >
-                      <Bookmark className={`w-3.5 h-3.5 ${bookmarkedPosts[post.id] ? 'fill-brand-clay text-brand-clay' : ''}`} />
+                  <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-brand-sand/50">
+                    <button type="button" onClick={() => setShowAddForm(false)}
+                      className="px-4 py-2.5 border border-brand-sand hover:bg-brand-sand/40 rounded-xl text-xs font-bold text-brand-navy transition">
+                      Cancelar
+                    </button>
+                    <button id="btn-publish-blog" type="submit"
+                      className="px-5 py-2.5 bg-brand-moss hover:bg-brand-moss-dark text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md transition">
+                      Publicar no Melodias
                     </button>
                   </div>
+                </form>
 
-                  <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center text-[9px] font-bold text-slate-400">
-                        <span className="flex items-center text-brand-clay mr-2"> Publicado por profissional</span>
-                        <span className="flex items-center text-brand-navy-light/65">
-                          <Clock className="w-3 h-3 mr-0.5" /> {post.readTime}
-                        </span>
-                      </div>
-                      
-                      <h3 className="text-sm font-serif font-bold text-brand-navy line-clamp-2 leading-snug group-hover:text-brand-clay transition">
-                        {post.title}
-                      </h3>
-                      <p className="text-xs text-brand-navy-light font-normal line-clamp-2 leading-relaxed">
-                        {post.excerpt}
+                {/* Live preview */}
+                <div className="lg:col-span-5 flex flex-col justify-center">
+                  <p className="text-[10px] text-brand-clay font-bold tracking-widest uppercase text-center mb-3">Pré-visualização</p>
+                  <div className="bg-brand-sand/30 rounded-2xl border border-brand-sand overflow-hidden shadow-lg">
+                    <img src={presetImg} alt="preview" className="w-full h-36 object-cover" />
+                    <div className="p-4 space-y-2.5">
+                      <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded-full border ${CAT_COLORS[newCategory] ?? 'bg-slate-50 text-slate-600 border-slate-100'}`}>
+                        {newCategory}
+                      </span>
+                      <h4 className="text-sm font-serif font-bold text-brand-navy leading-snug line-clamp-2 min-h-[40px]">
+                        {newTitle || 'Título do artigo...'}
+                      </h4>
+                      <p className="text-xs text-slate-400 line-clamp-2 min-h-[32px] leading-relaxed">
+                        {newExcerpt || 'Resumo curto aparecerá aqui...'}
                       </p>
-                    </div>
-
-                    <div className="flex justify-between items-center pt-3.5 border-t border-brand-sand/50">
-                      <div className="flex items-center space-x-2">
-                        <img 
-                          src={post.authorAvatar} 
-                          alt="author" 
-                          className="w-6 h-6 rounded-full object-cover border border-brand-sand" 
-                        />
-                        <span className="text-[10px] text-brand-navy font-semibold">{post.authorName}</span>
+                      <div className="flex items-center gap-2 pt-2 border-t border-brand-sand/50">
+                        <img src={currentUser.avatar} alt="" className="w-5 h-5 rounded-full object-cover" />
+                        <span className="text-[9px] font-bold text-brand-navy">{currentUser.name}</span>
                       </div>
-                      
-                      <button
-                        id={`btn-read-blog-${post.id}`}
-                        onClick={() => setSelectedBlogId(post.id)}
-                        className="text-[10px] font-bold text-brand-moss-dark group-hover:text-brand-clay uppercase tracking-wider flex items-center"
-                      >
-                        Ler →
-                      </button>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-
+              </div>
+            )}
+          </ContentCard>
         </div>
-      )}
+      </PageWrapper>
+    );
+  }
 
-    </div>
+  // ── BLOG LIST VIEW ───────────────────────────────────────────────────────
+  return (
+    <PageWrapper id="blog-list-view">
+      <div className="space-y-5 sm:space-y-6 animate-fadeIn">
+
+        {/* Header */}
+        <ContentCard padding="md" id="blog-header">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-brand-clay animate-pulse" />
+                <span className="text-[10px] font-bold text-brand-clay uppercase tracking-widest">Blog Científico Oficial</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-serif font-bold text-brand-navy">
+                Sinfonias da Mente
+                <span className="font-script text-brand-clay font-normal text-2xl sm:text-3xl ml-2">e Aprendizados</span>
+              </h2>
+              <p className="text-xs text-slate-400 max-w-xl leading-relaxed">
+                Nossos psicoterapeutas compartilham saberes sobre equilíbrio emocional e saúde integrativa.
+              </p>
+            </div>
+            {currentUser.role !== 'member' && (
+              <button id="btn-trigger-write-article" onClick={() => setShowAddForm(true)}
+                className="flex items-center gap-2 px-5 py-3 bg-brand-clay hover:bg-brand-clay-dark text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md transition shrink-0">
+                <PenTool className="w-4 h-4" />
+                Redigir Artigo
+              </button>
+            )}
+          </div>
+        </ContentCard>
+
+        {/* Filters */}
+        <div id="blog-filters" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {CATEGORIES.map(cat => (
+              <button key={cat} id={`filter-cat-${cat}`}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap ${
+                  activeCategory === cat
+                    ? 'bg-brand-moss text-white border-transparent shadow-sm'
+                    : 'bg-white text-slate-600 border-brand-sand/60 hover:bg-brand-sand/30'
+                }`}>
+                {cat === 'todos' ? 'Todos os Temas' : cat}
+              </button>
+            ))}
+          </div>
+          <div className="relative w-full sm:w-72 shrink-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input id="blog-search" type="text" placeholder="Pesquisar artigos..."
+              value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              className="w-full text-xs text-brand-navy bg-white border border-brand-sand pl-9 pr-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-moss transition" />
+          </div>
+        </div>
+
+        {/* Grid */}
+        {loading ? (
+          <div className="text-center py-16 text-slate-400 text-sm">Carregando artigos...</div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16 bg-white border border-brand-sand rounded-2xl">
+            <BookMarked className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+            <p className="text-sm font-semibold text-slate-400">Nenhum artigo encontrado</p>
+            <button onClick={() => { setSearchQuery(''); setActiveCategory('todos'); }}
+              className="mt-3 text-xs text-brand-clay font-bold hover:underline flex items-center gap-1 mx-auto">
+              <X className="w-3.5 h-3.5" /> Limpar filtros
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {filtered.map(post => (
+              <div key={post.id}
+                onClick={() => void openBlog(post.id)}
+                className="bg-white border border-brand-sand/60 rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col cursor-pointer group">
+
+                <div className="relative h-44 overflow-hidden bg-brand-sand/30 border-b border-brand-sand/40">
+                  {post.image_url
+                    ? <img src={post.image_url} alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
+                    : <div className="w-full h-full bg-gradient-to-br from-brand-clay/10 to-brand-moss/10 flex items-center justify-center text-4xl">📖</div>
+                  }
+                  <span className={`absolute top-3 left-3 text-[9px] font-bold px-2.5 py-0.5 rounded-full border backdrop-blur-sm ${CAT_COLORS[post.category] ?? 'bg-white/90 text-slate-600 border-slate-100'}`}>
+                    {post.category}
+                  </span>
+                </div>
+
+                <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between gap-3">
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center text-[10px] text-slate-400">
+                      <span className="text-brand-clay font-semibold">{post.author_name}</span>
+                      <span className="flex items-center gap-0.5">
+                        <Clock className="w-3 h-3" /> {post.read_time}
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-serif font-bold text-brand-navy line-clamp-2 leading-snug group-hover:text-brand-clay transition">
+                      {post.title}
+                    </h3>
+                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{post.excerpt}</p>
+                  </div>
+                  <div className="flex items-center justify-between pt-3 border-t border-brand-sand/50">
+                    <span className="text-[10px] text-slate-400">{new Date(post.post_date).toLocaleDateString('pt-BR')}</span>
+                    <span className="text-[10px] font-bold text-brand-moss group-hover:text-brand-clay uppercase tracking-wider transition">Ler →</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+      </div>
+    </PageWrapper>
   );
 }
