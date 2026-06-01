@@ -88,19 +88,6 @@ function Reveal({ children, delay = 0, className = '', from = 'bottom' }: {
 }
 
 // ─── Social helpers ───────────────────────────────────────────────────────────
-function socialColor(type: string) {
-  const c: Record<string,string> = {
-    whatsapp: 'linear-gradient(135deg,#22c55e,#16a34a)',
-    instagram: 'linear-gradient(135deg,#f97316,#db2777,#7c3aed)',
-    linkedin: 'linear-gradient(135deg,#0a66c2,#0284c7)',
-    facebook: 'linear-gradient(135deg,#1877f2,#1d4ed8)',
-    tiktok: 'linear-gradient(135deg,#020617,#334155)',
-    twitter: 'linear-gradient(135deg,#0f172a,#38bdf8)',
-    website: 'linear-gradient(135deg,#475569,#0f172a)',
-    link: 'linear-gradient(135deg,#64748b,#334155)',
-  };
-  return c[type] || c.link;
-}
 function socialIcon(type: string) {
   if (type === 'whatsapp') return <MessageCircle size={17} />;
   if (type === 'website')  return <Globe2 size={17} />;
@@ -599,53 +586,84 @@ function ProfessionalProfile({ professional }: { professional: Professional }) {
       <section id="contato" className="px-5 py-20 md:px-8 md:py-28"
         style={{ borderTop: `1px solid ${border}` }}>
         <div className="mx-auto max-w-6xl">
-          <div className="flex flex-col gap-12 lg:flex-row lg:items-start lg:gap-16">
 
-            <Reveal className="flex-1 min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[.25em] mb-3" style={{ color: accent }}>Contato</p>
-              <h2 className="text-3xl font-black tracking-[-0.04em] md:text-4xl mb-4" style={{ color: h1col }}>
-                Vamos conversar?
-              </h2>
-              <p className="text-base leading-7 mb-8 max-w-md" style={{ color: `${bodycol}99` }}>
-                Entre em contato para verificar disponibilidade, tirar dúvidas ou agendar um atendimento.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                {whatsappUrl && (
-                  <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
-                    className="wa-btn flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-sm font-black text-white transition hover:-translate-y-0.5 active:scale-95"
-                    style={{ background: '#25d366', boxShadow: '0 8px 28px rgba(37,211,102,.28)' }}>
-                    <MessageCircle size={18} /> WhatsApp
-                  </a>
-                )}
-                <a href="/diretorio"
-                  className="flex items-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-black border transition hover:bg-black/5 active:scale-95"
-                  style={{ borderColor: border, color: h1col }}>
-                  Ver outros profissionais
-                </a>
-              </div>
-            </Reveal>
+          <Reveal>
+            <p className="text-[10px] font-black uppercase tracking-[.25em] mb-3 text-center" style={{ color: accent }}>Contato</p>
+            <h2 className="text-3xl font-black tracking-[-0.04em] md:text-4xl mb-3 text-center" style={{ color: h1col }}>
+              Vamos conversar?
+            </h2>
+            <p className="text-base leading-7 mb-12 text-center mx-auto max-w-md" style={{ color: `${bodycol}80` }}>
+              Escolha o canal de sua preferência e entre em contato com {professional.name.split(' ')[0]}.
+            </p>
+          </Reveal>
 
-            {socialLinks.length > 0 && (
-              <Reveal className="lg:w-80 xl:w-96 shrink-0" delay={80} from="right">
-                <div className="rounded-2xl border p-5" style={{ background: card, borderColor: border }}>
-                  <p className="text-[10px] font-black uppercase tracking-[.22em] mb-4" style={{ color: accent }}>Redes & Links</p>
-                  <div className="grid gap-2.5">
-                    {socialLinks.map((link, i) => (
-                      <a key={i} href={link.url} target="_blank" rel="noopener noreferrer"
-                        className="social-link flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-bold no-underline"
-                        style={{ background: bg, borderColor: border, color: h1col }}>
-                        <span className="w-8 h-8 flex items-center justify-center rounded-xl text-white shrink-0 text-[13px]"
-                          style={{ background: socialColor(link.type) }}>
-                          {socialIcon(link.type)}
-                        </span>
-                        <span className="truncate">{link.label}</span>
-                        <ArrowRight size={14} className="ml-auto opacity-25 transition group-hover:translate-x-0.5" />
-                      </a>
-                    ))}
+          {/* Grid de links — WhatsApp em destaque, outros em grid */}
+          <div className="max-w-2xl mx-auto space-y-3">
+
+            {/* WhatsApp — botão principal em destaque */}
+            {whatsappUrl && (
+              <Reveal delay={0}>
+                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
+                  className="wa-btn group flex items-center gap-4 w-full px-6 py-4 rounded-2xl text-white no-underline transition hover:-translate-y-0.5 active:scale-[.99]"
+                  style={{ background: 'linear-gradient(135deg,#25d366,#1da951)', boxShadow: '0 12px 40px rgba(37,211,102,.32)' }}>
+                  <span className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                    <MessageCircle size={22} />
+                  </span>
+                  <div className="text-left flex-1">
+                    <p className="m-0 text-sm font-black leading-tight">WhatsApp</p>
+                    <p className="m-0 text-xs text-white/65 mt-0.5">Clique para iniciar uma conversa</p>
                   </div>
-                </div>
+                  <ArrowRight size={18} className="ml-auto opacity-60 transition group-hover:translate-x-1" />
+                </a>
               </Reveal>
             )}
+
+            {/* Outros links — grid 2 colunas */}
+            {socialLinks.filter(l => l.type !== 'whatsapp').length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {socialLinks.filter(l => l.type !== 'whatsapp').map((link, i) => {
+                  const styles: Record<string, { bg: string; shadow: string }> = {
+                    instagram: { bg: 'linear-gradient(135deg,#f97316,#db2777,#7c3aed)', shadow: 'rgba(219,39,119,.25)' },
+                    linkedin:  { bg: 'linear-gradient(135deg,#0a66c2,#0284c7)',         shadow: 'rgba(10,102,194,.25)' },
+                    facebook:  { bg: 'linear-gradient(135deg,#1877f2,#1d4ed8)',         shadow: 'rgba(24,119,242,.25)' },
+                    tiktok:    { bg: 'linear-gradient(135deg,#010101,#333)',             shadow: 'rgba(0,0,0,.2)' },
+                    twitter:   { bg: 'linear-gradient(135deg,#0f172a,#38bdf8)',         shadow: 'rgba(56,189,248,.2)' },
+                    website:   { bg: `linear-gradient(135deg,${h1col},${accent})`,      shadow: `${accent}30` },
+                    link:      { bg: `linear-gradient(135deg,#64748b,#334155)`,         shadow: 'rgba(100,116,139,.2)' },
+                  };
+                  const st = styles[link.type] ?? styles.link;
+                  return (
+                    <Reveal key={i} delay={i * 60 + 80}>
+                      <a href={link.url} target="_blank" rel="noopener noreferrer"
+                        className="social-link group flex items-center gap-3.5 w-full px-5 py-4 rounded-2xl text-white no-underline transition hover:-translate-y-0.5 active:scale-[.99]"
+                        style={{ background: st.bg, boxShadow: `0 8px 24px ${st.shadow}` }}>
+                        <span className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                          {socialIcon(link.type)}
+                        </span>
+                        <div className="text-left flex-1 min-w-0">
+                          <p className="m-0 text-sm font-black leading-tight">{link.label}</p>
+                          <p className="m-0 text-[11px] text-white/55 mt-0.5 truncate">{link.url.replace(/^https?:\/\/(www\.)?/,'').split('?')[0]}</p>
+                        </div>
+                        <ArrowRight size={15} className="shrink-0 opacity-50 transition group-hover:translate-x-1" />
+                      </a>
+                    </Reveal>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Badge Melodias */}
+            <Reveal delay={200}>
+              <div className="mt-8 flex items-center justify-center gap-3 py-4 px-5 rounded-2xl border"
+                style={{ borderColor: aborder, background: asoft }}>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-sm font-black shrink-0"
+                  style={{ background: `linear-gradient(135deg,${h1col},${accent})` }}>♩</div>
+                <p className="text-[11px] text-center leading-snug" style={{ color: bodycol }}>
+                  <span className="font-black">Membro verificado</span> da Rede Espalhe Melodias
+                  <span className="block opacity-50 mt-0.5">Profissional de saúde mental comprometido com ética e cuidado.</span>
+                </p>
+              </div>
+            </Reveal>
           </div>
         </div>
       </section>
