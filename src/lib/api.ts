@@ -516,7 +516,7 @@ export const suggestionsApi = {
 
 // ─── Professionals ────────────────────────────────────────────────────────────
 
-export type ProfTheme = 'forest' | 'ocean' | 'rose' | 'gold';
+export type ProfTheme = 'forest' | 'ocean' | 'rose' | 'gold' | 'melodias' | 'minimal' | 'card' | 'dark';
 
 export interface Professional {
   id: string;

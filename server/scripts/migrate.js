@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS professional_profiles (
   schedule          JSON,
   location          VARCHAR(200),
   accent_color      VARCHAR(30),
-  theme             ENUM('forest','ocean','rose','gold'),
+  theme             VARCHAR(20),
   languages         JSON,
   instagram         VARCHAR(255),
   linkedin          VARCHAR(255),

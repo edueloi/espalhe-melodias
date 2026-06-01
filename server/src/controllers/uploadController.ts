@@ -45,14 +45,23 @@ export const upload = multer({
 function deleteFileIfLocal(avatarUrl: string | undefined | null): void {
   if (!avatarUrl) return;
   try {
-    const parsed = new URL(avatarUrl);
-    // Só deleta se for arquivo local servido pelo próprio servidor
-    if (parsed.pathname.startsWith('/uploads/')) {
-      const filePath = path.join(process.cwd(), parsed.pathname);
+    let pathname: string;
+
+    if (avatarUrl.startsWith('/uploads/')) {
+      // Caminho relativo — formato novo
+      pathname = avatarUrl;
+    } else {
+      // URL absoluta — formato antigo (http://localhost:3001/uploads/...)
+      const parsed = new URL(avatarUrl);
+      pathname = parsed.pathname;
+    }
+
+    if (pathname.startsWith('/uploads/')) {
+      const filePath = path.join(process.cwd(), pathname);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
   } catch {
-    // URL inválida ou relativa — ignora
+    // URL inválida — ignora
   }
 }
 

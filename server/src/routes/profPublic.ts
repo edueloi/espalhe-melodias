@@ -4,6 +4,41 @@ import { parseJson } from '../utils/helpers';
 
 const router = Router();
 
+// ─── API JSON pública (sem autenticação) ─────────────────────────────────────
+// GET /profissional/api/:slug  →  JSON com dados do profissional
+
+router.get('/api/:slug', async (req: Request, res: Response): Promise<void> => {
+  const slug = req.params.slug;
+
+  const row = await queryOne<Record<string, unknown>>(
+    `SELECT p.*, u.name, u.email, u.avatar
+     FROM professional_profiles p
+     JOIN users u ON u.id = p.user_id AND u.approval_status = 'approved'
+     WHERE p.slug = ? OR p.id = ? OR p.user_id = ?`,
+    [slug, slug, slug],
+  ).catch(() => null);
+
+  if (!row) {
+    res.status(404).json({ success: false, message: 'Profissional não encontrado.' });
+    return;
+  }
+
+  res.json({
+    success: true,
+    data: {
+      ...row,
+      specialties:  parseJson<string[]>(row.specialties, []),
+      services:     parseJson<string[]>(row.services, []),
+      schedule:     parseJson(row.schedule, []),
+      languages:    parseJson<string[]>(row.languages, []),
+      extra_links:  parseJson(row.extra_links, []),
+      price_per_session: Number(row.price_per_session) || 0,
+      rating:        Number(row.rating) || 0,
+      reviews_count: Number(row.reviews_count) || 0,
+    },
+  });
+});
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function esc(str: unknown): string {

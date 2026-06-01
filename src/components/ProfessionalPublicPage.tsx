@@ -2,224 +2,125 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
   BadgeCheck,
-  BriefcaseBusiness,
   Check,
   ChevronDown,
-  CircleDollarSign,
   Globe2,
-  Languages,
   Link as LinkIcon,
   Loader2,
   MapPin,
   Menu,
   MessageCircle,
   ShieldCheck,
-  Sparkles,
   Star,
-  UserRound,
   X,
   XCircle,
 } from 'lucide-react';
-import { professionalsApi, type Professional, type ProfTheme } from '../lib/api';
+import { type Professional, type ProfTheme } from '../lib/api';
+import ThemeMinimal from './prof-themes/ThemeMinimal';
+import ThemeCard    from './prof-themes/ThemeCard';
+import ThemeDark    from './prof-themes/ThemeDark';
+import { THEME_TO_TEMPLATE } from './prof-themes/index';
 
-interface Props {
-  userId: string;
-}
+interface Props { userId: string }
+type SocialLink = { type: string; url: string; label: string };
 
-type SocialLink = {
-  type: string;
-  url: string;
-  label: string;
-};
-
+// ─── Tipos de tema (mantidos para compatibilidade com imports externos) ────────
+export type ProfThemeAlias = ProfTheme;
 export interface ThemePalette {
-  name: string;
-  label: string;
-  bannerFrom: string;
-  bannerMid: string;
-  bannerTo: string;
-  accent: string;
-  accentMuted: string;
-  accentLight: string;
-  textHeading: string;
-  textBody: string;
-  pageBg: string;
-  sectionAlt: string;
-  navBg: string;
-  navBorder: string;
-  cardBg: string;
-  cardBorder: string;
+  name: string; label: string;
+  bannerFrom: string; bannerMid: string; bannerTo: string;
+  accent: string; accentMuted: string; accentLight: string;
+  textHeading: string; textBody: string; pageBg: string; sectionAlt: string;
+  navBg: string; navBorder: string; cardBg: string; cardBorder: string;
 }
-
 export const THEMES: Record<ProfTheme, ThemePalette> = {
-  forest: {
-    name: 'forest',
-    label: 'Forest',
-    bannerFrom: '#0b1309',
-    bannerMid: '#172711',
-    bannerTo: '#40552b',
-    accent: '#567736',
-    accentMuted: '#789d54',
-    accentLight: '#edf5e5',
-    textHeading: '#17210e',
-    textBody: '#445036',
-    pageBg: '#f7fbf2',
-    sectionAlt: '#eef5e8',
-    navBg: 'rgba(247,251,242,0.88)',
-    navBorder: 'rgba(86,119,54,0.16)',
-    cardBg: '#ffffff',
-    cardBorder: '#e1ead6',
-  },
-  ocean: {
-    name: 'ocean',
-    label: 'Ocean',
-    bannerFrom: '#06111f',
-    bannerMid: '#0a2548',
-    bannerTo: '#0477a6',
-    accent: '#057ca5',
-    accentMuted: '#22a7ca',
-    accentLight: '#e2f5fb',
-    textHeading: '#0a1729',
-    textBody: '#263b52',
-    pageBg: '#f3fbff',
-    sectionAlt: '#e4f4fb',
-    navBg: 'rgba(243,251,255,0.88)',
-    navBorder: 'rgba(5,124,165,0.15)',
-    cardBg: '#ffffff',
-    cardBorder: '#cce8f3',
-  },
-  rose: {
-    name: 'rose',
-    label: 'Rose',
-    bannerFrom: '#210712',
-    bannerMid: '#521129',
-    bannerTo: '#9b3557',
-    accent: '#b73567',
-    accentMuted: '#d16388',
-    accentLight: '#fde8f0',
-    textHeading: '#3d0b1a',
-    textBody: '#552638',
-    pageBg: '#fff7fa',
-    sectionAlt: '#ffe8f0',
-    navBg: 'rgba(255,247,250,0.88)',
-    navBorder: 'rgba(183,53,103,0.15)',
-    cardBg: '#ffffff',
-    cardBorder: '#f7cfdd',
-  },
-  gold: {
-    name: 'gold',
-    label: 'Gold',
-    bannerFrom: '#120b02',
-    bannerMid: '#3b2404',
-    bannerTo: '#936209',
-    accent: '#ba780d',
-    accentMuted: '#d79931',
-    accentLight: '#fff2cf',
-    textHeading: '#211402',
-    textBody: '#4f3406',
-    pageBg: '#fffaf0',
-    sectionAlt: '#fff1cd',
-    navBg: 'rgba(255,250,240,0.88)',
-    navBorder: 'rgba(186,120,13,0.15)',
-    cardBg: '#ffffff',
-    cardBorder: '#f1dda5',
-  },
+  forest:   { name:'forest',   label:'Forest',   bannerFrom:'#0b1309', bannerMid:'#172711', bannerTo:'#40552b', accent:'#567736', accentMuted:'#789d54', accentLight:'#edf5e5', textHeading:'#17210e', textBody:'#445036', pageBg:'#f7fbf2', sectionAlt:'#eef5e8', navBg:'rgba(247,251,242,0.88)', navBorder:'rgba(86,119,54,0.16)', cardBg:'#ffffff', cardBorder:'#e1ead6' },
+  ocean:    { name:'ocean',    label:'Ocean',    bannerFrom:'#06111f', bannerMid:'#0a2548', bannerTo:'#0477a6', accent:'#057ca5', accentMuted:'#22a7ca', accentLight:'#e2f5fb', textHeading:'#0a1729', textBody:'#263b52', pageBg:'#f3fbff', sectionAlt:'#e4f4fb', navBg:'rgba(243,251,255,0.88)', navBorder:'rgba(5,124,165,0.15)', cardBg:'#ffffff', cardBorder:'#cce8f3' },
+  rose:     { name:'rose',     label:'Rose',     bannerFrom:'#210712', bannerMid:'#521129', bannerTo:'#9b3557', accent:'#b73567', accentMuted:'#d16388', accentLight:'#fde8f0', textHeading:'#3d0b1a', textBody:'#552638', pageBg:'#fff7fa', sectionAlt:'#ffe8f0', navBg:'rgba(255,247,250,0.88)', navBorder:'rgba(183,53,103,0.15)', cardBg:'#ffffff', cardBorder:'#f7cfdd' },
+  gold:     { name:'gold',     label:'Gold',     bannerFrom:'#120b02', bannerMid:'#3b2404', bannerTo:'#936209', accent:'#ba780d', accentMuted:'#d79931', accentLight:'#fff2cf', textHeading:'#211402', textBody:'#4f3406', pageBg:'#fffaf0', sectionAlt:'#fff1cd', navBg:'rgba(255,250,240,0.88)', navBorder:'rgba(186,120,13,0.15)', cardBg:'#ffffff', cardBorder:'#f1dda5' },
+  melodias: { name:'melodias', label:'Melodias', bannerFrom:'#0b1309', bannerMid:'#172711', bannerTo:'#40552b', accent:'#567736', accentMuted:'#789d54', accentLight:'#edf5e5', textHeading:'#17210e', textBody:'#445036', pageBg:'#f7fbf2', sectionAlt:'#eef5e8', navBg:'rgba(247,251,242,0.88)', navBorder:'rgba(86,119,54,0.16)', cardBg:'#ffffff', cardBorder:'#e1ead6' },
+  minimal:  { name:'minimal',  label:'Minimal',  bannerFrom:'#1a1a1a', bannerMid:'#2d2d2d', bannerTo:'#a75a35', accent:'#a75a35', accentMuted:'#c4784f', accentLight:'#fdf0e8', textHeading:'#1a1a1a', textBody:'#4a4a4a', pageBg:'#ffffff', sectionAlt:'#f9f9f9', navBg:'rgba(255,255,255,0.95)', navBorder:'rgba(167,90,53,0.15)', cardBg:'#ffffff', cardBorder:'#e8e8e4' },
+  card:     { name:'card',     label:'Card',     bannerFrom:'#06111f', bannerMid:'#0a2548', bannerTo:'#0477a6', accent:'#0477a6', accentMuted:'#22a7ca', accentLight:'#e2f5fb', textHeading:'#0a1729', textBody:'#263b52', pageBg:'#f4f4f0', sectionAlt:'#eaeae6', navBg:'rgba(244,244,240,0.95)', navBorder:'rgba(4,119,166,0.15)', cardBg:'#ffffff', cardBorder:'#d0d0cc' },
+  dark:     { name:'dark',     label:'Dark',     bannerFrom:'#0a0a0f', bannerMid:'#12121a', bannerTo:'#1a1a28', accent:'#a75a35', accentMuted:'#c4784f', accentLight:'rgba(167,90,53,0.15)', textHeading:'#ffffff', textBody:'rgba(255,255,255,0.7)', pageBg:'#0a0a0f', sectionAlt:'rgba(255,255,255,0.03)', navBg:'rgba(10,10,15,0.9)', navBorder:'rgba(255,255,255,0.06)', cardBg:'rgba(255,255,255,0.04)', cardBorder:'rgba(255,255,255,0.08)' },
 };
-
 export function getTheme(prof: Professional): ThemePalette {
   if (prof.theme && THEMES[prof.theme]) return THEMES[prof.theme];
-
   const fallback = { ...THEMES.forest };
-
-  if (prof.accent_color) {
-    fallback.accent = prof.accent_color;
-    fallback.accentMuted = `${prof.accent_color}cc`;
-    fallback.accentLight = `${prof.accent_color}18`;
-  }
-
+  if (prof.accent_color) { fallback.accent = prof.accent_color; fallback.accentMuted = `${prof.accent_color}cc`; fallback.accentLight = `${prof.accent_color}18`; }
   return fallback;
 }
 
-const toNumber = (value: unknown) => {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : 0;
-};
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function toNumber(v: unknown) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+function getInitials(name = '') { return name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
+function onlyDigits(v = '') { return v.replace(/\D/g,''); }
+function normalizeUrl(v = '') { return v.startsWith('http') ? v : `https://${v}`; }
 
-const formatCurrency = (value: unknown) =>
-  new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(toNumber(value));
-
-const onlyDigits = (value = '') => value.replace(/\D/g, '');
-
-const normalizeUrl = (value: string) => {
-  if (!value) return '';
-  return value.startsWith('http') ? value : `https://${value}`;
-};
-
-const getInitials = (name = '') =>
-  name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join('')
-    .toUpperCase();
-
-function useInView(threshold = 0.08) {
+// ─── Scroll reveal hook ───────────────────────────────────────────────────────
+function useInView(opts = { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
-
   useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold },
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [threshold]);
-
+    const el = ref.current; if (!el) return;
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } }, opts);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
   return { ref, visible };
 }
 
-function Reveal({
-  children,
-  delay = 0,
-  className = '',
-}: {
-  children: React.ReactNode;
-  delay?: number;
-  className?: string;
+function Reveal({ children, delay = 0, className = '', from = 'bottom' }: {
+  children: React.ReactNode; delay?: number; className?: string; from?: 'bottom' | 'left' | 'right' | 'scale';
 }) {
   const { ref, visible } = useInView();
-
+  const transforms: Record<string, string> = {
+    bottom: 'translateY(28px)', left: 'translateX(-28px)', right: 'translateX(28px)', scale: 'scale(0.94) translateY(16px)',
+  };
   return (
-    <div
-      ref={ref}
-      className={className}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(22px)',
-        transition: `opacity .65s ease ${delay}ms, transform .65s ease ${delay}ms`,
-      }}
-    >
+    <div ref={ref} className={className} style={{
+      opacity: visible ? 1 : 0,
+      transform: visible ? 'none' : transforms[from],
+      transition: `opacity .65s cubic-bezier(.22,1,.36,1) ${delay}ms, transform .65s cubic-bezier(.22,1,.36,1) ${delay}ms`,
+    }}>
       {children}
     </div>
   );
 }
 
+// ─── Social helpers ───────────────────────────────────────────────────────────
+function socialColor(type: string) {
+  const c: Record<string,string> = {
+    whatsapp: 'linear-gradient(135deg,#22c55e,#16a34a)',
+    instagram: 'linear-gradient(135deg,#f97316,#db2777,#7c3aed)',
+    linkedin: 'linear-gradient(135deg,#0a66c2,#0284c7)',
+    facebook: 'linear-gradient(135deg,#1877f2,#1d4ed8)',
+    tiktok: 'linear-gradient(135deg,#020617,#334155)',
+    twitter: 'linear-gradient(135deg,#0f172a,#38bdf8)',
+    website: 'linear-gradient(135deg,#475569,#0f172a)',
+    link: 'linear-gradient(135deg,#64748b,#334155)',
+  };
+  return c[type] || c.link;
+}
+function socialIcon(type: string) {
+  if (type === 'whatsapp') return <MessageCircle size={17} />;
+  if (type === 'website')  return <Globe2 size={17} />;
+  return <LinkIcon size={17} />;
+}
+function buildSocialLinks(p: Professional): SocialLink[] {
+  const links: SocialLink[] = [];
+  const waMsg = encodeURIComponent(`Olá, ${p.name.split(' ')[0]}! Vim através da Rede Espalhe Melodias e gostaria de saber mais sobre seu atendimento.`);
+  if (p.contact_whatsapp) links.push({ type:'whatsapp', url:`https://wa.me/${onlyDigits(p.contact_whatsapp)}?text=${waMsg}`, label:'WhatsApp' });
+  if (p.instagram)  links.push({ type:'instagram',  url: p.instagram.startsWith('http') ? p.instagram : `https://instagram.com/${p.instagram.replace('@','')}`, label:'Instagram' });
+  if (p.linkedin)   links.push({ type:'linkedin',   url: p.linkedin.startsWith('http')  ? p.linkedin  : `https://linkedin.com/in/${p.linkedin}`, label:'LinkedIn' });
+  if (p.facebook)   links.push({ type:'facebook',   url: p.facebook.startsWith('http')  ? p.facebook  : `https://facebook.com/${p.facebook}`, label:'Facebook' });
+  if (p.tiktok)     links.push({ type:'tiktok',     url: p.tiktok.startsWith('http')    ? p.tiktok    : `https://tiktok.com/@${p.tiktok.replace('@','')}`, label:'TikTok' });
+  if (p.twitter)    links.push({ type:'twitter',    url: p.twitter.startsWith('http')   ? p.twitter   : `https://twitter.com/${p.twitter.replace('@','')}`, label:'Twitter/X' });
+  if (p.website)    links.push({ type:'website',    url: normalizeUrl(p.website), label:'Site' });
+  p.extra_links?.forEach(l => { if (l.url) links.push({ type:'link', url: normalizeUrl(l.url), label: l.label||'Link' }); });
+  return links;
+}
+
+// ─── Entry point ──────────────────────────────────────────────────────────────
 export default function ProfessionalPublicPage({ userId }: Props) {
   const [professional, setProfessional] = useState<Professional | null>(null);
   const [loading, setLoading] = useState(true);
@@ -227,48 +128,39 @@ export default function ProfessionalPublicPage({ userId }: Props) {
 
   useEffect(() => {
     let mounted = true;
-
-    setLoading(true);
-    setError('');
-
-    professionalsApi
-      .list()
-      .then((response) => {
+    setLoading(true); setError('');
+    fetch(`http://localhost:3001/profissional/api/${encodeURIComponent(userId)}`)
+      .then(r => r.json())
+      .then((body: { success: boolean; data?: Professional; message?: string }) => {
         if (!mounted) return;
-
-        const found = response.data.find((item) => item.user_id === userId || item.id === userId);
-
-        if (found) {
-          setProfessional(found);
-          return;
-        }
-
-        setError('Profissional não encontrado.');
+        if (body.success && body.data) setProfessional(body.data);
+        else setError(body.message ?? 'Profissional não encontrado.');
       })
-      .catch(() => {
-        if (mounted) setError('Não foi possível carregar este perfil profissional.');
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-
-    return () => {
-      mounted = false;
-    };
+      .catch(() => { if (mounted) setError('Não foi possível carregar este perfil.'); })
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
   }, [userId]);
 
   if (loading) return <LoadingScreen />;
   if (error || !professional) return <ErrorScreen message={error} />;
 
+  const templateId = THEME_TO_TEMPLATE[professional.theme ?? ''] ?? 'melodias';
+  if (templateId === 'minimal') return <ThemeMinimal professional={professional} />;
+  if (templateId === 'card')    return <ThemeCard    professional={professional} />;
+  if (templateId === 'dark')    return <ThemeDark    professional={professional} />;
   return <ProfessionalProfile professional={professional} />;
 }
 
+// ─── Loading / Error ──────────────────────────────────────────────────────────
 function LoadingScreen() {
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-6">
-      <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] px-10 py-9 text-center shadow-2xl backdrop-blur-xl">
-        <Loader2 className="mx-auto mb-5 h-10 w-10 animate-spin text-white/70" />
-        <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/45">Carregando perfil</p>
+    <div className="min-h-screen bg-[#f9f4ee] flex items-center justify-center px-6">
+      <div className="text-center">
+        <div className="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center text-2xl font-black text-white shadow-xl"
+          style={{ background: 'linear-gradient(135deg,#2c1810,#a75a35)' }}>♩</div>
+        <div className="flex items-center gap-2 text-sm font-semibold text-[#5a4035]/50">
+          <Loader2 size={16} className="animate-spin" /> Carregando perfil...
+        </div>
       </div>
     </div>
   );
@@ -276,314 +168,373 @@ function LoadingScreen() {
 
 function ErrorScreen({ message }: { message: string }) {
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-6">
-      <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.05] p-8 text-center shadow-2xl backdrop-blur-xl">
-        <XCircle className="mx-auto mb-5 h-12 w-12 text-red-300" />
-        <h1 className="mb-2 text-2xl font-black tracking-tight text-white">Perfil não encontrado</h1>
-        <p className="text-sm leading-6 text-white/55">{message || 'Este link pode estar incorreto ou indisponível.'}</p>
-        <a
-          href="/diretorio"
-          className="mt-7 inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:-translate-y-0.5 hover:bg-white/90"
-        >
-          Voltar para o diretório
+    <div className="min-h-screen bg-[#f9f4ee] flex items-center justify-center px-6">
+      <div className="w-full max-w-sm text-center">
+        <XCircle className="mx-auto mb-4 text-red-400" size={48} />
+        <h1 className="text-xl font-black text-[#2c1810] mb-2">Perfil não encontrado</h1>
+        <p className="text-sm text-[#5a4035]/60 mb-6">{message || 'Este link pode estar incorreto.'}</p>
+        <a href="/diretorio"
+          className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold text-white"
+          style={{ background: '#a75a35' }}>
+          Ver diretório
         </a>
       </div>
     </div>
   );
 }
 
+// ─── Tema Melodias (padrão) ───────────────────────────────────────────────────
 function ProfessionalProfile({ professional }: { professional: Professional }) {
-  const theme = getTheme(professional);
+  const accent = professional.accent_color || '#a75a35';
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
 
-  const rating = toNumber(professional.rating);
-  const reviews = toNumber(professional.reviews_count);
-  const price = toNumber(professional.price_per_session);
-  const initials = getInitials(professional.name);
-
+  const rating     = toNumber(professional.rating);
+  const reviews    = toNumber(professional.reviews_count);
+  const initials   = getInitials(professional.name);
   const socialLinks = useMemo(() => buildSocialLinks(professional), [professional]);
+  const waMsg      = encodeURIComponent(`Olá, ${professional.name.split(' ')[0]}! Vim através da Rede Espalhe Melodias e gostaria de saber mais sobre seu atendimento.`);
+  const whatsappUrl = professional.contact_whatsapp
+    ? `https://wa.me/${onlyDigits(professional.contact_whatsapp)}?text=${waMsg}` : '';
+
+  // Cores
+  const bg     = '#f9f4ee';
+  const card   = '#ffffff';
+  const border = '#e8ddd3';
+  const h1col  = '#2c1810';
+  const bodycol = '#5a4035';
+  const asoft  = `${accent}14`;
+  const aborder = `${accent}26`;
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 48);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const fn = () => { setScrolled(window.scrollY > 50); setScrollY(window.scrollY); };
+    fn(); window.addEventListener('scroll', fn, { passive: true });
+    return () => window.removeEventListener('scroll', fn);
   }, []);
 
-  const whatsappUrl = professional.contact_whatsapp
-    ? `https://wa.me/${onlyDigits(professional.contact_whatsapp)}`
-    : '';
-
-  const hasStats = professional.location || price > 0 || rating > 0;
+  const parallax = Math.min(scrollY * 0.12, 48);
 
   return (
-    <main
-      className="min-h-screen overflow-x-hidden"
-      style={{
-        background: theme.pageBg,
-        color: theme.textBody,
-      }}
-    >
-      <style>{profileStyles(theme)}</style>
+    <main className="min-h-screen overflow-x-hidden antialiased"
+      style={{ background: bg, color: bodycol, fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
+      <style>{`
+        html { scroll-behavior: smooth; }
+        ::selection { background: ${accent}; color: #fff; }
 
-      <header
-        className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
-          scrolled ? 'py-3' : 'py-5'
-        }`}
-      >
-        <div className="mx-auto flex w-[min(1180px,calc(100%-32px))] items-center justify-between rounded-3xl border px-4 py-3 shadow-lg backdrop-blur-2xl md:px-5"
+        /* Entrada do hero */
+        .m-badge  { animation: mIn .6s cubic-bezier(.22,1,.36,1) .05s both; }
+        .m-name   { animation: mIn .7s cubic-bezier(.22,1,.36,1) .15s both; }
+        .m-sub    { animation: mIn .7s cubic-bezier(.22,1,.36,1) .25s both; }
+        .m-btns   { animation: mIn .7s cubic-bezier(.22,1,.36,1) .35s both; }
+        .m-photo  { animation: mPhotoIn .9s cubic-bezier(.22,1,.36,1) .1s both; }
+        .m-deco   { animation: mDecoIn 1s cubic-bezier(.22,1,.36,1) .05s both; }
+
+        @keyframes mIn {
+          from { opacity:0; transform:translateY(24px); }
+          to   { opacity:1; transform:translateY(0); }
+        }
+        @keyframes mPhotoIn {
+          from { opacity:0; transform:translateY(32px) scale(.96); }
+          to   { opacity:1; transform:translateY(0) scale(1); }
+        }
+        @keyframes mDecoIn {
+          from { opacity:0; transform:scale(.8) rotate(-6deg); }
+          to   { opacity:1; transform:scale(1) rotate(0deg); }
+        }
+
+        /* Botão WhatsApp pulse */
+        .wa-btn { position:relative; overflow:hidden; }
+        .wa-btn::after {
+          content:''; position:absolute; inset:0; border-radius:inherit;
+          background:rgba(255,255,255,.18);
+          animation:waPulse 2.4s ease-in-out infinite;
+        }
+        @keyframes waPulse {
+          0%,100% { opacity:0; transform:scale(1); }
+          50%     { opacity:1; transform:scale(1.06); }
+        }
+
+        /* Shimmer nos cards de serviço */
+        .service-card { position:relative; overflow:hidden; }
+        .service-card::before {
+          content:''; position:absolute; inset:0;
+          background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.55),transparent 70%);
+          transform:translateX(-100%); transition:transform .55s ease;
+        }
+        .service-card:hover::before { transform:translateX(100%); }
+
+        /* Nav pill hover */
+        .nav-pill { transition: background .18s, color .18s, transform .18s; }
+        .nav-pill:hover { transform:translateY(-1px); }
+
+        /* Social link hover lift */
+        .social-link { transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s; }
+        .social-link:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,.1); }
+
+        /* Foto hover zoom */
+        .photo-wrap img { transition: transform .6s cubic-bezier(.22,1,.36,1); }
+        .photo-wrap:hover img { transform: scale(1.04); }
+
+        /* Floating badge */
+        .float-badge { animation: floatBadge 3.5s ease-in-out infinite; }
+        @keyframes floatBadge {
+          0%,100% { transform:translateY(0); }
+          50%     { transform:translateY(-6px); }
+        }
+
+        /* Scroll indicator */
+        .scroll-dot { animation:scrollBob 1.5s ease-in-out infinite; }
+        @keyframes scrollBob {
+          0%,100% { transform:translateY(0); opacity:.6; }
+          50%     { transform:translateY(6px); opacity:1; }
+        }
+
+        /* Specialty pill hover */
+        .spec-pill { transition:background .18s, transform .18s; cursor:default; }
+        .spec-pill:hover { transform:translateY(-2px); }
+      `}</style>
+
+      {/* ── NAV ── */}
+      <nav className="fixed inset-x-0 top-0 z-50 transition-all duration-400"
+        style={{ padding: scrolled ? '8px 0' : '16px 0' }}>
+        <div className="mx-auto flex w-[min(1100px,calc(100%-20px))] items-center justify-between rounded-2xl px-4 py-2.5 transition-all duration-400"
           style={{
-            background: scrolled ? theme.navBg : 'rgba(255,255,255,0.08)',
-            borderColor: scrolled ? theme.navBorder : 'rgba(255,255,255,0.12)',
-            boxShadow: scrolled ? '0 16px 50px rgba(15,23,42,0.08)' : 'none',
-          }}
-        >
-          <a href="/" className="flex items-center gap-3 no-underline">
-            <div
-              className="grid h-11 w-11 place-items-center rounded-2xl text-white shadow-lg"
-              style={{ background: `linear-gradient(135deg, ${theme.bannerFrom}, ${theme.accent})` }}
-            >
-              <Sparkles size={19} />
-            </div>
+            background: scrolled ? 'rgba(249,244,238,.94)' : 'rgba(249,244,238,0)',
+            backdropFilter: scrolled ? 'blur(24px) saturate(1.8)' : 'none',
+            boxShadow: scrolled ? `0 4px 40px rgba(44,24,16,.08), 0 1px 0 ${border}` : 'none',
+            border: `1px solid ${scrolled ? border : 'transparent'}`,
+          }}>
+
+          {/* Logo */}
+          <a href="/" className="flex items-center gap-2.5 no-underline group">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-base font-black shadow-md transition group-hover:scale-105"
+              style={{ background: `linear-gradient(135deg, ${h1col}, ${accent})` }}>♩</div>
             <div>
-              <p
-                className="m-0 text-sm font-black leading-none tracking-tight"
-                style={{ color: scrolled ? theme.textHeading : '#fff' }}
-              >
-                Espalhe Melodias
-              </p>
-              <p
-                className="m-0 mt-1 text-[11px] font-bold uppercase tracking-[0.18em]"
-                style={{ color: scrolled ? theme.accent : 'rgba(255,255,255,0.55)' }}
-              >
-                Perfil profissional
-              </p>
+              <p className="m-0 text-sm font-black leading-tight" style={{ color: h1col }}>Espalhe Melodias</p>
+              <p className="m-0 text-[9px] font-bold uppercase tracking-[.2em]" style={{ color: `${h1col}55` }}>Perfil profissional</p>
             </div>
           </a>
 
-          <nav className="hidden items-center gap-2 md:flex">
-            <NavItem href="#sobre" label="Sobre" scrolled={scrolled} theme={theme} />
-            <NavItem href="#servicos" label="Serviços" scrolled={scrolled} theme={theme} />
-            <NavItem href="#contato" label="Contato" scrolled={scrolled} theme={theme} />
+          {/* Desktop nav */}
+          <div className="hidden md:flex items-center gap-1">
+            {(['Sobre','Serviços','Contato'] as const).map((label, i) => (
+              <a key={label} href={['#sobre','#servicos','#contato'][i]}
+                className="nav-pill px-4 py-2 rounded-xl text-xs font-bold"
+                style={{ color: bodycol }}>
+                {label}
+              </a>
+            ))}
             {whatsappUrl && (
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-2 inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-500/25 transition hover:-translate-y-0.5 hover:bg-emerald-600"
-              >
-                <MessageCircle size={17} /> Agendar
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
+                className="ml-2 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black text-white transition hover:-translate-y-0.5"
+                style={{ background: accent, boxShadow: `0 4px 16px ${accent}40` }}>
+                <MessageCircle size={14} /> Agendar
               </a>
             )}
-          </nav>
+          </div>
 
-          <button
-            type="button"
-            className="grid h-11 w-11 place-items-center rounded-2xl border md:hidden"
-            style={{
-              borderColor: scrolled ? theme.navBorder : 'rgba(255,255,255,0.16)',
-              color: scrolled ? theme.textHeading : '#fff',
-              background: scrolled ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.08)',
-            }}
-            onClick={() => setMenuOpen((value) => !value)}
-            aria-label="Abrir menu"
-          >
-            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          {/* Mobile menu btn */}
+          <button type="button" onClick={() => setMenuOpen(v=>!v)}
+            className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl border transition active:scale-95"
+            style={{ borderColor: border, color: h1col }}>
+            {menuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
 
+        {/* Mobile dropdown */}
         {menuOpen && (
-          <div className="mx-auto mt-2 grid w-[min(1180px,calc(100%-32px))] gap-2 rounded-3xl border bg-white p-3 shadow-2xl md:hidden">
-            <MobileNavItem href="#sobre" label="Sobre" onClick={() => setMenuOpen(false)} />
-            <MobileNavItem href="#servicos" label="Serviços" onClick={() => setMenuOpen(false)} />
-            <MobileNavItem href="#contato" label="Contato" onClick={() => setMenuOpen(false)} />
+          <div className="mx-auto mt-2 w-[min(1100px,calc(100%-20px))] rounded-2xl p-2 shadow-2xl md:hidden"
+            style={{ background: card, border: `1px solid ${border}` }}>
+            {(['Sobre','Serviços','Contato'] as const).map((label, i) => (
+              <a key={label} href={['#sobre','#servicos','#contato'][i]}
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold no-underline transition hover:opacity-70"
+                style={{ color: h1col }}>
+                {label}
+              </a>
+            ))}
             {whatsappUrl && (
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white"
-              >
-                <MessageCircle size={17} /> Agendar consulta
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
+                className="mt-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-black text-white"
+                style={{ background: '#25d366' }}>
+                <MessageCircle size={16} /> Agendar consulta
               </a>
             )}
           </div>
         )}
-      </header>
+      </nav>
 
-      <section
-        className="relative flex min-h-screen items-center overflow-hidden px-5 pb-16 pt-32 md:px-8 md:pt-36"
-        style={{
-          background: `radial-gradient(circle at 20% 20%, ${theme.accent}55, transparent 28%), radial-gradient(circle at 80% 10%, rgba(255,255,255,0.12), transparent 24%), linear-gradient(145deg, ${theme.bannerFrom} 0%, ${theme.bannerMid} 48%, ${theme.bannerTo} 100%)`,
-        }}
-      >
-        <div className="profile-grid pointer-events-none absolute inset-0 opacity-[0.08]" />
-        <FloatingOrnaments />
+      {/* ── HERO ── */}
+      <section className="relative min-h-[100svh] flex items-center overflow-hidden px-5 pt-24 pb-16 md:px-8">
 
-        <div className="relative z-10 mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1.12fr_.88fr]">
-          <div className="animate-hero-in">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white/75 backdrop-blur-xl">
-              <BadgeCheck size={15} className="text-emerald-300" />
-              Profissional verificado
+        {/* Fundo com manchas de cor suaves */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute top-[-10%] right-[-5%] w-[55vw] h-[55vw] max-w-lg rounded-full blur-[100px] opacity-25"
+            style={{ background: accent }} />
+          <div className="absolute bottom-[-5%] left-[-8%] w-[40vw] h-[40vw] max-w-sm rounded-full blur-[80px] opacity-15"
+            style={{ background: accent }} />
+          {/* Dots decorativos */}
+          <div className="m-deco absolute top-[18%] left-[12%] w-3 h-3 rounded-full opacity-30" style={{ background: accent }} />
+          <div className="m-deco absolute top-[35%] right-[8%] w-2 h-2 rounded-full opacity-20" style={{ background: accent }} />
+          <div className="m-deco absolute bottom-[20%] left-[30%] w-4 h-4 rounded-full opacity-15" style={{ background: accent }} />
+        </div>
+
+        <div className="relative z-10 mx-auto w-full max-w-6xl">
+          <div className="flex flex-col items-center gap-10 text-center lg:flex-row lg:items-end lg:gap-16 lg:text-left">
+
+            {/* ── FOTO ── mobile: abaixo do texto; desktop: à direita */}
+            <div className="m-photo order-first w-full max-w-[260px] shrink-0 lg:order-last lg:ml-auto lg:max-w-sm xl:max-w-md mx-auto lg:mx-0">
+              <div className="relative">
+                {/* Sombra decorativa atrás */}
+                <div className="absolute -bottom-3 -right-3 w-full h-full rounded-[2.5rem]"
+                  style={{ background: asoft, border: `2px dashed ${aborder}` }} />
+
+                {/* Container foto com parallax */}
+                <div className="photo-wrap relative overflow-hidden rounded-[2.5rem] shadow-2xl"
+                  style={{ boxShadow: `0 40px 80px ${accent}20, 0 16px 40px rgba(0,0,0,.1)`, transform: `translateY(${-parallax}px)`, transition: 'transform .1s linear' }}>
+                  {professional.avatar ? (
+                    <img
+                      src={professional.avatar}
+                      alt={professional.name}
+                      onLoad={() => setImgLoaded(true)}
+                      className="w-full aspect-[3/4] object-cover object-top"
+                      style={{ opacity: imgLoaded ? 1 : 0, transition: 'opacity .4s' }}
+                    />
+                  ) : (
+                    <div className="w-full aspect-[3/4] flex items-center justify-center text-6xl font-black"
+                      style={{ background: `linear-gradient(135deg, ${accent}22, ${accent}55)`, color: accent }}>
+                      {initials}
+                    </div>
+                  )}
+                  {/* Overlay sutil no hover */}
+                  <div className="absolute inset-0 pointer-events-none rounded-[2.5rem]"
+                    style={{ background: `linear-gradient(to top, ${accent}18 0%, transparent 40%)` }} />
+                </div>
+
+                {/* Badge verificado flutuante */}
+                <div className="float-badge absolute -left-5 top-1/3 flex items-center gap-2 px-4 py-2.5 rounded-2xl shadow-xl"
+                  style={{ background: card, border: `1px solid ${border}` }}>
+                  <ShieldCheck size={15} style={{ color: accent }} />
+                  <span className="text-xs font-black" style={{ color: h1col }}>Verificado</span>
+                </div>
+
+                {/* Rating flutuante se tiver */}
+                {rating > 0 && (
+                  <div className="float-badge absolute -right-5 bottom-1/4 flex items-center gap-2 px-3 py-2 rounded-xl shadow-xl"
+                    style={{ background: card, border: `1px solid ${border}`, animationDelay: '.8s' }}>
+                    <Star size={13} className="fill-amber-400 stroke-amber-400" />
+                    <span className="text-xs font-black text-amber-600">{rating.toFixed(1)}</span>
+                    {reviews > 0 && <span className="text-[10px] opacity-50">/5</span>}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <h1 className="m-0 max-w-3xl text-5xl font-black leading-[0.98] tracking-[-0.055em] text-white md:text-7xl">
-              {professional.name}
-            </h1>
+            {/* ── TEXTO ── */}
+            <div className="flex-1 min-w-0">
 
-            {professional.crp && (
-              <p className="mt-5 inline-flex rounded-full border border-white/12 bg-white/10 px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-white/55">
-                {professional.crp}
-              </p>
-            )}
+              {/* Badge */}
+              <div className="m-badge inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11px] font-bold mb-5 border"
+                style={{ background: asoft, borderColor: aborder, color: accent }}>
+                <BadgeCheck size={13} /> Profissional verificado · Espalhe Melodias
+              </div>
 
-            {professional.specialties?.length > 0 && (
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-white/65 md:text-xl">
-                {professional.specialties.slice(0, 4).join(' · ')}
-                {professional.specialties.length > 4 ? ` · +${professional.specialties.length - 4}` : ''}
-              </p>
-            )}
+              {/* Nome */}
+              <h1 className="m-name m-0 text-[2.8rem] font-black leading-[.9] tracking-[-0.055em] md:text-6xl xl:text-7xl"
+                style={{ color: h1col }}>
+                {professional.name}
+              </h1>
 
-            {rating > 0 && (
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((item) => (
-                    <Star
-                      key={item}
-                      size={18}
-                      className={item <= Math.round(rating) ? 'fill-amber-300 text-amber-300' : 'text-white/20'}
-                    />
+              {/* CRP */}
+              {professional.crp && (
+                <p className="m-sub mt-3 font-mono text-xs font-bold tracking-[.2em] uppercase opacity-40"
+                  style={{ color: h1col }}>{professional.crp}</p>
+              )}
+
+              {/* Especialidades como texto */}
+              {professional.specialties?.length > 0 && (
+                <p className="m-sub mt-4 text-base leading-7" style={{ color: `${bodycol}bb` }}>
+                  {professional.specialties.slice(0,5).join(' · ')}
+                  {professional.specialties.length > 5 ? ` · +${professional.specialties.length - 5}` : ''}
+                </p>
+              )}
+
+              {/* Localização */}
+              {professional.location && (
+                <div className="m-sub mt-3 flex items-center justify-center gap-1.5 text-sm font-medium lg:justify-start"
+                  style={{ color: `${bodycol}88` }}>
+                  <MapPin size={14} style={{ color: accent }} /> {professional.location}
+                </div>
+              )}
+
+              {/* CTAs */}
+              <div className="m-btns mt-8 flex flex-wrap justify-center gap-3 lg:justify-start">
+                {whatsappUrl && (
+                  <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
+                    className="wa-btn group flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-sm font-black text-white transition hover:-translate-y-0.5 active:scale-95"
+                    style={{ background: '#25d366', boxShadow: '0 8px 28px rgba(37,211,102,.35)' }}>
+                    <MessageCircle size={18} /> Agendar consulta
+                    <ArrowRight size={15} className="transition group-hover:translate-x-1" />
+                  </a>
+                )}
+                <a href="#sobre"
+                  className="flex items-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-black border transition hover:bg-black/5 active:scale-95"
+                  style={{ borderColor: border, color: h1col }}>
+                  Conhecer perfil <ChevronDown size={15} />
+                </a>
+              </div>
+
+              {/* Idiomas */}
+              {professional.languages?.length > 0 && (
+                <div className="m-btns mt-6 flex flex-wrap justify-center gap-2 lg:justify-start">
+                  {professional.languages.map(l => (
+                    <span key={l} className="text-[11px] font-semibold px-3 py-1.5 rounded-full border"
+                      style={{ borderColor: border, color: bodycol, background: card }}>{l}</span>
                   ))}
                 </div>
-                <span className="text-sm font-black text-amber-200">{rating.toFixed(1)}</span>
-                {reviews > 0 && <span className="text-sm font-semibold text-white/45">({reviews} avaliações)</span>}
-              </div>
-            )}
-
-            <div className="mt-9 flex flex-wrap gap-3">
-              {whatsappUrl ? (
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group inline-flex items-center gap-3 rounded-2xl bg-emerald-500 px-6 py-4 text-base font-black text-white shadow-2xl shadow-emerald-500/30 transition hover:-translate-y-1 hover:bg-emerald-600"
-                >
-                  <MessageCircle size={21} /> Agendar consulta
-                  <ArrowRight size={18} className="transition group-hover:translate-x-1" />
-                </a>
-              ) : null}
-
-              <a
-                href="#sobre"
-                className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-6 py-4 text-base font-bold text-white backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/15"
-              >
-                Conhecer perfil <ChevronDown size={18} />
-              </a>
+              )}
             </div>
-
-            {hasStats && (
-              <div className="mt-10 grid max-w-2xl gap-3 sm:grid-cols-3">
-                {professional.location && (
-                  <HeroStat icon={<MapPin size={18} />} label="Localização" value={professional.location} />
-                )}
-                {price > 0 && <HeroStat icon={<CircleDollarSign size={18} />} label="Sessão" value={formatCurrency(price)} />}
-                {rating > 0 && <HeroStat icon={<Star size={18} />} label="Avaliação" value={rating.toFixed(1)} />}
-              </div>
-            )}
           </div>
 
-          <div className="animate-card-in relative mx-auto w-full max-w-md lg:max-w-none">
-            <div className="absolute -inset-6 rounded-[3rem] bg-white/10 blur-2xl" />
-            <div className="relative overflow-hidden rounded-[2.5rem] border border-white/15 bg-white/12 p-4 shadow-2xl backdrop-blur-2xl">
-              <div className="relative overflow-hidden rounded-[2rem] bg-white">
-                <ProfileImage professional={professional} initials={initials} theme={theme} large />
-
-                <div className="p-6">
-                  <div className="mb-5 flex items-center justify-between gap-4">
-                    <div>
-                      <p className="m-0 text-xs font-black uppercase tracking-[0.18em]" style={{ color: theme.accent }}>
-                        Perfil público
-                      </p>
-                      <h2 className="m-0 mt-1 text-2xl font-black tracking-tight" style={{ color: theme.textHeading }}>
-                        {professional.name.split(' ')[0]}
-                      </h2>
-                    </div>
-                    <div
-                      className="grid h-12 w-12 place-items-center rounded-2xl"
-                      style={{ background: theme.accentLight, color: theme.accent }}
-                    >
-                      <ShieldCheck size={24} />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3">
-                    {professional.location && (
-                      <InfoLine icon={<MapPin size={17} />} label={professional.location} theme={theme} />
-                    )}
-                    {professional.languages?.length > 0 && (
-                      <InfoLine icon={<Languages size={17} />} label={professional.languages.join(', ')} theme={theme} />
-                    )}
-                    {professional.services?.length > 0 && (
-                      <InfoLine icon={<BriefcaseBusiness size={17} />} label={`${professional.services.length} serviço(s) disponível(is)`} theme={theme} />
-                    )}
-                  </div>
-                </div>
-              </div>
+          {/* Scroll indicator */}
+          <div className="hidden md:flex absolute bottom-0 left-1/2 -translate-x-1/2 flex-col items-center gap-2 pb-4">
+            <div className="w-5 h-8 rounded-full border-2 flex items-start justify-center pt-1.5"
+              style={{ borderColor: `${h1col}30` }}>
+              <div className="scroll-dot w-1 h-2 rounded-full" style={{ background: accent }} />
             </div>
           </div>
         </div>
       </section>
 
-      <section id="sobre" className="px-5 py-20 md:px-8 md:py-28">
-        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[.85fr_1.15fr]">
-          <Reveal>
-            <div className="sticky top-28 rounded-[2rem] border p-5 shadow-xl" style={{ background: theme.cardBg, borderColor: theme.cardBorder }}>
-              <ProfileImage professional={professional} initials={initials} theme={theme} />
-              <div className="mt-5">
-                <p className="m-0 text-xs font-black uppercase tracking-[0.18em]" style={{ color: theme.accent }}>
-                  Identificação profissional
-                </p>
-                <h2 className="m-0 mt-2 text-2xl font-black tracking-tight" style={{ color: theme.textHeading }}>
-                  {professional.name}
-                </h2>
-                {professional.crp && <p className="mt-2 text-sm font-bold opacity-70">{professional.crp}</p>}
-              </div>
-            </div>
-          </Reveal>
+      {/* Separador */}
+      <div className="h-px mx-auto max-w-6xl" style={{ background: `linear-gradient(90deg, transparent, ${border}, transparent)` }} />
 
-          <div>
-            <Reveal delay={80}>
-              <SectionEyebrow theme={theme}>Sobre o profissional</SectionEyebrow>
-              <h2 className="mt-3 max-w-3xl text-4xl font-black leading-tight tracking-[-0.04em] md:text-5xl" style={{ color: theme.textHeading }}>
-                Um espaço de cuidado, escuta e desenvolvimento humano.
+      {/* ── SOBRE ── */}
+      <section id="sobre" className="px-5 py-20 md:px-8 md:py-28">
+        <div className="mx-auto max-w-6xl">
+          <div className="flex flex-col gap-12 lg:flex-row lg:gap-20 lg:items-start">
+
+            <Reveal className="flex-1 min-w-0" delay={0}>
+              <p className="text-[10px] font-black uppercase tracking-[.25em] mb-4" style={{ color: accent }}>Sobre</p>
+              <h2 className="text-3xl font-black tracking-[-0.04em] md:text-4xl mb-6" style={{ color: h1col }}>
+                {professional.name.split(' ')[0]}, em palavras
               </h2>
-              {professional.bio ? (
-                <p className="mt-6 max-w-3xl text-lg leading-9" style={{ color: theme.textBody }}>
-                  {professional.bio}
-                </p>
-              ) : (
-                <p className="mt-6 max-w-3xl text-lg leading-9 opacity-75">
-                  Este perfil reúne as principais informações profissionais, áreas de atuação, serviços e canais de contato.
-                </p>
-              )}
+              <p className="text-base leading-8" style={{ color: `${bodycol}bb` }}>
+                {professional.bio || 'Perfil profissional verificado na Rede Espalhe Melodias.'}
+              </p>
             </Reveal>
 
             {professional.specialties?.length > 0 && (
-              <Reveal delay={140} className="mt-10">
-                <div className="rounded-[2rem] border p-6" style={{ background: theme.cardBg, borderColor: theme.cardBorder }}>
-                  <h3 className="mb-5 text-xl font-black tracking-tight" style={{ color: theme.textHeading }}>
-                    Especialidades
-                  </h3>
-                  <div className="flex flex-wrap gap-3">
-                    {professional.specialties.map((specialty) => (
-                      <span
-                        key={specialty}
-                        className="inline-flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-bold"
-                        style={{ background: theme.accentLight, borderColor: `${theme.accent}25`, color: theme.textHeading }}
-                      >
-                        <Check size={15} style={{ color: theme.accent }} />
-                        {specialty}
+              <Reveal className="lg:w-96 shrink-0" delay={100} from="right">
+                <div className="rounded-2xl p-5 border" style={{ background: card, borderColor: border }}>
+                  <p className="text-[10px] font-black uppercase tracking-[.22em] mb-4" style={{ color: accent }}>Especialidades</p>
+                  <div className="flex flex-wrap gap-2">
+                    {professional.specialties.map((s, i) => (
+                      <span key={s} className="spec-pill inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border"
+                        style={{ background: asoft, borderColor: aborder, color: h1col, transitionDelay: `${i * 30}ms` }}>
+                        <Check size={11} style={{ color: accent }} /> {s}
                       </span>
                     ))}
                   </div>
@@ -594,421 +545,126 @@ function ProfessionalProfile({ professional }: { professional: Professional }) {
         </div>
       </section>
 
-      <section id="servicos" className="px-5 py-20 md:px-8 md:py-24" style={{ background: theme.sectionAlt }}>
-        <div className="mx-auto max-w-6xl">
-          <Reveal>
-            <div className="mx-auto max-w-2xl text-center">
-              <SectionEyebrow theme={theme}>Serviços</SectionEyebrow>
-              <h2 className="mt-3 text-4xl font-black leading-tight tracking-[-0.04em] md:text-5xl" style={{ color: theme.textHeading }}>
-                Atendimentos e possibilidades
+      {/* ── SERVIÇOS ── */}
+      {professional.services?.length > 0 && (
+        <section id="servicos" className="px-5 py-20 md:px-8 md:py-24"
+          style={{ background: `linear-gradient(180deg, ${asoft} 0%, transparent 100%)`, borderTop: `1px solid ${border}`, borderBottom: `1px solid ${border}` }}>
+          <div className="mx-auto max-w-6xl">
+            <Reveal>
+              <p className="text-[10px] font-black uppercase tracking-[.25em] mb-2" style={{ color: accent }}>Serviços</p>
+              <h2 className="text-3xl font-black tracking-[-0.04em] md:text-4xl mb-10" style={{ color: h1col }}>
+                Como posso ajudar
               </h2>
-              <p className="mt-5 text-base leading-7 opacity-75">
-                Conheça os principais serviços oferecidos e escolha o melhor caminho para iniciar o contato.
-              </p>
-            </div>
-          </Reveal>
-
-          {professional.services?.length > 0 ? (
-            <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {professional.services.map((service, index) => (
-                <Reveal key={service} delay={index * 60}>
-                  <div
-                    className="group h-full rounded-[2rem] border p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
-                    style={{ background: theme.cardBg, borderColor: theme.cardBorder }}
-                  >
-                    <div
-                      className="mb-5 grid h-12 w-12 place-items-center rounded-2xl transition group-hover:scale-105"
-                      style={{ background: theme.accentLight, color: theme.accent }}
-                    >
-                      <BriefcaseBusiness size={22} />
+            </Reveal>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {professional.services.map((s, i) => (
+                <Reveal key={s} delay={i * 60} from="bottom">
+                  <div className="service-card group rounded-2xl border p-5 transition hover:-translate-y-1 hover:shadow-xl cursor-default"
+                    style={{ background: card, borderColor: border }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 group-hover:rotate-3"
+                      style={{ background: asoft, color: accent }}>
+                      <Check size={18} />
                     </div>
-                    <h3 className="m-0 text-lg font-black tracking-tight" style={{ color: theme.textHeading }}>
-                      {service}
-                    </h3>
-                    <p className="mt-3 text-sm leading-6 opacity-70">
-                      Atendimento conduzido com ética, acolhimento e direcionamento profissional.
-                    </p>
+                    <h3 className="text-sm font-black mb-1" style={{ color: h1col }}>{s}</h3>
+                    <p className="text-xs leading-5 opacity-45">Atendimento com ética e acolhimento profissional.</p>
                   </div>
                 </Reveal>
               ))}
             </div>
-          ) : (
-            <EmptyCard theme={theme} text="Nenhum serviço foi cadastrado para este perfil." />
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
-      <section className="px-5 py-20 md:px-8 md:py-24">
-        <div className="mx-auto grid max-w-6xl gap-5 md:grid-cols-3">
-          {professional.location && (
-            <DataCard icon={<MapPin size={24} />} title="Localização" value={professional.location} theme={theme} />
-          )}
-          {price > 0 && (
-            <DataCard icon={<CircleDollarSign size={24} />} title="Valor da sessão" value={formatCurrency(price)} theme={theme} />
-          )}
-          {professional.languages?.length > 0 && (
-            <DataCard icon={<Globe2 size={24} />} title="Idiomas" value={professional.languages.join(', ')} theme={theme} />
-          )}
-        </div>
-      </section>
+      {/* ── AGENDA ── */}
+      {professional.schedule?.length > 0 && (
+        <section className="px-5 py-16 md:px-8">
+          <div className="mx-auto max-w-6xl">
+            <Reveal>
+              <p className="text-[10px] font-black uppercase tracking-[.25em] mb-2" style={{ color: accent }}>Agenda</p>
+              <h2 className="text-2xl font-black tracking-tight mb-6" style={{ color: h1col }}>Horários disponíveis</h2>
+              <div className="flex flex-wrap gap-2">
+                {professional.schedule.map((slot, i) => (
+                  <span key={i} className="text-xs font-semibold px-4 py-2.5 rounded-xl border transition hover:shadow-sm"
+                    style={{ background: card, borderColor: border, color: bodycol }}>
+                    {slot.day} {slot.hours}
+                  </span>
+                ))}
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      )}
 
-      <section id="contato" className="px-5 py-20 md:px-8 md:py-28" style={{ background: theme.sectionAlt }}>
-        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_.9fr]">
-          <Reveal>
-            <div>
-              <SectionEyebrow theme={theme}>Contato</SectionEyebrow>
-              <h2 className="mt-3 text-4xl font-black leading-tight tracking-[-0.04em] md:text-5xl" style={{ color: theme.textHeading }}>
-                Comece uma conversa de forma simples e segura.
+      {/* ── CONTATO ── */}
+      <section id="contato" className="px-5 py-20 md:px-8 md:py-28"
+        style={{ borderTop: `1px solid ${border}` }}>
+        <div className="mx-auto max-w-6xl">
+          <div className="flex flex-col gap-12 lg:flex-row lg:items-start lg:gap-16">
+
+            <Reveal className="flex-1 min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[.25em] mb-3" style={{ color: accent }}>Contato</p>
+              <h2 className="text-3xl font-black tracking-[-0.04em] md:text-4xl mb-4" style={{ color: h1col }}>
+                Vamos conversar?
               </h2>
-              <p className="mt-5 max-w-2xl text-lg leading-8 opacity-75">
-                Use os canais disponíveis para tirar dúvidas, verificar horários ou agendar um atendimento.
+              <p className="text-base leading-7 mb-8 max-w-md" style={{ color: `${bodycol}99` }}>
+                Entre em contato para verificar disponibilidade, tirar dúvidas ou agendar um atendimento.
               </p>
-
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-3">
                 {whatsappUrl && (
-                  <a
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-3 rounded-2xl bg-emerald-500 px-6 py-4 text-base font-black text-white shadow-xl shadow-emerald-500/20 transition hover:-translate-y-1 hover:bg-emerald-600"
-                  >
-                    <MessageCircle size={21} /> Falar pelo WhatsApp
+                  <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
+                    className="wa-btn flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-sm font-black text-white transition hover:-translate-y-0.5 active:scale-95"
+                    style={{ background: '#25d366', boxShadow: '0 8px 28px rgba(37,211,102,.28)' }}>
+                    <MessageCircle size={18} /> WhatsApp
                   </a>
                 )}
-                <a
-                  href="/diretorio"
-                  className="inline-flex items-center gap-3 rounded-2xl border bg-white px-6 py-4 text-base font-black transition hover:-translate-y-1"
-                  style={{ borderColor: theme.cardBorder, color: theme.textHeading }}
-                >
+                <a href="/diretorio"
+                  className="flex items-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-black border transition hover:bg-black/5 active:scale-95"
+                  style={{ borderColor: border, color: h1col }}>
                   Ver outros profissionais
                 </a>
               </div>
-            </div>
-          </Reveal>
+            </Reveal>
 
-          <Reveal delay={120}>
-            <div className="rounded-[2rem] border p-5 shadow-xl" style={{ background: theme.cardBg, borderColor: theme.cardBorder }}>
-              <h3 className="mb-4 text-xl font-black tracking-tight" style={{ color: theme.textHeading }}>
-                Redes e links
-              </h3>
-              {socialLinks.length > 0 ? <SocialGrid links={socialLinks} theme={theme} /> : <EmptyCard theme={theme} text="Nenhum link cadastrado." compact />}
-            </div>
-          </Reveal>
+            {socialLinks.length > 0 && (
+              <Reveal className="lg:w-80 xl:w-96 shrink-0" delay={80} from="right">
+                <div className="rounded-2xl border p-5" style={{ background: card, borderColor: border }}>
+                  <p className="text-[10px] font-black uppercase tracking-[.22em] mb-4" style={{ color: accent }}>Redes & Links</p>
+                  <div className="grid gap-2.5">
+                    {socialLinks.map((link, i) => (
+                      <a key={i} href={link.url} target="_blank" rel="noopener noreferrer"
+                        className="social-link flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-bold no-underline"
+                        style={{ background: bg, borderColor: border, color: h1col }}>
+                        <span className="w-8 h-8 flex items-center justify-center rounded-xl text-white shrink-0 text-[13px]"
+                          style={{ background: socialColor(link.type) }}>
+                          {socialIcon(link.type)}
+                        </span>
+                        <span className="truncate">{link.label}</span>
+                        <ArrowRight size={14} className="ml-auto opacity-25 transition group-hover:translate-x-0.5" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </Reveal>
+            )}
+          </div>
         </div>
       </section>
 
-      <footer className="px-5 py-10 md:px-8" style={{ background: theme.bannerFrom }}>
-        <div className="mx-auto flex max-w-6xl flex-col gap-5 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white/10 text-white">
-              <Sparkles size={19} />
-            </div>
+      {/* ── FOOTER ── */}
+      <footer className="px-5 py-8 md:px-8" style={{ background: h1col }}>
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/10 text-white font-black">♩</div>
             <div>
               <p className="m-0 text-sm font-black text-white">Espalhe Melodias</p>
-              <p className="m-0 mt-1 text-xs font-semibold text-white/40">Comunidade de saúde mental</p>
+              <p className="m-0 text-xs text-white/30">Comunidade de saúde mental</p>
             </div>
           </div>
-
-          <p className="m-0 text-xs font-semibold text-white/35">
+          <p className="m-0 text-xs text-white/25">
             © {new Date().getFullYear()} Espalhe Melodias. Todos os direitos reservados.
           </p>
         </div>
       </footer>
     </main>
   );
-}
-
-function NavItem({ href, label, scrolled, theme }: { href: string; label: string; scrolled: boolean; theme: ThemePalette }) {
-  return (
-    <a
-      href={href}
-      className="rounded-2xl px-4 py-3 text-sm font-bold no-underline transition hover:bg-white/15"
-      style={{ color: scrolled ? theme.textHeading : 'rgba(255,255,255,0.78)' }}
-    >
-      {label}
-    </a>
-  );
-}
-
-function MobileNavItem({ href, label, onClick }: { href: string; label: string; onClick: () => void }) {
-  return (
-    <a href={href} onClick={onClick} className="rounded-2xl px-4 py-3 text-sm font-black text-slate-700 no-underline hover:bg-slate-50">
-      {label}
-    </a>
-  );
-}
-
-function ProfileImage({
-  professional,
-  initials,
-  theme,
-  large = false,
-}: {
-  professional: Professional;
-  initials: string;
-  theme: ThemePalette;
-  large?: boolean;
-}) {
-  const className = large ? 'aspect-[4/4] w-full' : 'aspect-[4/3] w-full rounded-[1.5rem]';
-
-  if (professional.avatar) {
-    return (
-      <img
-        src={professional.avatar}
-        alt={professional.name}
-        className={`${className} object-cover`}
-        style={{ borderRadius: large ? '2rem 2rem 0 0' : '1.5rem' }}
-      />
-    );
-  }
-
-  return (
-    <div
-      className={`${className} grid place-items-center text-6xl font-black text-white`}
-      style={{
-        borderRadius: large ? '2rem 2rem 0 0' : '1.5rem',
-        background: `linear-gradient(135deg, ${theme.bannerMid}, ${theme.accent})`,
-      }}
-    >
-      <UserRound className="absolute opacity-10" size={180} />
-      <span className="relative z-10">{initials}</span>
-    </div>
-  );
-}
-
-function InfoLine({ icon, label, theme }: { icon: React.ReactNode; label: string; theme: ThemePalette }) {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border px-4 py-3" style={{ borderColor: theme.cardBorder, background: theme.pageBg }}>
-      <span style={{ color: theme.accent }}>{icon}</span>
-      <span className="text-sm font-bold" style={{ color: theme.textHeading }}>
-        {label}
-      </span>
-    </div>
-  );
-}
-
-function HeroStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/12 bg-white/10 p-4 text-white backdrop-blur-xl">
-      <div className="mb-2 text-white/55">{icon}</div>
-      <p className="m-0 text-[10px] font-black uppercase tracking-[0.18em] text-white/40">{label}</p>
-      <p className="m-0 mt-1 line-clamp-1 text-sm font-black text-white">{value}</p>
-    </div>
-  );
-}
-
-function SectionEyebrow({ children, theme }: { children: React.ReactNode; theme: ThemePalette }) {
-  return (
-    <p className="m-0 text-xs font-black uppercase tracking-[0.22em]" style={{ color: theme.accent }}>
-      {children}
-    </p>
-  );
-}
-
-function DataCard({ icon, title, value, theme }: { icon: React.ReactNode; title: string; value: string; theme: ThemePalette }) {
-  return (
-    <Reveal>
-      <div className="h-full rounded-[2rem] border p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl" style={{ background: theme.cardBg, borderColor: theme.cardBorder }}>
-        <div className="mb-5 grid h-14 w-14 place-items-center rounded-2xl" style={{ background: theme.accentLight, color: theme.accent }}>
-          {icon}
-        </div>
-        <p className="m-0 text-xs font-black uppercase tracking-[0.18em]" style={{ color: theme.accentMuted }}>
-          {title}
-        </p>
-        <p className="m-0 mt-2 text-2xl font-black tracking-tight" style={{ color: theme.textHeading }}>
-          {value}
-        </p>
-      </div>
-    </Reveal>
-  );
-}
-
-function EmptyCard({ theme, text, compact = false }: { theme: ThemePalette; text: string; compact?: boolean }) {
-  return (
-    <div
-      className={`rounded-[2rem] border text-center ${compact ? 'p-5' : 'mt-12 p-10'}`}
-      style={{ background: theme.cardBg, borderColor: theme.cardBorder, color: theme.textBody }}
-    >
-      <p className="m-0 text-sm font-semibold opacity-70">{text}</p>
-    </div>
-  );
-}
-
-function FloatingOrnaments() {
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="float-one absolute left-[7%] top-[22%] h-24 w-24 rounded-full border border-white/10" />
-      <div className="float-two absolute bottom-[18%] right-[8%] h-32 w-32 rounded-full border border-white/10" />
-      <div className="float-three absolute right-[28%] top-[16%] h-3 w-3 rounded-full bg-white/40" />
-      <div className="float-two absolute bottom-[24%] left-[35%] h-2 w-2 rounded-full bg-white/30" />
-    </div>
-  );
-}
-
-function buildSocialLinks(professional: Professional): SocialLink[] {
-  const links: SocialLink[] = [];
-
-  if (professional.contact_whatsapp) {
-    links.push({ type: 'whatsapp', url: `https://wa.me/${onlyDigits(professional.contact_whatsapp)}`, label: 'WhatsApp' });
-  }
-
-  if (professional.instagram) {
-    links.push({
-      type: 'instagram',
-      url: professional.instagram.startsWith('http')
-        ? professional.instagram
-        : `https://instagram.com/${professional.instagram.replace('@', '')}`,
-      label: 'Instagram',
-    });
-  }
-
-  if (professional.linkedin) {
-    links.push({
-      type: 'linkedin',
-      url: professional.linkedin.startsWith('http')
-        ? professional.linkedin
-        : `https://linkedin.com/in/${professional.linkedin}`,
-      label: 'LinkedIn',
-    });
-  }
-
-  if (professional.facebook) {
-    links.push({
-      type: 'facebook',
-      url: professional.facebook.startsWith('http')
-        ? professional.facebook
-        : `https://facebook.com/${professional.facebook}`,
-      label: 'Facebook',
-    });
-  }
-
-  if (professional.tiktok) {
-    links.push({
-      type: 'tiktok',
-      url: professional.tiktok.startsWith('http')
-        ? professional.tiktok
-        : `https://tiktok.com/@${professional.tiktok.replace('@', '')}`,
-      label: 'TikTok',
-    });
-  }
-
-  if (professional.twitter) {
-    links.push({
-      type: 'twitter',
-      url: professional.twitter.startsWith('http')
-        ? professional.twitter
-        : `https://twitter.com/${professional.twitter.replace('@', '')}`,
-      label: 'Twitter / X',
-    });
-  }
-
-  if (professional.website) {
-    links.push({ type: 'website', url: normalizeUrl(professional.website), label: 'Site' });
-  }
-
-  professional.extra_links?.forEach((link) => {
-    if (link.url) links.push({ type: 'link', url: normalizeUrl(link.url), label: link.label || 'Link' });
-  });
-
-  return links;
-}
-
-function SocialGrid({ links, theme }: { links: SocialLink[]; theme: ThemePalette }) {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {links.map((link, index) => (
-        <a
-          key={`${link.type}-${index}`}
-          href={link.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group flex items-center gap-3 rounded-2xl border px-4 py-4 text-sm font-black no-underline transition hover:-translate-y-0.5 hover:shadow-lg"
-          style={{ background: theme.pageBg, borderColor: theme.cardBorder, color: theme.textHeading }}
-        >
-          <span className="grid h-10 w-10 place-items-center rounded-2xl text-white" style={{ background: socialColor(link.type) }}>
-            {socialIcon(link.type)}
-          </span>
-          <span>{link.label}</span>
-          <ArrowRight className="ml-auto opacity-40 transition group-hover:translate-x-1 group-hover:opacity-80" size={17} />
-        </a>
-      ))}
-    </div>
-  );
-}
-
-function socialColor(type: string) {
-  const colors: Record<string, string> = {
-    whatsapp: 'linear-gradient(135deg,#22c55e,#16a34a)',
-    instagram: 'linear-gradient(135deg,#f97316,#db2777,#7c3aed)',
-    linkedin: 'linear-gradient(135deg,#0a66c2,#0284c7)',
-    facebook: 'linear-gradient(135deg,#1877f2,#1d4ed8)',
-    tiktok: 'linear-gradient(135deg,#020617,#334155)',
-    twitter: 'linear-gradient(135deg,#0f172a,#38bdf8)',
-    website: 'linear-gradient(135deg,#475569,#0f172a)',
-    link: 'linear-gradient(135deg,#64748b,#334155)',
-  };
-
-  return colors[type] || colors.link;
-}
-
-function socialIcon(type: string) {
-  if (type === 'whatsapp') return <MessageCircle size={18} />;
-  if (type === 'website') return <Globe2 size={18} />;
-  return <LinkIcon size={18} />;
-}
-
-function profileStyles(theme: ThemePalette) {
-  return `
-    html { scroll-behavior: smooth; }
-
-    .profile-grid {
-      background-image:
-        linear-gradient(rgba(255,255,255,.8) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.8) 1px, transparent 1px);
-      background-size: 64px 64px;
-      mask-image: radial-gradient(circle at 50% 42%, black, transparent 72%);
-    }
-
-    .animate-hero-in {
-      animation: heroIn .85s cubic-bezier(.22,1,.36,1) both;
-    }
-
-    .animate-card-in {
-      animation: cardIn .95s cubic-bezier(.22,1,.36,1) .12s both;
-    }
-
-    .float-one { animation: floatOne 9s ease-in-out infinite; }
-    .float-two { animation: floatTwo 11s ease-in-out infinite; }
-    .float-three { animation: floatThree 7s ease-in-out infinite; }
-
-    ::selection {
-      background: ${theme.accent};
-      color: white;
-    }
-
-    @keyframes heroIn {
-      from { opacity: 0; transform: translateY(28px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes cardIn {
-      from { opacity: 0; transform: translateY(36px) scale(.96); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    @keyframes floatOne {
-      0%, 100% { transform: translate3d(0,0,0) rotate(0deg); }
-      50% { transform: translate3d(18px,-24px,0) rotate(12deg); }
-    }
-
-    @keyframes floatTwo {
-      0%, 100% { transform: translate3d(0,0,0) rotate(0deg); }
-      50% { transform: translate3d(-18px,20px,0) rotate(-10deg); }
-    }
-
-    @keyframes floatThree {
-      0%, 100% { transform: translate3d(0,0,0) scale(1); opacity: .35; }
-      50% { transform: translate3d(0,-18px,0) scale(1.5); opacity: .75; }
-    }
-  `;
 }

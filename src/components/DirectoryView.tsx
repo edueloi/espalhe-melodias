@@ -322,6 +322,7 @@ export default function DirectoryView() {
   const [newLinkLabel, setNewLinkLabel] = useState('');
   const [newLinkUrl, setNewLinkUrl]   = useState('');
   const [newSpecialty, setNewSpecialty] = useState('');
+  const [eTheme, setETheme]           = useState<'melodias' | 'minimal' | 'card' | 'dark'>('melodias');
   const [saving, setSaving]           = useState(false);
   const [step, setStep]               = useState(1);
   const [avatarFile, setAvatarFile]   = useState<File | null>(null);
@@ -438,6 +439,9 @@ export default function DirectoryView() {
     setEWebsite(prof.website ?? '');
     setEExtraLinks(prof.extra_links ?? []);
     setESlug(prof.slug ?? '');
+    // Detecta modelo pelo campo theme salvo
+    const tm = prof.theme ?? '';
+    setETheme(tm === 'minimal' ? 'minimal' : tm === 'card' || tm === 'ocean' ? 'card' : tm === 'dark' || tm === 'gold' ? 'dark' : 'melodias');
     setSlugStatus('idle');
     setSlugMessage('');
     setAvatarFile(null);
@@ -470,7 +474,7 @@ export default function DirectoryView() {
         avatar: finalAvatar,
         slug: eSlug || undefined,
         price_per_session: ePrice, location: builtLocation,
-        contact_whatsapp: unmaskedPhone(eWhatsapp), accent_color: eColor,
+        contact_whatsapp: unmaskedPhone(eWhatsapp), accent_color: eColor, theme: eTheme as import('../lib/api').ProfTheme,
         specialties: eSpecialties, services: eServices,
         languages: eLanguages,
         schedule: eSchedule.map(s => {
@@ -1184,11 +1188,130 @@ export default function DirectoryView() {
 
         {/* ── STEP 4 ── */}
         {step === 4 && (
-          <PanelCard title="Aparência do Site Público" icon={Globe} description="Cor de destaque usada no seu perfil externo">
-            <div className="space-y-5">
-              <div>
-                <label className="text-xs font-bold text-zinc-600 block mb-3">Escolha uma cor ou personalize</label>
-                <div className="flex flex-wrap gap-3 mb-4">
+          <div className="space-y-5">
+            {/* Seletor de modelos */}
+            <PanelCard title="Modelo do Site Público" icon={Globe} description="Escolha o layout que melhor representa você">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {([
+                  {
+                    id: 'melodias' as const,
+                    name: 'Melodias',
+                    desc: 'Padrão da rede. Hero imersivo com gradiente.',
+                    preview: (
+                      <div className="h-full rounded-xl overflow-hidden" style={{ background: `linear-gradient(135deg, #0b1309, #172711, ${eColor})` }}>
+                        <div className="p-2.5 h-full flex flex-col justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-4 h-4 rounded-md" style={{ background: eColor }} />
+                            <div className="h-1.5 w-12 rounded-full bg-white/20" />
+                          </div>
+                          <div>
+                            <div className="h-2 w-16 rounded-full bg-white/80 mb-1" />
+                            <div className="h-1.5 w-20 rounded-full bg-white/40 mb-2" />
+                            <div className="h-1 w-14 rounded-full bg-white/25" />
+                          </div>
+                        </div>
+                      </div>
+                    ),
+                  },
+                  {
+                    id: 'minimal' as const,
+                    name: 'Minimal',
+                    desc: 'Clean e tipográfico. Nome em destaque.',
+                    preview: (
+                      <div className="h-full rounded-xl overflow-hidden bg-white border border-zinc-100">
+                        <div className="h-1" style={{ background: eColor }} />
+                        <div className="p-2.5 flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 rounded-full" style={{ background: eColor }} />
+                            <div className="h-1.5 w-10 rounded-full bg-zinc-200" />
+                          </div>
+                          <div className="h-3 w-20 rounded-md bg-zinc-900" />
+                          <div className="h-1.5 w-16 rounded-full bg-zinc-200" />
+                          <div className="h-6 w-14 rounded-xl" style={{ background: eColor }} />
+                        </div>
+                      </div>
+                    ),
+                  },
+                  {
+                    id: 'card' as const,
+                    name: 'Card',
+                    desc: 'Sidebar com seu card profissional.',
+                    preview: (
+                      <div className="h-full rounded-xl overflow-hidden border border-zinc-100 flex gap-1.5 p-1.5" style={{ background: '#f4f4f0' }}>
+                        <div className="w-12 rounded-xl bg-white shadow-sm flex flex-col items-center gap-1 py-2 px-1">
+                          <div className="w-7 h-7 rounded-lg" style={{ background: eColor }} />
+                          <div className="h-1 w-8 rounded bg-zinc-200" />
+                          <div className="h-1 w-6 rounded bg-zinc-200" />
+                          <div className="h-5 w-8 rounded-lg mt-1" style={{ background: '#25d366' }} />
+                        </div>
+                        <div className="flex-1 flex flex-col gap-1">
+                          <div className="h-8 rounded-lg bg-white shadow-sm" />
+                          <div className="h-10 rounded-lg bg-white shadow-sm" />
+                          <div className="h-6 rounded-lg" style={{ background: eColor }} />
+                        </div>
+                      </div>
+                    ),
+                  },
+                  {
+                    id: 'dark' as const,
+                    name: 'Dark',
+                    desc: 'Visual escuro premium com glow.',
+                    preview: (
+                      <div className="h-full rounded-xl overflow-hidden bg-[#0a0a0f] border border-white/5">
+                        <div className="p-2.5 h-full flex flex-col gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-4 h-4 rounded-md" style={{ background: eColor }} />
+                            <div className="h-1.5 w-12 rounded-full bg-white/10" />
+                          </div>
+                          <div className="flex gap-2 flex-1">
+                            <div className="flex-1 flex flex-col gap-1.5 justify-center">
+                              <div className="h-2.5 w-16 rounded bg-white/80" />
+                              <div className="h-1.5 w-12 rounded bg-white/30" />
+                              <div className="h-1 w-14 rounded bg-white/15" />
+                              <div className="h-5 w-12 rounded-xl mt-1" style={{ background: eColor }} />
+                            </div>
+                            <div className="w-12 h-12 rounded-xl self-center" style={{ background: `linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.1))`, border: '1px solid rgba(255,255,255,0.08)' }} />
+                          </div>
+                        </div>
+                        {/* Glow */}
+                        <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(circle at 40% 50%, ${eColor}25, transparent 60%)` }} />
+                      </div>
+                    ),
+                  },
+                ] as const).map(tpl => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => setETheme(tpl.id)}
+                    className={`rounded-2xl overflow-hidden border-2 transition-all text-left ${
+                      eTheme === tpl.id
+                        ? 'border-brand-clay shadow-md shadow-brand-clay/15 scale-[1.02]'
+                        : 'border-zinc-200 hover:border-zinc-300'
+                    }`}
+                  >
+                    {/* Preview */}
+                    <div className="h-28 relative">
+                      {tpl.preview}
+                    </div>
+                    {/* Info */}
+                    <div className="bg-white px-3 py-2.5 border-t border-zinc-100">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <p className="text-xs font-black text-zinc-800">{tpl.name}</p>
+                        {eTheme === tpl.id && (
+                          <span className="text-[9px] font-black text-brand-clay bg-brand-clay/10 px-2 py-0.5 rounded-full">Ativo</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-zinc-400 leading-snug">{tpl.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </PanelCard>
+
+            {/* Cor de destaque */}
+            <PanelCard title="Cor de Destaque" icon={Globe} description="Usada em botões, títulos e detalhes do seu site">
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-3">
                   {[
                     { color: '#a75a35', label: 'Clay' },
                     { color: '#5a6242', label: 'Musgo' },
@@ -1198,17 +1321,19 @@ export default function DirectoryView() {
                     { color: '#dc2626', label: 'Vermelho' },
                     { color: '#b45309', label: 'Âmbar' },
                     { color: '#065f46', label: 'Esmeralda' },
+                    { color: '#be185d', label: 'Rosa' },
+                    { color: '#1d4ed8', label: 'Azul' },
                   ].map(({ color, label }) => (
                     <button key={color} type="button" onClick={() => setEColor(color)}
                       className="flex flex-col items-center gap-1.5 group">
-                      <div className={`w-10 h-10 rounded-2xl border-4 transition-all ${eColor === color ? 'border-zinc-800 scale-110 shadow-lg' : 'border-transparent hover:scale-105'}`}
+                      <div className={`w-9 h-9 rounded-2xl border-4 transition-all ${eColor === color ? 'border-zinc-800 scale-110 shadow-lg' : 'border-transparent hover:scale-105'}`}
                         style={{ background: color }} />
                       <span className="text-[9px] font-bold text-zinc-400 group-hover:text-zinc-600">{label}</span>
                     </button>
                   ))}
-                  {/* Custom color */}
+                  {/* Custom */}
                   <div className="flex flex-col items-center gap-1.5">
-                    <label className={`w-10 h-10 rounded-2xl border-4 flex items-center justify-center transition-all cursor-pointer hover:scale-105 ${!['#a75a35','#5a6242','#182638','#6d28d9','#0891b2','#dc2626','#b45309','#065f46'].includes(eColor) ? 'border-zinc-800 scale-110 shadow-lg' : 'border-transparent'}`}
+                    <label className={`w-9 h-9 rounded-2xl border-4 flex items-center justify-center transition-all cursor-pointer hover:scale-105 ${!['#a75a35','#5a6242','#182638','#6d28d9','#0891b2','#dc2626','#b45309','#065f46','#be185d','#1d4ed8'].includes(eColor) ? 'border-zinc-800 scale-110 shadow-lg' : 'border-transparent'}`}
                       style={{ background: eColor }}>
                       <input type="color" value={eColor} onChange={e => setEColor(e.target.value)} className="opacity-0 w-0 h-0 absolute" />
                       <span className="text-[10px] text-white font-black">+</span>
@@ -1217,25 +1342,23 @@ export default function DirectoryView() {
                   </div>
                 </div>
 
-                {/* Preview */}
-                <div className="rounded-2xl overflow-hidden border border-zinc-200">
-                  <div className="h-12 relative" style={{ background: `linear-gradient(135deg, ${eColor} 0%, ${eColor}88 100%)` }}>
-                    <span className="absolute top-2 left-3 text-white/30 font-serif text-xl">♩Ψ</span>
-                  </div>
-                  <div className="bg-white px-4 py-3 flex items-center justify-between">
+                {/* Minipreview da cor */}
+                <div className="rounded-2xl overflow-hidden border border-zinc-200 flex">
+                  <div className="w-16 shrink-0" style={{ background: eColor }} />
+                  <div className="bg-white px-4 py-3 flex items-center justify-between flex-1">
                     <div>
-                      <p className="text-xs font-bold text-zinc-800">Preview da cor</p>
+                      <p className="text-xs font-bold text-zinc-800">Cor escolhida</p>
                       <p className="text-[10px] text-zinc-400 font-mono">{eColor}</p>
                     </div>
                     <span className="text-[10px] font-bold px-3 py-1.5 rounded-full border-2"
                       style={{ color: eColor, borderColor: `${eColor}40`, background: `${eColor}10` }}>
-                      Especialidade
+                      Botões & links
                     </span>
                   </div>
                 </div>
               </div>
-            </div>
-          </PanelCard>
+            </PanelCard>
+          </div>
         )}
 
         {/* ── NAVEGAÇÃO ── */}
@@ -1406,6 +1529,15 @@ const WA_ICON = (
 
 // ─── Detalhe do profissional ──────────────────────────────────────────────────
 
+function DetailSectionLabel({ label, accent }: { label: string; accent: string }) {
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <div className="w-0.5 h-4 rounded-full shrink-0" style={{ background: accent }} />
+      <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: accent }}>{label}</p>
+    </div>
+  );
+}
+
 function ProfDetailView({ prof, timeSlot, setTimeSlot, bookMsg, setBookMsg, booked, setBooked, onBack }: {
   prof: Professional;
   timeSlot: string; setTimeSlot: (v: string) => void;
@@ -1423,7 +1555,7 @@ function ProfDetailView({ prof, timeSlot, setTimeSlot, bookMsg, setBookMsg, book
 
   return (
     <PageWrapper id={`directory-detail-${prof.id}`}>
-      <div className="max-w-3xl mx-auto animate-fadeIn pb-12">
+      <div className="animate-fadeIn pb-12">
 
         {/* ── Voltar ── */}
         <button onClick={onBack}
@@ -1432,125 +1564,151 @@ function ProfDetailView({ prof, timeSlot, setTimeSlot, bookMsg, setBookMsg, book
           Voltar ao diretório
         </button>
 
-        {/* ── Hero ── */}
-        <div className="rounded-3xl overflow-hidden shadow-lg mb-5 border border-slate-100/80">
+        {/* ── Banner com gradiente ── */}
+        <div className="relative h-28 sm:h-36 rounded-2xl overflow-hidden mb-0"
+          style={{ background: `linear-gradient(135deg, #0a0f0a 0%, #14201a 45%, ${accent} 100%)` }}>
+          <span className="absolute top-3 left-5 text-5xl opacity-[0.07] font-serif text-white select-none">♩</span>
+          <span className="absolute bottom-3 right-10 text-3xl opacity-[0.07] font-serif text-white select-none">♫</span>
+          <a href={publicUrl} target="_blank" rel="noopener noreferrer"
+            className="absolute top-3 right-3 flex items-center gap-1.5 text-[11px] font-bold text-white/75 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full transition border border-white/15 backdrop-blur-sm">
+            <Globe className="w-3 h-3" />Ver site público
+          </a>
+        </div>
 
-          {/* Banner */}
-          <div className="h-36 sm:h-44 relative overflow-hidden"
-            style={{ background: `linear-gradient(135deg, #0a1208 0%, #182618 40%, ${accent} 100%)` }}>
-            <span className="absolute top-4 left-6 text-6xl opacity-[0.07] font-serif text-white select-none">♩</span>
-            <span className="absolute top-6 right-16 text-4xl opacity-[0.07] font-serif text-white select-none">♫</span>
-            <span className="absolute bottom-4 left-1/3 text-3xl opacity-[0.05] font-serif text-white select-none">♪</span>
+        {/* ── Layout: sidebar + conteúdo ── */}
+        <div className="flex flex-col lg:flex-row gap-4 items-start">
 
-            <a href={publicUrl} target="_blank" rel="noopener noreferrer"
-              className="absolute top-3 right-3 flex items-center gap-1.5 text-[11px] font-bold text-white/80 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full transition border border-white/20 backdrop-blur-sm">
-              <Globe className="w-3 h-3" />Ver site público
-            </a>
-          </div>
+          {/* ── Sidebar esquerda ── */}
+          <div className="w-full lg:w-64 xl:w-72 shrink-0 lg:sticky lg:top-4 space-y-3 -mt-10 lg:-mt-16 relative z-10">
 
-          {/* Conteúdo do hero */}
-          <div className="bg-white px-5 sm:px-7 pb-6">
-            {/* Avatar + nome lado a lado */}
-            <div className="flex items-end gap-4 -mt-11 mb-4">
-              <div className="shrink-0 z-10">
+            {/* Card principal do profissional */}
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+              {/* Avatar centralizado */}
+              <div className="flex flex-col items-center px-5 pt-5 pb-4 text-center">
                 {showImg ? (
                   <img src={prof.avatar} alt={prof.name} onError={() => setImgError(true)}
-                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-4 border-white shadow-xl"
-                    style={{ boxShadow: `0 8px 24px ${accent}30` }} />
+                    className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-xl mb-3"
+                    style={{ boxShadow: `0 6px 20px ${accent}30` }} />
                 ) : (
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-4 border-white shadow-xl flex items-center justify-center text-2xl font-black"
+                  <div className="w-24 h-24 rounded-full border-4 border-white shadow-xl flex items-center justify-center text-2xl font-black mb-3"
                     style={{ background: `linear-gradient(135deg, ${accent}30, ${accent}70)`, color: accent }}>
                     {initials}
                   </div>
                 )}
+                <h2 className="text-base font-black text-slate-900 leading-tight mb-0.5">{prof.name}</h2>
+                {prof.crp && (
+                  <span className="inline-block text-[10px] font-mono font-bold px-2.5 py-1 rounded-full mb-2"
+                    style={{ background: `${accent}12`, color: accent, border: `1px solid ${accent}28` }}>
+                    {prof.crp}
+                  </span>
+                )}
+                {rating > 0 && (
+                  <div className="flex items-center justify-center gap-1 mb-2">
+                    {[1,2,3,4,5].map(i => (
+                      <Star key={i} className={`w-3 h-3 ${i <= Math.round(rating) ? 'fill-amber-400 stroke-amber-400' : 'stroke-slate-200'}`} />
+                    ))}
+                    <span className="text-xs font-black text-amber-600 ml-1">{rating.toFixed(1)}</span>
+                  </div>
+                )}
+                {/* Botão WhatsApp */}
+                {prof.contact_whatsapp && (
+                  <a href={`https://wa.me/${prof.contact_whatsapp.replace(/\D/g,'')}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-xl transition active:scale-95 mt-1 mb-2">
+                    <Phone className="w-4 h-4" />Chamar WhatsApp
+                  </a>
+                )}
+                {/* Redes sociais ícones */}
+                {hasSocials && <div className="mt-1"><SocialLinks prof={prof} size="sm" /></div>}
               </div>
-              <div className="flex-1 min-w-0 pb-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-xl sm:text-2xl font-serif font-black text-slate-800 leading-tight">{prof.name}</h2>
-                  <div className="flex items-center gap-1" style={{ color: accent }}>
-                    <ShieldCheck className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Verificado</span>
+
+              {/* Localização */}
+              {prof.location && (
+                <div className="border-t border-slate-100 px-5 py-3 flex items-start gap-2.5">
+                  <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: accent }} />
+                  <span className="text-xs text-slate-600 font-medium leading-snug">{prof.location}</span>
+                </div>
+              )}
+
+              {/* Idiomas */}
+              {prof.languages?.length > 0 && (
+                <div className="border-t border-slate-100 px-5 py-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Idiomas</p>
+                  <div className="flex flex-wrap gap-1">
+                    {prof.languages.map((l: string) => (
+                      <span key={l} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">{l}</span>
+                    ))}
                   </div>
                 </div>
-                {prof.crp && (
-                  <p className="text-[11px] font-mono font-semibold tracking-widest mt-0.5" style={{ color: `${accent}aa` }}>
-                    {prof.crp}
-                  </p>
-                )}
-              </div>
+              )}
             </div>
 
-            {/* Especialidades */}
-            {prof.specialties?.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {prof.specialties.map(s => (
-                  <span key={s} className="text-[11px] font-semibold px-3 py-1 rounded-full"
-                    style={{ background: `${accent}12`, color: accent, border: `1.5px solid ${accent}28` }}>
-                    {s}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Localização + Rating + Idiomas */}
-            <div className="flex flex-wrap items-center gap-3">
-              {prof.location && (
-                <div className="flex items-center gap-1.5 text-sm text-slate-500 font-medium">
-                  <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: accent }} />
-                  {prof.location}
+            {/* Card de agendamento */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+              <p className="text-[9px] font-black uppercase tracking-widest mb-3" style={{ color: accent }}>Agendar Consulta</p>
+              {booked ? (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2">
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold text-emerald-800">Solicitado!</p>
+                    <p className="text-[10px] text-emerald-600 mt-0.5">O profissional confirmará em breve.</p>
+                  </div>
                 </div>
-              )}
-              {rating > 0 && (
-                <div className="flex items-center gap-1 bg-amber-50 border border-amber-100 rounded-full px-3 py-1">
-                  {[1,2,3,4,5].map(i => (
-                    <Star key={i} className={`w-3 h-3 ${i <= Math.round(rating) ? 'fill-amber-400 stroke-amber-400' : 'stroke-slate-200'}`} />
-                  ))}
-                  <span className="text-xs font-black text-amber-700 ml-1">{rating.toFixed(1)}</span>
-                  {toNumericValue(prof.reviews_count) > 0 && (
-                    <span className="text-[10px] text-slate-400 ml-0.5">({prof.reviews_count})</span>
-                  )}
-                </div>
-              )}
-              {prof.languages?.length > 0 && (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {prof.languages.map((l: string) => (
-                    <span key={l} className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">{l}</span>
-                  ))}
+              ) : (
+                <div className="space-y-2">
+                  <textarea rows={2} placeholder="Mensagem inicial (opcional)..." value={bookMsg}
+                    onChange={e => setBookMsg(e.target.value)}
+                    className="w-full text-xs text-slate-700 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl focus:outline-none focus:ring-1 transition resize-none"
+                    style={{ '--tw-ring-color': `${accent}30` } as React.CSSProperties} />
+                  <button onClick={() => { if (timeSlot) setBooked(true); }}
+                    disabled={!timeSlot}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white text-xs font-bold rounded-xl transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ background: timeSlot ? accent : '#94a3b8' }}>
+                    <Calendar className="w-3.5 h-3.5" />
+                    {timeSlot ? `Agendar: ${timeSlot}` : 'Selecione um horário abaixo'}
+                  </button>
                 </div>
               )}
             </div>
           </div>
-        </div>
 
-        {/* ── Corpo: 2 colunas desktop ── */}
-        <div className="flex flex-col lg:flex-row gap-4 items-start">
+          {/* ── Conteúdo principal direita ── */}
+          <div className="flex-1 min-w-0 space-y-3 mt-3 lg:mt-4">
 
-          {/* Esquerda */}
-          <div className="flex-1 min-w-0 space-y-4">
-
+            {/* Bio */}
             {prof.bio && (
-              <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-100">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-0.5 h-4 rounded-full" style={{ background: accent }} />
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: accent }}>Sobre</p>
-                </div>
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                <DetailSectionLabel label="Sobre Mim / Biografia" accent={accent} />
                 <p className="text-sm text-slate-600 leading-relaxed">{prof.bio}</p>
               </div>
             )}
 
-            {prof.services?.length > 0 && (
-              <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-100">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-0.5 h-4 rounded-full" style={{ background: accent }} />
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: accent }}>Serviços</p>
+            {/* Especialidades */}
+            {prof.specialties?.length > 0 && (
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                <DetailSectionLabel label="Especialidades" accent={accent} />
+                <div className="flex flex-wrap gap-1.5">
+                  {prof.specialties.map(s => (
+                    <span key={s} className="text-xs font-semibold px-3 py-1.5 rounded-full"
+                      style={{ background: `${accent}10`, color: accent, border: `1.5px solid ${accent}28` }}>
+                      {s}
+                    </span>
+                  ))}
                 </div>
+              </div>
+            )}
+
+            {/* Serviços */}
+            {prof.services?.length > 0 && (
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                <DetailSectionLabel label="Serviços Oferecidos" accent={accent} />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {prof.services.map(s => (
                     <div key={s} className="flex items-center gap-2.5 text-sm text-slate-700 font-medium px-3 py-2.5 rounded-xl"
-                      style={{ background: `${accent}08`, border: `1px solid ${accent}18` }}>
-                      <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                        style={{ background: `linear-gradient(135deg, ${accent}55, ${accent})` }}>
-                        <Check className="w-2.5 h-2.5 text-white" />
+                      style={{ background: `${accent}08`, border: `1px solid ${accent}15` }}>
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-white"
+                        style={{ background: accent }}>
+                        <Check className="w-3 h-3" />
                       </div>
                       {s}
                     </div>
@@ -1559,12 +1717,10 @@ function ProfDetailView({ prof, timeSlot, setTimeSlot, bookMsg, setBookMsg, book
               </div>
             )}
 
+            {/* Agenda */}
             {prof.schedule?.length > 0 && (
-              <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-100">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-0.5 h-4 rounded-full" style={{ background: accent }} />
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: accent }}>Agenda</p>
-                </div>
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                <DetailSectionLabel label="Horários Disponíveis" accent={accent} />
                 <div className="flex flex-wrap gap-2">
                   {prof.schedule.map(slot => (
                     <button key={`${slot.day}-${slot.hours}`}
@@ -1572,7 +1728,7 @@ function ProfDetailView({ prof, timeSlot, setTimeSlot, bookMsg, setBookMsg, book
                       className="text-xs px-3 py-2 rounded-xl font-semibold transition-all"
                       style={timeSlot === `${slot.day} ${slot.hours}`
                         ? { background: accent, color: '#fff', boxShadow: `0 4px 12px ${accent}40` }
-                        : { background: `${accent}0d`, color: accent, border: `1.5px solid ${accent}28` }
+                        : { background: `${accent}0d`, color: accent, border: `1.5px solid ${accent}25` }
                       }>
                       {slot.day} {slot.hours}
                     </button>
@@ -1580,59 +1736,6 @@ function ProfDetailView({ prof, timeSlot, setTimeSlot, bookMsg, setBookMsg, book
                 </div>
               </div>
             )}
-
-            {hasSocials && (
-              <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-100">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-0.5 h-4 rounded-full bg-slate-300" />
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Redes & Links</p>
-                </div>
-                <SocialLinks prof={prof} size="md" />
-              </div>
-            )}
-          </div>
-
-          {/* Direita — contato sticky */}
-          <div className="w-full lg:w-64 xl:w-72 shrink-0">
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 lg:sticky lg:top-4">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-0.5 h-4 rounded-full" style={{ background: accent }} />
-                <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: accent }}>Entrar em Contato</p>
-              </div>
-
-              {booked ? (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3">
-                  <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-bold text-emerald-800">Solicitado!</p>
-                    <p className="text-[11px] text-emerald-600 mt-0.5">O profissional confirmará em breve.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  <textarea rows={3} placeholder="Mensagem inicial (opcional)..." value={bookMsg}
-                    onChange={e => setBookMsg(e.target.value)}
-                    className="w-full text-xs text-slate-700 bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 transition resize-none"
-                    style={{ '--tw-ring-color': `${accent}30` } as React.CSSProperties} />
-                  {prof.contact_whatsapp && (
-                    <a href={`https://wa.me/${prof.contact_whatsapp}`} target="_blank" rel="noopener noreferrer"
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-xl transition active:scale-95">
-                      <Phone className="w-4 h-4" />WhatsApp
-                    </a>
-                  )}
-                  <button onClick={() => { if (timeSlot) setBooked(true); }}
-                    disabled={!timeSlot}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-white text-sm font-bold rounded-xl transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{ background: timeSlot ? accent : '#94a3b8' }}>
-                    <Calendar className="w-4 h-4" />
-                    {timeSlot ? `Agendar` : 'Selecione um horário'}
-                  </button>
-                  {timeSlot && (
-                    <p className="text-center text-[10px] text-slate-400">{timeSlot}</p>
-                  )}
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
