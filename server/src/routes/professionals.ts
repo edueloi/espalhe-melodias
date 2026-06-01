@@ -5,8 +5,9 @@ import * as ctrl from '../controllers/professionalsController';
 
 const router = Router();
 
-router.get('/',      authenticate, asyncHandler(ctrl.listProfessionals));
-router.get('/:id',   authenticate, asyncHandler(ctrl.getProfessional));
-router.put('/me',    authenticate, professionalOrAdmin, asyncHandler(ctrl.upsertProfessional));
+router.get('/slug-check', authenticate, asyncHandler(ctrl.checkSlug));
+router.get('/',           authenticate, asyncHandler(ctrl.listProfessionals));
+router.get('/:id',        authenticate, asyncHandler(ctrl.getProfessional));
+router.put('/me',         authenticate, professionalOrAdmin, asyncHandler(ctrl.upsertProfessional));
 
 export default router;

@@ -38,13 +38,13 @@ function getThemeColors(theme: string | undefined, accentColor: string | undefin
 router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
-  // Busca sem authenticate (perfil público)
+  // Busca sem authenticate (perfil público) — aceita UUID (id ou user_id) ou slug
   const row = await queryOne<Record<string, unknown>>(
     `SELECT p.*, u.name, u.email, u.avatar
      FROM professional_profiles p
      JOIN users u ON u.id = p.user_id AND u.approval_status = 'approved'
-     WHERE p.id = ? OR p.user_id = ?`,
-    [id, id],
+     WHERE p.slug = ? OR p.id = ? OR p.user_id = ?`,
+    [id, id, id],
   ).catch(() => null);
 
   // Se não encontrar, serve a SPA e ela mostra o estado de erro

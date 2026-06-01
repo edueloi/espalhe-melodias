@@ -521,6 +521,7 @@ export type ProfTheme = 'forest' | 'ocean' | 'rose' | 'gold';
 export interface Professional {
   id: string;
   user_id: string;
+  slug?: string;
   name: string;
   email: string;
   avatar?: string;
@@ -567,9 +568,12 @@ export const professionalsApi = {
     return { ...result, data: result.data.map(normalizeProfessional) };
   },
   get: async (id: string) => normalizeProfessional(await get<Professional>(`/professionals/${id}`)),
+  checkSlug: (slug: string) =>
+    get<{ available: boolean; slug?: string; reason?: string }>(`/professionals/slug-check?slug=${encodeURIComponent(slug)}`),
   updateMe: (data: Partial<Professional> & { name?: string }) =>
     put<void>('/professionals/me', {
       name: data.name,
+      slug: data.slug,
       crp: data.crp,
       specialties: data.specialties,
       bio: data.bio,

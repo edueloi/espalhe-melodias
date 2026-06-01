@@ -1,12 +1,36 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { XCircle } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ArrowRight,
+  BadgeCheck,
+  BriefcaseBusiness,
+  Check,
+  ChevronDown,
+  CircleDollarSign,
+  Globe2,
+  Languages,
+  Link as LinkIcon,
+  Loader2,
+  MapPin,
+  Menu,
+  MessageCircle,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  UserRound,
+  X,
+  XCircle,
+} from 'lucide-react';
 import { professionalsApi, type Professional, type ProfTheme } from '../lib/api';
 
 interface Props {
   userId: string;
 }
 
-// ─── Temas ────────────────────────────────────────────────────────────────────
+type SocialLink = {
+  type: string;
+  url: string;
+  label: string;
+};
 
 export interface ThemePalette {
   name: string;
@@ -20,6 +44,7 @@ export interface ThemePalette {
   textHeading: string;
   textBody: string;
   pageBg: string;
+  sectionAlt: string;
   navBg: string;
   navBorder: string;
   cardBg: string;
@@ -28,577 +53,962 @@ export interface ThemePalette {
 
 export const THEMES: Record<ProfTheme, ThemePalette> = {
   forest: {
-    name: 'forest', label: 'Forest',
-    bannerFrom: '#1a2412', bannerMid: '#2d3a1e', bannerTo: '#5a6242',
-    accent: '#5a6242', accentMuted: '#808b5e', accentLight: '#e8eddc',
-    textHeading: '#1a2412', textBody: '#3d3d30',
-    pageBg: 'linear-gradient(160deg, #fbf8f3 0%, #f5ece1 60%, #eee8d8 100%)',
-    navBg: 'rgba(251,248,243,0.92)', navBorder: 'rgba(90,98,66,0.12)',
-    cardBg: 'rgba(255,255,255,0.72)', cardBorder: 'rgba(255,255,255,0.85)',
+    name: 'forest',
+    label: 'Forest',
+    bannerFrom: '#0b1309',
+    bannerMid: '#172711',
+    bannerTo: '#40552b',
+    accent: '#567736',
+    accentMuted: '#789d54',
+    accentLight: '#edf5e5',
+    textHeading: '#17210e',
+    textBody: '#445036',
+    pageBg: '#f7fbf2',
+    sectionAlt: '#eef5e8',
+    navBg: 'rgba(247,251,242,0.88)',
+    navBorder: 'rgba(86,119,54,0.16)',
+    cardBg: '#ffffff',
+    cardBorder: '#e1ead6',
   },
   ocean: {
-    name: 'ocean', label: 'Ocean',
-    bannerFrom: '#0a1628', bannerMid: '#0e3460', bannerTo: '#0891b2',
-    accent: '#0891b2', accentMuted: '#22b5d4', accentLight: '#e0f5fa',
-    textHeading: '#0a1628', textBody: '#1e3045',
-    pageBg: 'linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 55%, #cce8f4 100%)',
-    navBg: 'rgba(240,249,255,0.92)', navBorder: 'rgba(8,145,178,0.12)',
-    cardBg: 'rgba(255,255,255,0.72)', cardBorder: 'rgba(255,255,255,0.85)',
+    name: 'ocean',
+    label: 'Ocean',
+    bannerFrom: '#06111f',
+    bannerMid: '#0a2548',
+    bannerTo: '#0477a6',
+    accent: '#057ca5',
+    accentMuted: '#22a7ca',
+    accentLight: '#e2f5fb',
+    textHeading: '#0a1729',
+    textBody: '#263b52',
+    pageBg: '#f3fbff',
+    sectionAlt: '#e4f4fb',
+    navBg: 'rgba(243,251,255,0.88)',
+    navBorder: 'rgba(5,124,165,0.15)',
+    cardBg: '#ffffff',
+    cardBorder: '#cce8f3',
   },
   rose: {
-    name: 'rose', label: 'Rose',
-    bannerFrom: '#3b0a18', bannerMid: '#7c1d3a', bannerTo: '#be4a6d',
-    accent: '#be4a6d', accentMuted: '#d4748f', accentLight: '#fce8ef',
-    textHeading: '#3b0a18', textBody: '#4a2030',
-    pageBg: 'linear-gradient(160deg, #fff5f8 0%, #ffe4ec 55%, #ffd6e3 100%)',
-    navBg: 'rgba(255,245,248,0.92)', navBorder: 'rgba(190,74,109,0.12)',
-    cardBg: 'rgba(255,255,255,0.72)', cardBorder: 'rgba(255,255,255,0.85)',
+    name: 'rose',
+    label: 'Rose',
+    bannerFrom: '#210712',
+    bannerMid: '#521129',
+    bannerTo: '#9b3557',
+    accent: '#b73567',
+    accentMuted: '#d16388',
+    accentLight: '#fde8f0',
+    textHeading: '#3d0b1a',
+    textBody: '#552638',
+    pageBg: '#fff7fa',
+    sectionAlt: '#ffe8f0',
+    navBg: 'rgba(255,247,250,0.88)',
+    navBorder: 'rgba(183,53,103,0.15)',
+    cardBg: '#ffffff',
+    cardBorder: '#f7cfdd',
   },
   gold: {
-    name: 'gold', label: 'Gold',
-    bannerFrom: '#1c1000', bannerMid: '#5a3800', bannerTo: '#c8860a',
-    accent: '#c8860a', accentMuted: '#e0a83a', accentLight: '#fef3d0',
-    textHeading: '#1c1000', textBody: '#3d2800',
-    pageBg: 'linear-gradient(160deg, #fffbf0 0%, #fff3d0 55%, #ffedb0 100%)',
-    navBg: 'rgba(255,251,240,0.92)', navBorder: 'rgba(200,134,10,0.12)',
-    cardBg: 'rgba(255,255,255,0.72)', cardBorder: 'rgba(255,255,255,0.85)',
+    name: 'gold',
+    label: 'Gold',
+    bannerFrom: '#120b02',
+    bannerMid: '#3b2404',
+    bannerTo: '#936209',
+    accent: '#ba780d',
+    accentMuted: '#d79931',
+    accentLight: '#fff2cf',
+    textHeading: '#211402',
+    textBody: '#4f3406',
+    pageBg: '#fffaf0',
+    sectionAlt: '#fff1cd',
+    navBg: 'rgba(255,250,240,0.88)',
+    navBorder: 'rgba(186,120,13,0.15)',
+    cardBg: '#ffffff',
+    cardBorder: '#f1dda5',
   },
 };
 
 export function getTheme(prof: Professional): ThemePalette {
   if (prof.theme && THEMES[prof.theme]) return THEMES[prof.theme];
-  const t = { ...THEMES.forest };
+
+  const fallback = { ...THEMES.forest };
+
   if (prof.accent_color) {
-    t.accent      = prof.accent_color;
-    t.accentMuted = prof.accent_color + 'cc';
-    t.accentLight = prof.accent_color + '18';
+    fallback.accent = prof.accent_color;
+    fallback.accentMuted = `${prof.accent_color}cc`;
+    fallback.accentLight = `${prof.accent_color}18`;
   }
-  return t;
+
+  return fallback;
 }
 
-// ─── Página pública ───────────────────────────────────────────────────────────
+const toNumber = (value: unknown) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+};
 
-export default function ProfessionalPublicPage({ userId }: Props) {
-  const [prof, setProf]       = useState<Professional | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState('');
+const formatCurrency = (value: unknown) =>
+  new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(toNumber(value));
 
-  useEffect(() => {
-    professionalsApi.list()
-      .then(res => {
-        const found = res.data.find(p => p.user_id === userId || p.id === userId);
-        if (found) setProf(found);
-        else setError('Profissional não encontrado.');
-      })
-      .catch(() => setError('Erro ao carregar perfil.'))
-      .finally(() => setLoading(false));
-  }, [userId]);
+const onlyDigits = (value = '') => value.replace(/\D/g, '');
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center"
-        style={{ background: 'linear-gradient(135deg, #1a2412 0%, #2d3a1e 50%, #3d2a1e 100%)' }}>
-        <div className="text-center space-y-4">
-          <div className="relative mx-auto w-20 h-20">
-            <div className="absolute inset-0 rounded-full border-4 border-white/10 animate-ping" />
-            <div className="w-20 h-20 rounded-full border-4 border-t-white/80 border-white/20 animate-spin" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-2xl font-serif text-white/80 italic">♩</span>
-            </div>
-          </div>
-          <p className="text-white/60 text-sm font-medium tracking-wide">Carregando perfil...</p>
-        </div>
-      </div>
-    );
-  }
+const normalizeUrl = (value: string) => {
+  if (!value) return '';
+  return value.startsWith('http') ? value : `https://${value}`;
+};
 
-  if (error || !prof) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6"
-        style={{ background: 'linear-gradient(135deg, #1a2412 0%, #2d3a1e 100%)' }}>
-        <div className="w-full max-w-sm bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-8 text-center border border-white/20">
-          <XCircle size={40} className="text-red-400 mx-auto mb-4" />
-          <h2 className="font-serif text-xl font-bold text-white mb-2">Perfil não encontrado</h2>
-          <p className="text-sm text-white/60">{error || 'Este link pode estar incorreto.'}</p>
-        </div>
-      </div>
-    );
-  }
+const getInitials = (name = '') =>
+  name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase();
 
-  return <StandaloneProfSite prof={prof} />;
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const toNum   = (v: unknown) => { const n = Number(v); return isFinite(n) ? n : 0; };
-const fmtCurr = (v: unknown) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0 }).format(toNum(v));
-
-function useInView(threshold = 0.12) {
+function useInView(threshold = 0.08) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
+
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+    const element = ref.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
       { threshold },
     );
-    obs.observe(el);
-    return () => obs.disconnect();
+
+    observer.observe(element);
+    return () => observer.disconnect();
   }, [threshold]);
+
   return { ref, visible };
 }
 
-function AnimCard({ children, delay = 0, className = '' }: {
-  children: React.ReactNode; delay?: number; className?: string;
+function Reveal({
+  children,
+  delay = 0,
+  className = '',
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
 }) {
   const { ref, visible } = useInView();
+
   return (
-    <div ref={ref} className={className} style={{
-      opacity:    visible ? 1 : 0,
-      transform:  visible ? 'translateY(0)' : 'translateY(28px)',
-      transition: `opacity 0.55s cubic-bezier(.4,0,.2,1) ${delay}ms, transform 0.55s cubic-bezier(.4,0,.2,1) ${delay}ms`,
-    }}>
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(22px)',
+        transition: `opacity .65s ease ${delay}ms, transform .65s ease ${delay}ms`,
+      }}
+    >
       {children}
     </div>
   );
 }
 
-// ─── Ícones ───────────────────────────────────────────────────────────────────
-
-const WaIcon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-  </svg>
-);
-
-const socialIcons: Record<string, React.ReactNode> = {
-  whatsapp: <WaIcon />,
-  instagram: (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-    </svg>
-  ),
-  linkedin: (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-    </svg>
-  ),
-  facebook: (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-    </svg>
-  ),
-  tiktok: (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.28 8.28 0 004.84 1.55V6.79a4.85 4.85 0 01-1.07-.1z"/>
-    </svg>
-  ),
-  twitter: (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-    </svg>
-  ),
-  website: (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="10"/>
-      <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
-    </svg>
-  ),
-  link: (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
-      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
-    </svg>
-  ),
-};
-
-const socialColors: Record<string, { bg: string; text: string; glow: string }> = {
-  whatsapp:  { bg: 'linear-gradient(135deg,#25d366,#128c7e)', text: '#fff', glow: 'rgba(37,211,102,0.3)' },
-  instagram: { bg: 'linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)', text: '#fff', glow: 'rgba(220,39,67,0.3)' },
-  linkedin:  { bg: 'linear-gradient(135deg,#0a66c2,#0077b5)', text: '#fff', glow: 'rgba(10,102,194,0.3)' },
-  facebook:  { bg: 'linear-gradient(135deg,#1877f2,#166fe5)', text: '#fff', glow: 'rgba(24,119,242,0.3)' },
-  tiktok:    { bg: 'linear-gradient(135deg,#010101,#2d2d2d)', text: '#fff', glow: 'rgba(1,1,1,0.3)' },
-  twitter:   { bg: 'linear-gradient(135deg,#1d9bf0,#0d8fd9)', text: '#fff', glow: 'rgba(29,155,240,0.3)' },
-  website:   { bg: 'linear-gradient(135deg,#5a6242,#3f452e)', text: '#fff', glow: 'rgba(90,98,66,0.3)' },
-  link:      { bg: 'linear-gradient(135deg,#64748b,#475569)', text: '#fff', glow: 'rgba(100,116,139,0.3)' },
-};
-
-// ─── Site standalone ──────────────────────────────────────────────────────────
-
-function StandaloneProfSite({ prof }: { prof: Professional }) {
-  const theme    = getTheme(prof);
-  const initials = prof.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
-  const [scrolled, setScrolled]       = useState(false);
-  const [heroVisible, setHeroVisible] = useState(false);
+export default function ProfessionalPublicPage({ userId }: Props) {
+  const [professional, setProfessional] = useState<Professional | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    let mounted = true;
 
-  useEffect(() => {
-    const t = setTimeout(() => setHeroVisible(true), 80);
-    return () => clearTimeout(t);
-  }, []);
+    setLoading(true);
+    setError('');
 
-  const hasSocial = !!(prof.contact_whatsapp || prof.instagram || prof.linkedin ||
-    prof.facebook || prof.tiktok || prof.twitter || prof.website || (prof.extra_links ?? []).length > 0);
+    professionalsApi
+      .list()
+      .then((response) => {
+        if (!mounted) return;
 
-  const { accent, accentLight, bannerFrom, bannerMid, bannerTo, textHeading, cardBg, cardBorder } = theme;
+        const found = response.data.find((item) => item.user_id === userId || item.id === userId);
 
+        if (found) {
+          setProfessional(found);
+          return;
+        }
+
+        setError('Profissional não encontrado.');
+      })
+      .catch(() => {
+        if (mounted) setError('Não foi possível carregar este perfil profissional.');
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [userId]);
+
+  if (loading) return <LoadingScreen />;
+  if (error || !professional) return <ErrorScreen message={error} />;
+
+  return <ProfessionalProfile professional={professional} />;
+}
+
+function LoadingScreen() {
   return (
-    <div className="min-h-screen overflow-x-hidden" style={{ background: theme.pageBg }}>
-
-      {/* Navbar */}
-      <nav
-        className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 transition-all duration-300"
-        style={{
-          background:     scrolled ? theme.navBg : 'transparent',
-          backdropFilter: scrolled ? 'blur(16px)' : 'none',
-          borderBottom:   scrolled ? `1px solid ${theme.navBorder}` : 'none',
-          boxShadow:      scrolled ? '0 2px 20px rgba(0,0,0,0.06)' : 'none',
-        }}
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-lg"
-            style={{ background: `linear-gradient(135deg, ${bannerFrom}, ${accent})` }}>
-            <span className="text-xs text-white font-black italic font-serif">♩</span>
-          </div>
-          <div>
-            <p className="font-serif text-sm font-black leading-none" style={{ color: textHeading }}>Espalhe</p>
-            <p className="font-script text-base leading-none -mt-0.5" style={{ color: accent }}>Melodias</p>
-          </div>
-        </div>
-        <a
-          href="/diretorio"
-          className="text-xs font-bold px-4 py-2 rounded-full transition-all duration-200 hover:scale-105 active:scale-95"
-          style={{ background: `${accent}15`, color: accent, border: `1px solid ${accent}30` }}
-        >
-          Ver a rede →
-        </a>
-      </nav>
-
-      {/* Hero */}
-      <div className="relative">
-        <div
-          className="relative h-64 sm:h-72 overflow-hidden"
-          style={{ background: `linear-gradient(135deg, ${bannerFrom} 0%, ${bannerMid} 40%, ${bannerTo} 100%)` }}
-        >
-          <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
-            {(['♩','♫','♪','♬','𝄞'] as const).map((note, i) => (
-              <span key={i} className="absolute font-serif text-white select-none"
-                style={{
-                  fontSize: ['3rem','2.5rem','4rem','2rem','3.5rem'][i],
-                  top:      ['8%','14%','38%',undefined,'10%'][i],
-                  bottom:   [undefined,undefined,undefined,'8%',undefined][i],
-                  left:     ['6%',undefined,'17%','48%',undefined][i],
-                  right:    [undefined,'9%',undefined,undefined,'7%'][i],
-                  opacity:  0.09,
-                  animation: `profFloat${i % 3} ${[6,7,8,5,9][i]}s ease-in-out ${[0,1,2,0.5,1.5][i]}s infinite`,
-                }}>
-                {note}
-              </span>
-            ))}
-            <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full border border-white/8"
-              style={{ animation: 'profSpin 40s linear infinite' }} />
-            <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full border border-white/6"
-              style={{ animation: 'profSpin 60s linear reverse infinite' }} />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full"
-              style={{ background: `radial-gradient(circle, ${accent}22 0%, transparent 70%)` }} />
-          </div>
-
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 flex items-center gap-2"
-            style={{ opacity: heroVisible ? 1 : 0, transform: heroVisible ? 'translateY(0)' : 'translateY(-14px)', transition: 'all 0.6s ease' }}>
-            <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-              <span className="text-xs text-white font-black italic font-serif">♩</span>
-            </div>
-            <div>
-              <p className="font-serif text-sm font-black text-white/90 leading-none">Espalhe</p>
-              <p className="font-script text-base text-white leading-none -mt-0.5">Melodias</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Avatar flutuante */}
-        <div className="absolute left-1/2 -translate-x-1/2 -bottom-16"
-          style={{ opacity: heroVisible ? 1 : 0, transform: heroVisible ? 'scale(1)' : 'scale(0.8)', transition: 'all 0.7s cubic-bezier(.34,1.56,.64,1) 0.2s' }}>
-          <div className="relative">
-            <div className="absolute -inset-2 rounded-full animate-pulse"
-              style={{ background: `radial-gradient(circle, ${accent}40 0%, transparent 70%)` }} />
-            {prof.avatar ? (
-              <img src={prof.avatar} alt={prof.name}
-                className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-2xl relative z-10"
-                style={{ boxShadow: `0 8px 32px ${accent}40, 0 2px 8px rgba(0,0,0,0.2)` }} />
-            ) : (
-              <div className="w-32 h-32 rounded-full border-4 border-white shadow-2xl flex items-center justify-center text-4xl font-black relative z-10"
-                style={{ background: `linear-gradient(135deg, ${accent}30, ${accent}70)`, color: accent,
-                  boxShadow: `0 8px 32px ${accent}40, 0 2px 8px rgba(0,0,0,0.2)` }}>
-                {initials}
-              </div>
-            )}
-            <div className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center z-20 border-2 border-white"
-              style={{ boxShadow: `0 2px 12px ${accent}30` }}>
-              <svg className="w-5 h-5" style={{ color: accent }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-              </svg>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-6">
+      <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] px-10 py-9 text-center shadow-2xl backdrop-blur-xl">
+        <Loader2 className="mx-auto mb-5 h-10 w-10 animate-spin text-white/70" />
+        <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/45">Carregando perfil</p>
       </div>
-
-      {/* Conteúdo */}
-      <div className="max-w-xl mx-auto px-4 pt-24 pb-16">
-
-        {/* Nome */}
-        <div className="text-center mb-6"
-          style={{ opacity: heroVisible ? 1 : 0, transform: heroVisible ? 'translateY(0)' : 'translateY(20px)', transition: 'all 0.6s ease 0.35s' }}>
-          <h1 className="font-serif text-3xl font-black leading-tight" style={{ color: textHeading }}>{prof.name}</h1>
-          {prof.crp && (
-            <p className="text-xs font-mono font-bold mt-1.5 tracking-widest uppercase" style={{ color: `${accent}cc` }}>
-              {prof.crp}
-            </p>
-          )}
-          {toNum(prof.rating) > 0 && (
-            <div className="flex items-center justify-center gap-1 mt-3">
-              <div className="flex items-center gap-0.5">
-                {[1,2,3,4,5].map(i => (
-                  <svg key={i} className={`w-4 h-4 ${i <= Math.round(toNum(prof.rating)) ? 'fill-amber-400' : 'fill-slate-200'}`} viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                  </svg>
-                ))}
-              </div>
-              <span className="text-sm font-bold ml-1.5" style={{ color: accent }}>{toNum(prof.rating).toFixed(1)}</span>
-              {toNum(prof.reviews_count) > 0 && (
-                <span className="text-xs text-slate-400 ml-0.5">({toNum(prof.reviews_count)} avaliações)</span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Especialidades */}
-        {prof.specialties?.length > 0 && (
-          <AnimCard delay={100} className="flex flex-wrap justify-center gap-2 mb-6">
-            {prof.specialties.map(s => (
-              <span key={s}
-                className="text-xs font-bold px-3.5 py-1.5 rounded-full cursor-default hover:scale-105 transition-transform duration-200"
-                style={{ background: accentLight, color: accent, border: `1.5px solid ${accent}35` }}>
-                {s}
-              </span>
-            ))}
-          </AnimCard>
-        )}
-
-        {/* CTAs */}
-        <AnimCard delay={150} className="flex gap-3 mb-6">
-          {prof.contact_whatsapp && (
-            <a href={`https://wa.me/${prof.contact_whatsapp}`} target="_blank" rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-2.5 py-4 text-white text-sm font-black rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-95 select-none"
-              style={{ background: 'linear-gradient(135deg,#25d366,#128c7e)', boxShadow: '0 4px 20px rgba(37,211,102,0.35)' }}>
-              <WaIcon /> Entrar em contato
-            </a>
-          )}
-          <a href="/diretorio"
-            className="flex-1 flex items-center justify-center gap-2 py-4 bg-white text-sm font-black rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-95 select-none shadow-md"
-            style={{ border: `2px solid ${accent}35`, color: accent }}>
-            Ver todos os membros
-          </a>
-        </AnimCard>
-
-        {/* Localização e preço */}
-        {(prof.location || toNum(prof.price_per_session) > 0) && (
-          <AnimCard delay={200} className="mb-4">
-            <div className="rounded-2xl overflow-hidden border shadow-md"
-              style={{ background: cardBg, backdropFilter: 'blur(12px)', borderColor: cardBorder }}>
-              {prof.location && (
-                <div className="flex items-center gap-3.5 px-5 py-4 border-b" style={{ borderColor: `${accent}15` }}>
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: `linear-gradient(135deg, ${accent}20, ${accent}35)` }}>
-                    <svg className="w-4 h-4" style={{ color: accent }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                      <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Localização</p>
-                    <p className="text-sm font-semibold" style={{ color: textHeading }}>{prof.location}</p>
-                  </div>
-                </div>
-              )}
-              {toNum(prof.price_per_session) > 0 && (
-                <div className="flex items-center gap-3.5 px-5 py-4">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: `linear-gradient(135deg, ${accent}20, ${accent}35)` }}>
-                    <svg className="w-4 h-4" style={{ color: accent }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Valor da sessão</p>
-                    <p className="text-sm">
-                      <span className="text-base font-black" style={{ color: accent }}>R$ {fmtCurr(prof.price_per_session)}</span>
-                      <span className="text-slate-400 text-xs ml-1">/ sessão</span>
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </AnimCard>
-        )}
-
-        {/* Bio */}
-        {prof.bio && (
-          <AnimCard delay={250} className="mb-4">
-            <div className="rounded-2xl px-5 py-5 border shadow-md"
-              style={{ background: cardBg, backdropFilter: 'blur(12px)', borderColor: cardBorder }}>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-1 h-5 rounded-full" style={{ background: `linear-gradient(180deg, ${accent}, ${accent}60)` }} />
-                <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: accent }}>Sobre</span>
-              </div>
-              <p className="text-sm leading-relaxed" style={{ color: theme.textBody }}>{prof.bio}</p>
-            </div>
-          </AnimCard>
-        )}
-
-        {/* Serviços */}
-        {prof.services?.length > 0 && (
-          <AnimCard delay={300} className="mb-4">
-            <div className="rounded-2xl px-5 py-5 border shadow-md"
-              style={{ background: cardBg, backdropFilter: 'blur(12px)', borderColor: cardBorder }}>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-1 h-5 rounded-full" style={{ background: `linear-gradient(180deg, ${accent}, ${accent}60)` }} />
-                <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: accent }}>Serviços</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {prof.services.map(s => (
-                  <div key={s}
-                    className="flex items-center gap-3 px-3.5 py-3 rounded-xl hover:scale-[1.02] transition-transform duration-200"
-                    style={{ background: `${accent}08`, border: `1px solid ${accent}18` }}>
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                      style={{ background: `linear-gradient(135deg, ${accent}40, ${accent}70)` }}>
-                      <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
-                      </svg>
-                    </div>
-                    <span className="text-sm font-semibold" style={{ color: textHeading }}>{s}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </AnimCard>
-        )}
-
-        {/* Idiomas */}
-        {prof.languages?.length > 0 && (
-          <AnimCard delay={340} className="mb-4">
-            <div className="rounded-2xl px-5 py-5 border shadow-md"
-              style={{ background: cardBg, backdropFilter: 'blur(12px)', borderColor: cardBorder }}>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-1 h-5 rounded-full bg-gradient-to-b from-blue-400 to-blue-600/60" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">Idiomas</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {prof.languages.map(l => (
-                  <span key={l} className="text-xs font-bold px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">{l}</span>
-                ))}
-              </div>
-            </div>
-          </AnimCard>
-        )}
-
-        {/* Redes sociais */}
-        {hasSocial && (
-          <AnimCard delay={380} className="mb-4">
-            <div className="rounded-2xl px-5 py-5 border shadow-md"
-              style={{ background: cardBg, backdropFilter: 'blur(12px)', borderColor: cardBorder }}>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-1 h-5 rounded-full"
-                  style={{ background: `linear-gradient(180deg, ${bannerFrom}, ${bannerMid}80)` }} />
-                <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: bannerMid }}>Redes & Links</span>
-              </div>
-              <SocialGrid prof={prof} />
-            </div>
-          </AnimCard>
-        )}
-
-        {/* Badge Melodias */}
-        <AnimCard delay={420} className="mb-6">
-          <div className="rounded-2xl overflow-hidden shadow-lg border border-white/20"
-            style={{ background: `linear-gradient(135deg, ${bannerFrom} 0%, ${bannerMid} 55%, ${bannerTo} 100%)` }}>
-            <div className="px-5 py-5 flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border border-white/25"
-                style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)' }}>
-                <span className="text-2xl font-serif font-black italic text-white leading-none">♩</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <p className="text-white font-black text-sm">Rede Espalhe Melodias</p>
-                  <svg className="w-4 h-4 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                  </svg>
-                </div>
-                <p className="text-white/55 text-[11px] font-medium">Profissional verificado · Membro ativo</p>
-              </div>
-            </div>
-            <div className="px-5 py-3.5 border-t border-white/10" style={{ background: 'rgba(255,255,255,0.06)' }}>
-              <p className="text-[11px] text-white/50 leading-relaxed">
-                Este profissional é membro verificado da comunidade{' '}
-                <strong className="text-white/70">Espalhe Melodias</strong>{' '}
-                — uma rede comprometida com saúde mental e conexões humanas.
-              </p>
-            </div>
-          </div>
-        </AnimCard>
-
-        {/* Footer */}
-        <div className="text-center py-4">
-          <div className="inline-flex flex-col items-center gap-1">
-            <div className="flex items-center gap-2">
-              <span className="font-serif italic text-xl" style={{ color: accent }}>♩</span>
-              <span className="font-script text-xl" style={{ color: accent }}>Melodias</span>
-            </div>
-            <p className="text-[10px] tracking-wide" style={{ color: `${accent}80` }}>Conectando pessoas através da saúde mental</p>
-          </div>
-        </div>
-      </div>
-
-      <style>{`
-        @keyframes profFloat0 { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-14px) rotate(8deg)} }
-        @keyframes profFloat1 { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-10px) rotate(-6deg)} }
-        @keyframes profFloat2 { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-18px) rotate(12deg)} }
-        @keyframes profSpin   { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-      `}</style>
     </div>
   );
 }
 
-// ─── Grid social ──────────────────────────────────────────────────────────────
-
-function SocialGrid({ prof }: { prof: Professional }) {
-  const links: Array<{ type: string; url: string; label: string }> = [];
-  if (prof.contact_whatsapp) links.push({ type: 'whatsapp', url: `https://wa.me/${prof.contact_whatsapp}`, label: 'WhatsApp' });
-  if (prof.instagram)        links.push({ type: 'instagram', url: prof.instagram.startsWith('http') ? prof.instagram : `https://instagram.com/${prof.instagram.replace('@','')}`, label: 'Instagram' });
-  if (prof.linkedin)         links.push({ type: 'linkedin',  url: prof.linkedin.startsWith('http') ? prof.linkedin : `https://linkedin.com/in/${prof.linkedin}`, label: 'LinkedIn' });
-  if (prof.facebook)         links.push({ type: 'facebook',  url: prof.facebook.startsWith('http') ? prof.facebook : `https://facebook.com/${prof.facebook}`, label: 'Facebook' });
-  if (prof.tiktok)           links.push({ type: 'tiktok',    url: prof.tiktok.startsWith('http') ? prof.tiktok : `https://tiktok.com/@${prof.tiktok.replace('@','')}`, label: 'TikTok' });
-  if (prof.twitter)          links.push({ type: 'twitter',   url: prof.twitter.startsWith('http') ? prof.twitter : `https://twitter.com/${prof.twitter.replace('@','')}`, label: 'Twitter' });
-  if (prof.website)          links.push({ type: 'website',   url: prof.website, label: 'Site' });
-  (prof.extra_links ?? []).forEach(l => links.push({ type: 'link', url: l.url, label: l.label }));
-
+function ErrorScreen({ message }: { message: string }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-      {links.map((l, i) => {
-        const c = socialColors[l.type] ?? socialColors.link;
-        return (
-          <a key={i} href={l.url} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl font-bold text-xs transition-all duration-200 hover:scale-105 active:scale-95 hover:-translate-y-0.5 select-none"
-            style={{ background: c.bg, color: c.text, boxShadow: `0 4px 12px ${c.glow}` }}>
-            {socialIcons[l.type] ?? socialIcons.link}
-            <span className="truncate">{l.label}</span>
-          </a>
-        );
-      })}
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-6">
+      <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.05] p-8 text-center shadow-2xl backdrop-blur-xl">
+        <XCircle className="mx-auto mb-5 h-12 w-12 text-red-300" />
+        <h1 className="mb-2 text-2xl font-black tracking-tight text-white">Perfil não encontrado</h1>
+        <p className="text-sm leading-6 text-white/55">{message || 'Este link pode estar incorreto ou indisponível.'}</p>
+        <a
+          href="/diretorio"
+          className="mt-7 inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:-translate-y-0.5 hover:bg-white/90"
+        >
+          Voltar para o diretório
+        </a>
+      </div>
     </div>
   );
+}
+
+function ProfessionalProfile({ professional }: { professional: Professional }) {
+  const theme = getTheme(professional);
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const rating = toNumber(professional.rating);
+  const reviews = toNumber(professional.reviews_count);
+  const price = toNumber(professional.price_per_session);
+  const initials = getInitials(professional.name);
+
+  const socialLinks = useMemo(() => buildSocialLinks(professional), [professional]);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 48);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const whatsappUrl = professional.contact_whatsapp
+    ? `https://wa.me/${onlyDigits(professional.contact_whatsapp)}`
+    : '';
+
+  const hasStats = professional.location || price > 0 || rating > 0;
+
+  return (
+    <main
+      className="min-h-screen overflow-x-hidden"
+      style={{
+        background: theme.pageBg,
+        color: theme.textBody,
+      }}
+    >
+      <style>{profileStyles(theme)}</style>
+
+      <header
+        className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
+          scrolled ? 'py-3' : 'py-5'
+        }`}
+      >
+        <div className="mx-auto flex w-[min(1180px,calc(100%-32px))] items-center justify-between rounded-3xl border px-4 py-3 shadow-lg backdrop-blur-2xl md:px-5"
+          style={{
+            background: scrolled ? theme.navBg : 'rgba(255,255,255,0.08)',
+            borderColor: scrolled ? theme.navBorder : 'rgba(255,255,255,0.12)',
+            boxShadow: scrolled ? '0 16px 50px rgba(15,23,42,0.08)' : 'none',
+          }}
+        >
+          <a href="/" className="flex items-center gap-3 no-underline">
+            <div
+              className="grid h-11 w-11 place-items-center rounded-2xl text-white shadow-lg"
+              style={{ background: `linear-gradient(135deg, ${theme.bannerFrom}, ${theme.accent})` }}
+            >
+              <Sparkles size={19} />
+            </div>
+            <div>
+              <p
+                className="m-0 text-sm font-black leading-none tracking-tight"
+                style={{ color: scrolled ? theme.textHeading : '#fff' }}
+              >
+                Espalhe Melodias
+              </p>
+              <p
+                className="m-0 mt-1 text-[11px] font-bold uppercase tracking-[0.18em]"
+                style={{ color: scrolled ? theme.accent : 'rgba(255,255,255,0.55)' }}
+              >
+                Perfil profissional
+              </p>
+            </div>
+          </a>
+
+          <nav className="hidden items-center gap-2 md:flex">
+            <NavItem href="#sobre" label="Sobre" scrolled={scrolled} theme={theme} />
+            <NavItem href="#servicos" label="Serviços" scrolled={scrolled} theme={theme} />
+            <NavItem href="#contato" label="Contato" scrolled={scrolled} theme={theme} />
+            {whatsappUrl && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-2 inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-500/25 transition hover:-translate-y-0.5 hover:bg-emerald-600"
+              >
+                <MessageCircle size={17} /> Agendar
+              </a>
+            )}
+          </nav>
+
+          <button
+            type="button"
+            className="grid h-11 w-11 place-items-center rounded-2xl border md:hidden"
+            style={{
+              borderColor: scrolled ? theme.navBorder : 'rgba(255,255,255,0.16)',
+              color: scrolled ? theme.textHeading : '#fff',
+              background: scrolled ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.08)',
+            }}
+            onClick={() => setMenuOpen((value) => !value)}
+            aria-label="Abrir menu"
+          >
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+
+        {menuOpen && (
+          <div className="mx-auto mt-2 grid w-[min(1180px,calc(100%-32px))] gap-2 rounded-3xl border bg-white p-3 shadow-2xl md:hidden">
+            <MobileNavItem href="#sobre" label="Sobre" onClick={() => setMenuOpen(false)} />
+            <MobileNavItem href="#servicos" label="Serviços" onClick={() => setMenuOpen(false)} />
+            <MobileNavItem href="#contato" label="Contato" onClick={() => setMenuOpen(false)} />
+            {whatsappUrl && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white"
+              >
+                <MessageCircle size={17} /> Agendar consulta
+              </a>
+            )}
+          </div>
+        )}
+      </header>
+
+      <section
+        className="relative flex min-h-screen items-center overflow-hidden px-5 pb-16 pt-32 md:px-8 md:pt-36"
+        style={{
+          background: `radial-gradient(circle at 20% 20%, ${theme.accent}55, transparent 28%), radial-gradient(circle at 80% 10%, rgba(255,255,255,0.12), transparent 24%), linear-gradient(145deg, ${theme.bannerFrom} 0%, ${theme.bannerMid} 48%, ${theme.bannerTo} 100%)`,
+        }}
+      >
+        <div className="profile-grid pointer-events-none absolute inset-0 opacity-[0.08]" />
+        <FloatingOrnaments />
+
+        <div className="relative z-10 mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1.12fr_.88fr]">
+          <div className="animate-hero-in">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white/75 backdrop-blur-xl">
+              <BadgeCheck size={15} className="text-emerald-300" />
+              Profissional verificado
+            </div>
+
+            <h1 className="m-0 max-w-3xl text-5xl font-black leading-[0.98] tracking-[-0.055em] text-white md:text-7xl">
+              {professional.name}
+            </h1>
+
+            {professional.crp && (
+              <p className="mt-5 inline-flex rounded-full border border-white/12 bg-white/10 px-4 py-2 font-mono text-xs font-black uppercase tracking-[0.18em] text-white/55">
+                {professional.crp}
+              </p>
+            )}
+
+            {professional.specialties?.length > 0 && (
+              <p className="mt-6 max-w-2xl text-lg leading-8 text-white/65 md:text-xl">
+                {professional.specialties.slice(0, 4).join(' · ')}
+                {professional.specialties.length > 4 ? ` · +${professional.specialties.length - 4}` : ''}
+              </p>
+            )}
+
+            {rating > 0 && (
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((item) => (
+                    <Star
+                      key={item}
+                      size={18}
+                      className={item <= Math.round(rating) ? 'fill-amber-300 text-amber-300' : 'text-white/20'}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm font-black text-amber-200">{rating.toFixed(1)}</span>
+                {reviews > 0 && <span className="text-sm font-semibold text-white/45">({reviews} avaliações)</span>}
+              </div>
+            )}
+
+            <div className="mt-9 flex flex-wrap gap-3">
+              {whatsappUrl ? (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex items-center gap-3 rounded-2xl bg-emerald-500 px-6 py-4 text-base font-black text-white shadow-2xl shadow-emerald-500/30 transition hover:-translate-y-1 hover:bg-emerald-600"
+                >
+                  <MessageCircle size={21} /> Agendar consulta
+                  <ArrowRight size={18} className="transition group-hover:translate-x-1" />
+                </a>
+              ) : null}
+
+              <a
+                href="#sobre"
+                className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-6 py-4 text-base font-bold text-white backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/15"
+              >
+                Conhecer perfil <ChevronDown size={18} />
+              </a>
+            </div>
+
+            {hasStats && (
+              <div className="mt-10 grid max-w-2xl gap-3 sm:grid-cols-3">
+                {professional.location && (
+                  <HeroStat icon={<MapPin size={18} />} label="Localização" value={professional.location} />
+                )}
+                {price > 0 && <HeroStat icon={<CircleDollarSign size={18} />} label="Sessão" value={formatCurrency(price)} />}
+                {rating > 0 && <HeroStat icon={<Star size={18} />} label="Avaliação" value={rating.toFixed(1)} />}
+              </div>
+            )}
+          </div>
+
+          <div className="animate-card-in relative mx-auto w-full max-w-md lg:max-w-none">
+            <div className="absolute -inset-6 rounded-[3rem] bg-white/10 blur-2xl" />
+            <div className="relative overflow-hidden rounded-[2.5rem] border border-white/15 bg-white/12 p-4 shadow-2xl backdrop-blur-2xl">
+              <div className="relative overflow-hidden rounded-[2rem] bg-white">
+                <ProfileImage professional={professional} initials={initials} theme={theme} large />
+
+                <div className="p-6">
+                  <div className="mb-5 flex items-center justify-between gap-4">
+                    <div>
+                      <p className="m-0 text-xs font-black uppercase tracking-[0.18em]" style={{ color: theme.accent }}>
+                        Perfil público
+                      </p>
+                      <h2 className="m-0 mt-1 text-2xl font-black tracking-tight" style={{ color: theme.textHeading }}>
+                        {professional.name.split(' ')[0]}
+                      </h2>
+                    </div>
+                    <div
+                      className="grid h-12 w-12 place-items-center rounded-2xl"
+                      style={{ background: theme.accentLight, color: theme.accent }}
+                    >
+                      <ShieldCheck size={24} />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3">
+                    {professional.location && (
+                      <InfoLine icon={<MapPin size={17} />} label={professional.location} theme={theme} />
+                    )}
+                    {professional.languages?.length > 0 && (
+                      <InfoLine icon={<Languages size={17} />} label={professional.languages.join(', ')} theme={theme} />
+                    )}
+                    {professional.services?.length > 0 && (
+                      <InfoLine icon={<BriefcaseBusiness size={17} />} label={`${professional.services.length} serviço(s) disponível(is)`} theme={theme} />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="sobre" className="px-5 py-20 md:px-8 md:py-28">
+        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[.85fr_1.15fr]">
+          <Reveal>
+            <div className="sticky top-28 rounded-[2rem] border p-5 shadow-xl" style={{ background: theme.cardBg, borderColor: theme.cardBorder }}>
+              <ProfileImage professional={professional} initials={initials} theme={theme} />
+              <div className="mt-5">
+                <p className="m-0 text-xs font-black uppercase tracking-[0.18em]" style={{ color: theme.accent }}>
+                  Identificação profissional
+                </p>
+                <h2 className="m-0 mt-2 text-2xl font-black tracking-tight" style={{ color: theme.textHeading }}>
+                  {professional.name}
+                </h2>
+                {professional.crp && <p className="mt-2 text-sm font-bold opacity-70">{professional.crp}</p>}
+              </div>
+            </div>
+          </Reveal>
+
+          <div>
+            <Reveal delay={80}>
+              <SectionEyebrow theme={theme}>Sobre o profissional</SectionEyebrow>
+              <h2 className="mt-3 max-w-3xl text-4xl font-black leading-tight tracking-[-0.04em] md:text-5xl" style={{ color: theme.textHeading }}>
+                Um espaço de cuidado, escuta e desenvolvimento humano.
+              </h2>
+              {professional.bio ? (
+                <p className="mt-6 max-w-3xl text-lg leading-9" style={{ color: theme.textBody }}>
+                  {professional.bio}
+                </p>
+              ) : (
+                <p className="mt-6 max-w-3xl text-lg leading-9 opacity-75">
+                  Este perfil reúne as principais informações profissionais, áreas de atuação, serviços e canais de contato.
+                </p>
+              )}
+            </Reveal>
+
+            {professional.specialties?.length > 0 && (
+              <Reveal delay={140} className="mt-10">
+                <div className="rounded-[2rem] border p-6" style={{ background: theme.cardBg, borderColor: theme.cardBorder }}>
+                  <h3 className="mb-5 text-xl font-black tracking-tight" style={{ color: theme.textHeading }}>
+                    Especialidades
+                  </h3>
+                  <div className="flex flex-wrap gap-3">
+                    {professional.specialties.map((specialty) => (
+                      <span
+                        key={specialty}
+                        className="inline-flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-bold"
+                        style={{ background: theme.accentLight, borderColor: `${theme.accent}25`, color: theme.textHeading }}
+                      >
+                        <Check size={15} style={{ color: theme.accent }} />
+                        {specialty}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </Reveal>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section id="servicos" className="px-5 py-20 md:px-8 md:py-24" style={{ background: theme.sectionAlt }}>
+        <div className="mx-auto max-w-6xl">
+          <Reveal>
+            <div className="mx-auto max-w-2xl text-center">
+              <SectionEyebrow theme={theme}>Serviços</SectionEyebrow>
+              <h2 className="mt-3 text-4xl font-black leading-tight tracking-[-0.04em] md:text-5xl" style={{ color: theme.textHeading }}>
+                Atendimentos e possibilidades
+              </h2>
+              <p className="mt-5 text-base leading-7 opacity-75">
+                Conheça os principais serviços oferecidos e escolha o melhor caminho para iniciar o contato.
+              </p>
+            </div>
+          </Reveal>
+
+          {professional.services?.length > 0 ? (
+            <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {professional.services.map((service, index) => (
+                <Reveal key={service} delay={index * 60}>
+                  <div
+                    className="group h-full rounded-[2rem] border p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+                    style={{ background: theme.cardBg, borderColor: theme.cardBorder }}
+                  >
+                    <div
+                      className="mb-5 grid h-12 w-12 place-items-center rounded-2xl transition group-hover:scale-105"
+                      style={{ background: theme.accentLight, color: theme.accent }}
+                    >
+                      <BriefcaseBusiness size={22} />
+                    </div>
+                    <h3 className="m-0 text-lg font-black tracking-tight" style={{ color: theme.textHeading }}>
+                      {service}
+                    </h3>
+                    <p className="mt-3 text-sm leading-6 opacity-70">
+                      Atendimento conduzido com ética, acolhimento e direcionamento profissional.
+                    </p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          ) : (
+            <EmptyCard theme={theme} text="Nenhum serviço foi cadastrado para este perfil." />
+          )}
+        </div>
+      </section>
+
+      <section className="px-5 py-20 md:px-8 md:py-24">
+        <div className="mx-auto grid max-w-6xl gap-5 md:grid-cols-3">
+          {professional.location && (
+            <DataCard icon={<MapPin size={24} />} title="Localização" value={professional.location} theme={theme} />
+          )}
+          {price > 0 && (
+            <DataCard icon={<CircleDollarSign size={24} />} title="Valor da sessão" value={formatCurrency(price)} theme={theme} />
+          )}
+          {professional.languages?.length > 0 && (
+            <DataCard icon={<Globe2 size={24} />} title="Idiomas" value={professional.languages.join(', ')} theme={theme} />
+          )}
+        </div>
+      </section>
+
+      <section id="contato" className="px-5 py-20 md:px-8 md:py-28" style={{ background: theme.sectionAlt }}>
+        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_.9fr]">
+          <Reveal>
+            <div>
+              <SectionEyebrow theme={theme}>Contato</SectionEyebrow>
+              <h2 className="mt-3 text-4xl font-black leading-tight tracking-[-0.04em] md:text-5xl" style={{ color: theme.textHeading }}>
+                Comece uma conversa de forma simples e segura.
+              </h2>
+              <p className="mt-5 max-w-2xl text-lg leading-8 opacity-75">
+                Use os canais disponíveis para tirar dúvidas, verificar horários ou agendar um atendimento.
+              </p>
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                {whatsappUrl && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-3 rounded-2xl bg-emerald-500 px-6 py-4 text-base font-black text-white shadow-xl shadow-emerald-500/20 transition hover:-translate-y-1 hover:bg-emerald-600"
+                  >
+                    <MessageCircle size={21} /> Falar pelo WhatsApp
+                  </a>
+                )}
+                <a
+                  href="/diretorio"
+                  className="inline-flex items-center gap-3 rounded-2xl border bg-white px-6 py-4 text-base font-black transition hover:-translate-y-1"
+                  style={{ borderColor: theme.cardBorder, color: theme.textHeading }}
+                >
+                  Ver outros profissionais
+                </a>
+              </div>
+            </div>
+          </Reveal>
+
+          <Reveal delay={120}>
+            <div className="rounded-[2rem] border p-5 shadow-xl" style={{ background: theme.cardBg, borderColor: theme.cardBorder }}>
+              <h3 className="mb-4 text-xl font-black tracking-tight" style={{ color: theme.textHeading }}>
+                Redes e links
+              </h3>
+              {socialLinks.length > 0 ? <SocialGrid links={socialLinks} theme={theme} /> : <EmptyCard theme={theme} text="Nenhum link cadastrado." compact />}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      <footer className="px-5 py-10 md:px-8" style={{ background: theme.bannerFrom }}>
+        <div className="mx-auto flex max-w-6xl flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white/10 text-white">
+              <Sparkles size={19} />
+            </div>
+            <div>
+              <p className="m-0 text-sm font-black text-white">Espalhe Melodias</p>
+              <p className="m-0 mt-1 text-xs font-semibold text-white/40">Comunidade de saúde mental</p>
+            </div>
+          </div>
+
+          <p className="m-0 text-xs font-semibold text-white/35">
+            © {new Date().getFullYear()} Espalhe Melodias. Todos os direitos reservados.
+          </p>
+        </div>
+      </footer>
+    </main>
+  );
+}
+
+function NavItem({ href, label, scrolled, theme }: { href: string; label: string; scrolled: boolean; theme: ThemePalette }) {
+  return (
+    <a
+      href={href}
+      className="rounded-2xl px-4 py-3 text-sm font-bold no-underline transition hover:bg-white/15"
+      style={{ color: scrolled ? theme.textHeading : 'rgba(255,255,255,0.78)' }}
+    >
+      {label}
+    </a>
+  );
+}
+
+function MobileNavItem({ href, label, onClick }: { href: string; label: string; onClick: () => void }) {
+  return (
+    <a href={href} onClick={onClick} className="rounded-2xl px-4 py-3 text-sm font-black text-slate-700 no-underline hover:bg-slate-50">
+      {label}
+    </a>
+  );
+}
+
+function ProfileImage({
+  professional,
+  initials,
+  theme,
+  large = false,
+}: {
+  professional: Professional;
+  initials: string;
+  theme: ThemePalette;
+  large?: boolean;
+}) {
+  const className = large ? 'aspect-[4/4] w-full' : 'aspect-[4/3] w-full rounded-[1.5rem]';
+
+  if (professional.avatar) {
+    return (
+      <img
+        src={professional.avatar}
+        alt={professional.name}
+        className={`${className} object-cover`}
+        style={{ borderRadius: large ? '2rem 2rem 0 0' : '1.5rem' }}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={`${className} grid place-items-center text-6xl font-black text-white`}
+      style={{
+        borderRadius: large ? '2rem 2rem 0 0' : '1.5rem',
+        background: `linear-gradient(135deg, ${theme.bannerMid}, ${theme.accent})`,
+      }}
+    >
+      <UserRound className="absolute opacity-10" size={180} />
+      <span className="relative z-10">{initials}</span>
+    </div>
+  );
+}
+
+function InfoLine({ icon, label, theme }: { icon: React.ReactNode; label: string; theme: ThemePalette }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border px-4 py-3" style={{ borderColor: theme.cardBorder, background: theme.pageBg }}>
+      <span style={{ color: theme.accent }}>{icon}</span>
+      <span className="text-sm font-bold" style={{ color: theme.textHeading }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function HeroStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/12 bg-white/10 p-4 text-white backdrop-blur-xl">
+      <div className="mb-2 text-white/55">{icon}</div>
+      <p className="m-0 text-[10px] font-black uppercase tracking-[0.18em] text-white/40">{label}</p>
+      <p className="m-0 mt-1 line-clamp-1 text-sm font-black text-white">{value}</p>
+    </div>
+  );
+}
+
+function SectionEyebrow({ children, theme }: { children: React.ReactNode; theme: ThemePalette }) {
+  return (
+    <p className="m-0 text-xs font-black uppercase tracking-[0.22em]" style={{ color: theme.accent }}>
+      {children}
+    </p>
+  );
+}
+
+function DataCard({ icon, title, value, theme }: { icon: React.ReactNode; title: string; value: string; theme: ThemePalette }) {
+  return (
+    <Reveal>
+      <div className="h-full rounded-[2rem] border p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl" style={{ background: theme.cardBg, borderColor: theme.cardBorder }}>
+        <div className="mb-5 grid h-14 w-14 place-items-center rounded-2xl" style={{ background: theme.accentLight, color: theme.accent }}>
+          {icon}
+        </div>
+        <p className="m-0 text-xs font-black uppercase tracking-[0.18em]" style={{ color: theme.accentMuted }}>
+          {title}
+        </p>
+        <p className="m-0 mt-2 text-2xl font-black tracking-tight" style={{ color: theme.textHeading }}>
+          {value}
+        </p>
+      </div>
+    </Reveal>
+  );
+}
+
+function EmptyCard({ theme, text, compact = false }: { theme: ThemePalette; text: string; compact?: boolean }) {
+  return (
+    <div
+      className={`rounded-[2rem] border text-center ${compact ? 'p-5' : 'mt-12 p-10'}`}
+      style={{ background: theme.cardBg, borderColor: theme.cardBorder, color: theme.textBody }}
+    >
+      <p className="m-0 text-sm font-semibold opacity-70">{text}</p>
+    </div>
+  );
+}
+
+function FloatingOrnaments() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="float-one absolute left-[7%] top-[22%] h-24 w-24 rounded-full border border-white/10" />
+      <div className="float-two absolute bottom-[18%] right-[8%] h-32 w-32 rounded-full border border-white/10" />
+      <div className="float-three absolute right-[28%] top-[16%] h-3 w-3 rounded-full bg-white/40" />
+      <div className="float-two absolute bottom-[24%] left-[35%] h-2 w-2 rounded-full bg-white/30" />
+    </div>
+  );
+}
+
+function buildSocialLinks(professional: Professional): SocialLink[] {
+  const links: SocialLink[] = [];
+
+  if (professional.contact_whatsapp) {
+    links.push({ type: 'whatsapp', url: `https://wa.me/${onlyDigits(professional.contact_whatsapp)}`, label: 'WhatsApp' });
+  }
+
+  if (professional.instagram) {
+    links.push({
+      type: 'instagram',
+      url: professional.instagram.startsWith('http')
+        ? professional.instagram
+        : `https://instagram.com/${professional.instagram.replace('@', '')}`,
+      label: 'Instagram',
+    });
+  }
+
+  if (professional.linkedin) {
+    links.push({
+      type: 'linkedin',
+      url: professional.linkedin.startsWith('http')
+        ? professional.linkedin
+        : `https://linkedin.com/in/${professional.linkedin}`,
+      label: 'LinkedIn',
+    });
+  }
+
+  if (professional.facebook) {
+    links.push({
+      type: 'facebook',
+      url: professional.facebook.startsWith('http')
+        ? professional.facebook
+        : `https://facebook.com/${professional.facebook}`,
+      label: 'Facebook',
+    });
+  }
+
+  if (professional.tiktok) {
+    links.push({
+      type: 'tiktok',
+      url: professional.tiktok.startsWith('http')
+        ? professional.tiktok
+        : `https://tiktok.com/@${professional.tiktok.replace('@', '')}`,
+      label: 'TikTok',
+    });
+  }
+
+  if (professional.twitter) {
+    links.push({
+      type: 'twitter',
+      url: professional.twitter.startsWith('http')
+        ? professional.twitter
+        : `https://twitter.com/${professional.twitter.replace('@', '')}`,
+      label: 'Twitter / X',
+    });
+  }
+
+  if (professional.website) {
+    links.push({ type: 'website', url: normalizeUrl(professional.website), label: 'Site' });
+  }
+
+  professional.extra_links?.forEach((link) => {
+    if (link.url) links.push({ type: 'link', url: normalizeUrl(link.url), label: link.label || 'Link' });
+  });
+
+  return links;
+}
+
+function SocialGrid({ links, theme }: { links: SocialLink[]; theme: ThemePalette }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {links.map((link, index) => (
+        <a
+          key={`${link.type}-${index}`}
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex items-center gap-3 rounded-2xl border px-4 py-4 text-sm font-black no-underline transition hover:-translate-y-0.5 hover:shadow-lg"
+          style={{ background: theme.pageBg, borderColor: theme.cardBorder, color: theme.textHeading }}
+        >
+          <span className="grid h-10 w-10 place-items-center rounded-2xl text-white" style={{ background: socialColor(link.type) }}>
+            {socialIcon(link.type)}
+          </span>
+          <span>{link.label}</span>
+          <ArrowRight className="ml-auto opacity-40 transition group-hover:translate-x-1 group-hover:opacity-80" size={17} />
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function socialColor(type: string) {
+  const colors: Record<string, string> = {
+    whatsapp: 'linear-gradient(135deg,#22c55e,#16a34a)',
+    instagram: 'linear-gradient(135deg,#f97316,#db2777,#7c3aed)',
+    linkedin: 'linear-gradient(135deg,#0a66c2,#0284c7)',
+    facebook: 'linear-gradient(135deg,#1877f2,#1d4ed8)',
+    tiktok: 'linear-gradient(135deg,#020617,#334155)',
+    twitter: 'linear-gradient(135deg,#0f172a,#38bdf8)',
+    website: 'linear-gradient(135deg,#475569,#0f172a)',
+    link: 'linear-gradient(135deg,#64748b,#334155)',
+  };
+
+  return colors[type] || colors.link;
+}
+
+function socialIcon(type: string) {
+  if (type === 'whatsapp') return <MessageCircle size={18} />;
+  if (type === 'website') return <Globe2 size={18} />;
+  return <LinkIcon size={18} />;
+}
+
+function profileStyles(theme: ThemePalette) {
+  return `
+    html { scroll-behavior: smooth; }
+
+    .profile-grid {
+      background-image:
+        linear-gradient(rgba(255,255,255,.8) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.8) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(circle at 50% 42%, black, transparent 72%);
+    }
+
+    .animate-hero-in {
+      animation: heroIn .85s cubic-bezier(.22,1,.36,1) both;
+    }
+
+    .animate-card-in {
+      animation: cardIn .95s cubic-bezier(.22,1,.36,1) .12s both;
+    }
+
+    .float-one { animation: floatOne 9s ease-in-out infinite; }
+    .float-two { animation: floatTwo 11s ease-in-out infinite; }
+    .float-three { animation: floatThree 7s ease-in-out infinite; }
+
+    ::selection {
+      background: ${theme.accent};
+      color: white;
+    }
+
+    @keyframes heroIn {
+      from { opacity: 0; transform: translateY(28px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(36px) scale(.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes floatOne {
+      0%, 100% { transform: translate3d(0,0,0) rotate(0deg); }
+      50% { transform: translate3d(18px,-24px,0) rotate(12deg); }
+    }
+
+    @keyframes floatTwo {
+      0%, 100% { transform: translate3d(0,0,0) rotate(0deg); }
+      50% { transform: translate3d(-18px,20px,0) rotate(-10deg); }
+    }
+
+    @keyframes floatThree {
+      0%, 100% { transform: translate3d(0,0,0) scale(1); opacity: .35; }
+      50% { transform: translate3d(0,-18px,0) scale(1.5); opacity: .75; }
+    }
+  `;
 }

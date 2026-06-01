@@ -87,21 +87,57 @@ export async function getProfessional(req: AuthRequest, res: Response): Promise<
   });
 }
 
+export async function checkSlug(req: AuthRequest, res: Response): Promise<void> {
+  if (!req.user) throw new AppError('Não autenticado.', 401);
+  const { slug } = req.query as { slug?: string };
+  if (!slug) throw new AppError('Parâmetro slug é obrigatório.', 400);
+
+  const clean = slug.trim().toLowerCase();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(clean)) {
+    res.json({ available: false, reason: 'Slug inválido. Use apenas letras, números e hífens.' });
+    return;
+  }
+
+  const existing = await queryOne<{ user_id: string }>(
+    'SELECT user_id FROM professional_profiles WHERE slug = ?', [clean],
+  );
+
+  if (!existing || existing.user_id === req.user.userId) {
+    res.json({ available: true, slug: clean });
+  } else {
+    res.json({ available: false, reason: 'Este endereço já está em uso por outro profissional.' });
+  }
+}
+
 export async function upsertProfessional(req: AuthRequest, res: Response): Promise<void> {
   if (!req.user) throw new AppError('Não autenticado.', 401);
 
   const {
     name, crp, specialties, bio, pricePerSession, contactWhatsapp,
     services, schedule, location, accentColor, theme, languages,
-    instagram, linkedin, facebook, tiktok, twitter, website, extraLinks,
+    instagram, linkedin, facebook, tiktok, twitter, website, extraLinks, slug,
   } = req.body as {
     name?: string; crp: string; specialties: string[]; bio: string; pricePerSession: number;
     contactWhatsapp?: string; services: string[]; schedule: unknown[];
     location: string; accentColor?: string; theme?: string; languages: string[];
     instagram?: string; linkedin?: string; facebook?: string;
     tiktok?: string; twitter?: string; website?: string;
-    extraLinks?: Array<{ label: string; url: string }>;
+    extraLinks?: Array<{ label: string; url: string }>; slug?: string;
   };
+
+  // Valida slug se fornecido
+  let cleanSlug: string | null = null;
+  if (slug) {
+    cleanSlug = slug.trim().toLowerCase();
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(cleanSlug)) {
+      throw new AppError('Slug inválido. Use apenas letras, números e hífens.', 400);
+    }
+    const conflict = await queryOne<{ user_id: string }>(
+      'SELECT user_id FROM professional_profiles WHERE slug = ? AND user_id != ?',
+      [cleanSlug, req.user.userId],
+    );
+    if (conflict) throw new AppError('Este endereço já está em uso por outro profissional.', 409);
+  }
 
   const existing = await queryOne<{ id: string }>(
     'SELECT id FROM professional_profiles WHERE user_id = ?', [req.user.userId],
@@ -119,6 +155,7 @@ export async function upsertProfessional(req: AuthRequest, res: Response): Promi
   if (existing) {
     await execute(
       `UPDATE professional_profiles SET
+         slug              = COALESCE(?, slug),
          crp               = COALESCE(?, crp),
          specialties       = COALESCE(?, specialties),
          bio               = COALESCE(?, bio),
@@ -140,6 +177,7 @@ export async function upsertProfessional(req: AuthRequest, res: Response): Promi
          updated_at        = ?
        WHERE user_id = ?`,
       [
+        cleanSlug ?? null,
         crp ?? null, specialties ? JSON.stringify(specialties) : null, bio ?? null,
         pricePerSession ?? null, contactWhatsapp ?? null,
         services ? JSON.stringify(services) : null,
@@ -157,13 +195,14 @@ export async function upsertProfessional(req: AuthRequest, res: Response): Promi
     const id = newId();
     await execute(
       `INSERT INTO professional_profiles
-       (id, user_id, crp, specialties, bio, price_per_session, contact_whatsapp,
+       (id, user_id, slug, crp, specialties, bio, price_per_session, contact_whatsapp,
         services, schedule, location, accent_color, theme, languages,
         instagram, linkedin, facebook, tiktok, twitter, website, extra_links,
         created_at, updated_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
-        id, req.user.userId, crp, JSON.stringify(specialties), bio, pricePerSession,
+        id, req.user.userId, cleanSlug ?? null,
+        crp, JSON.stringify(specialties), bio, pricePerSession,
         contactWhatsapp ?? null, JSON.stringify(services), JSON.stringify(schedule),
         location, accentColor ?? null, theme ?? null, JSON.stringify(languages),
         instagram ?? null, linkedin ?? null, facebook ?? null,

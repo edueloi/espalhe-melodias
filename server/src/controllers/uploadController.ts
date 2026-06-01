@@ -62,7 +62,7 @@ export async function uploadAvatar(req: AuthRequest, res: Response): Promise<voi
   if (!req.file) throw new AppError('Nenhum arquivo enviado.', 400);
 
   const userId = req.user!.userId;
-  const avatarUrl = `http://localhost:3001/uploads/avatars/${req.file.filename}`;
+  const avatarUrl = `/uploads/avatars/${req.file.filename}`;
 
   // Busca avatar anterior para deletar depois de salvar o novo
   const row = await queryOne<{ avatar: string | null }>('SELECT avatar FROM users WHERE id = ?', [userId]);

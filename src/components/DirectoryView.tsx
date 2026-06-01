@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Users, Search, Star, MapPin, MessageSquare, Coins,
+  Users, Search, Star, MapPin, MessageSquare,
   ArrowLeft, ChevronRight, ShieldCheck, Check, Globe,
   Settings, Plus, Trash2, Phone, RefreshCw, AlertCircle,
   Stethoscope, Calendar, X, Edit3, ExternalLink, Instagram,
@@ -19,13 +19,196 @@ const toNumericValue = (value: unknown, fallback = 0) => {
   return Number.isFinite(num) ? num : fallback;
 };
 
-const formatCurrency = (value: unknown) =>
-  new Intl.NumberFormat('pt-BR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(toNumericValue(value));
 
-const SPECIALTIES = ['Ansiedade', 'Depressão', 'Burnout', 'Stress Ocupacional', 'Autoconhecimento', 'TCC', 'Mindfulness', 'Autoestima', 'Transtorno Pânico', 'Luto', 'Relacionamentos'];
+// ── Tipos de profissional com registro e máscara ─────────────────────────────
+
+const PROF_TYPES: Array<{
+  label: string;
+  council: string;       // sigla do conselho
+  placeholder: string;   // placeholder do número
+  mask: (v: string) => string;
+}> = [
+  {
+    label: 'Psicólogo',
+    council: 'CRP',
+    placeholder: '06/123456',
+    mask: v => {
+      const d = v.replace(/\D/g, '').slice(0, 8);
+      if (d.length <= 2) return d;
+      return `${d.slice(0, 2)}/${d.slice(2)}`;
+    },
+  },
+  {
+    label: 'Médico',
+    council: 'CRM',
+    placeholder: 'SP 123456',
+    mask: v => {
+      const clean = v.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      const letters = clean.match(/[A-Z]+/)?.[0] ?? '';
+      const nums    = clean.replace(/[A-Z]/g, '').slice(0, 6);
+      if (!letters) return nums;
+      return `${letters.slice(0,2)} ${nums}`;
+    },
+  },
+  {
+    label: 'Psiquiatra',
+    council: 'CRM',
+    placeholder: 'SP 123456',
+    mask: v => {
+      const clean = v.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      const letters = clean.match(/[A-Z]+/)?.[0] ?? '';
+      const nums    = clean.replace(/[A-Z]/g, '').slice(0, 6);
+      if (!letters) return nums;
+      return `${letters.slice(0,2)} ${nums}`;
+    },
+  },
+  {
+    label: 'Fisioterapeuta',
+    council: 'CREFITO',
+    placeholder: '3-123456F',
+    mask: v => v.replace(/[^0-9A-Za-z-]/g, '').slice(0, 10).toUpperCase(),
+  },
+  {
+    label: 'Fonoaudiólogo',
+    council: 'CFFa',
+    placeholder: '1-12345',
+    mask: v => v.replace(/[^0-9-]/g, '').slice(0, 8),
+  },
+  {
+    label: 'Nutricionista',
+    council: 'CFN',
+    placeholder: '12345',
+    mask: v => v.replace(/\D/g, '').slice(0, 6),
+  },
+  {
+    label: 'Terapeuta Ocupacional',
+    council: 'COFFITO',
+    placeholder: '123456',
+    mask: v => v.replace(/\D/g, '').slice(0, 6),
+  },
+  {
+    label: 'Assistente Social',
+    council: 'CRESS',
+    placeholder: '6a/12345',
+    mask: v => v.replace(/[^0-9A-Za-z/]/g, '').slice(0, 9).toUpperCase(),
+  },
+  {
+    label: 'Educador Físico',
+    council: 'CREF',
+    placeholder: '012345-G/SP',
+    mask: v => v.replace(/[^0-9A-Za-z-/]/g, '').slice(0, 12).toUpperCase(),
+  },
+  {
+    label: 'Psicopedagogo',
+    council: 'ABPp',
+    placeholder: '12345',
+    mask: v => v.replace(/\D/g, '').slice(0, 6),
+  },
+  {
+    label: 'Psicanalista',
+    council: '',
+    placeholder: 'Número do registro',
+    mask: v => v,
+  },
+  {
+    label: 'Pedagogo',
+    council: '',
+    placeholder: 'Número do registro',
+    mask: v => v,
+  },
+  {
+    label: 'Outro',
+    council: '',
+    placeholder: 'Número do registro',
+    mask: v => v,
+  },
+];
+
+// Grupos temáticos de especialidades por tipo de profissional
+type SpecGroup = { label: string; items: string[] };
+
+const SPEC_GROUPS_BY_TYPE: Record<string, SpecGroup[]> = {
+  Psicólogo: [
+    { label: 'Abordagens Terapêuticas', items: ['TCC', 'Psicanálise', 'Gestalt-terapia', 'ACT', 'DBT', 'Terapia do Esquema', 'EMDR', 'Brainspotting', 'Logoterapia', 'Terapia Sistêmica', 'Terapia Humanista', 'Neuropsicologia', 'Psicologia Positiva', 'Terapia Integrativa', 'Avaliação Psicológica'] },
+    { label: 'Público Atendido', items: ['Crianças', 'Adolescentes', 'Adultos', 'Idosos', 'Casais', 'Famílias', 'Grupos'] },
+    { label: 'Áreas Clínicas', items: ['Ansiedade', 'Depressão', 'Burnout', 'Trauma', 'Luto', 'TOC', 'TDAH', 'Autismo', 'Fobia', 'Dependência Química', 'Transtorno Alimentar', 'Transtorno Pânico', 'Bipolaridade', 'Autoestima', 'Relacionamentos', 'Sexualidade'] },
+    { label: 'Formatos', items: ['Psicoterapia Online', 'Psicoterapia Presencial', 'Atendimento Híbrido', 'Grupo Terapêutico', 'Supervisão Clínica', 'Plantão Psicológico', 'Workshops', 'Palestras'] },
+  ],
+  Psiquiatra: [
+    { label: 'Transtornos', items: ['Ansiedade', 'Depressão', 'Transtorno Bipolar', 'Esquizofrenia', 'TDAH', 'Autismo', 'TOC', 'Fobia Social', 'TEPT', 'Borderline', 'Dependência Química', 'Psicose', 'Insônia'] },
+    { label: 'Público', items: ['Crianças', 'Adolescentes', 'Adultos', 'Idosos'] },
+    { label: 'Formatos', items: ['Consulta Presencial', 'Consulta Online', 'Acompanhamento Medicamentoso', 'Laudo Psiquiátrico'] },
+  ],
+  Médico: [
+    { label: 'Especialidades', items: ['Clínica Geral', 'Cardiologia', 'Dermatologia', 'Endocrinologia', 'Ginecologia', 'Neurologia', 'Ortopedia', 'Pediatria', 'Reumatologia', 'Urologia', 'Medicina Preventiva', 'Medicina do Trabalho', 'Geriatria'] },
+    { label: 'Formatos', items: ['Consulta Presencial', 'Telemedicina', 'Medicina Preventiva', 'Check-up'] },
+  ],
+  Fisioterapeuta: [
+    { label: 'Especialidades', items: ['Ortopedia', 'Neurológica', 'Respiratória', 'Esportiva', 'Pediátrica', 'Geriatria', 'Pós-operatório', 'Uroginecologia', 'Dermato-funcional'] },
+    { label: 'Métodos', items: ['RPG', 'Pilates Clínico', 'Acupuntura', 'Dry Needling', 'Crochetagem', 'Osteopatia', 'Terapia Manual'] },
+    { label: 'Formatos', items: ['Atendimento Presencial', 'Domiciliar', 'Online'] },
+  ],
+  'Fonoaudiólogo': [
+    { label: 'Áreas', items: ['Linguagem', 'Fala', 'Deglutição', 'Voz', 'Audiologia', 'Gagueira', 'Motricidade Orofacial', 'Dislexia'] },
+    { label: 'Público', items: ['Bebês', 'Crianças', 'Adolescentes', 'Adultos', 'Idosos'] },
+  ],
+  Nutricionista: [
+    { label: 'Especialidades', items: ['Emagrecimento', 'Esportiva', 'Clínica', 'Pediátrica', 'Oncológica', 'Gestantes', 'Vegetarianismo', 'Comportamento Alimentar', 'Diabetes', 'Hipertensão'] },
+    { label: 'Formatos', items: ['Consulta Presencial', 'Consulta Online', 'Acompanhamento Contínuo', 'Palestras'] },
+  ],
+  'Terapeuta Ocupacional': [
+    { label: 'Áreas', items: ['Desenvolvimento Infantil', 'Neurológica', 'Saúde Mental', 'Geriatria', 'Autismo', 'TDAH', 'Inclusão Escolar', 'Reabilitação', 'Ortopedia'] },
+    { label: 'Formatos', items: ['Presencial', 'Domiciliar', 'Escolar', 'Hospitalar'] },
+  ],
+  'Assistente Social': [
+    { label: 'Áreas', items: ['Proteção Social', 'Saúde', 'Família', 'Infância', 'Violência Doméstica', 'Dependência Química', 'Habitação', 'Orientação Sociojurídica'] },
+    { label: 'Contextos', items: ['CRAS', 'CREAS', 'Hospital', 'Escola', 'Empresa', 'ONG'] },
+  ],
+  'Educador Físico': [
+    { label: 'Modalidades', items: ['Musculação', 'Funcional', 'Pilates', 'Yoga', 'Natação', 'Corrida', 'Ciclismo', 'Crossfit'] },
+    { label: 'Foco', items: ['Emagrecimento', 'Hipertrofia', 'Reabilitação', 'Qualidade de Vida', 'Idosos', 'Gestantes', 'Esportivo'] },
+  ],
+  Psicopedagogo: [
+    { label: 'Dificuldades', items: ['Dislexia', 'Disgrafia', 'Discalculia', 'TDAH', 'Autismo', 'Dificuldades de Aprendizagem', 'Problema de Leitura'] },
+    { label: 'Atuação', items: ['Alfabetização', 'Orientação Escolar', 'Inclusão', 'Avaliação Psicopedagógica', 'Orientação de Pais', 'Reforço Escolar'] },
+    { label: 'Público', items: ['Bebês', 'Crianças', 'Adolescentes', 'Adultos'] },
+  ],
+  Psicanalista: [
+    { label: 'Abordagens', items: ['Psicanálise Clínica', 'Freudiana', 'Lacaniana', 'Junguiana', 'Winnicottiana'] },
+    { label: 'Áreas', items: ['Neurose', 'Psicose', 'Depressão', 'Ansiedade', 'Trauma', 'Luto', 'Sexualidade', 'Transtorno de Personalidade'] },
+    { label: 'Público', items: ['Crianças', 'Adolescentes', 'Adultos', 'Casais'] },
+  ],
+  Pedagogo: [
+    { label: 'Atuação', items: ['Educação Infantil', 'Alfabetização', 'Reforço Escolar', 'Orientação Educacional', 'Educação Especial', 'Pedagogia Hospitalar', 'EJA', 'Pedagogia Empresarial'] },
+    { label: 'Público', items: ['Bebês', 'Crianças', 'Adolescentes', 'Adultos'] },
+  ],
+  Outro: [
+    { label: 'Áreas', items: ['Saúde Mental', 'Bem-estar', 'Desenvolvimento Pessoal', 'Ansiedade', 'Depressão', 'Qualidade de Vida'] },
+  ],
+};
+
+// Flat list para filtro do diretório e input custom
+const SPECIALTIES_BY_TYPE: Record<string, string[]> = Object.fromEntries(
+  Object.entries(SPEC_GROUPS_BY_TYPE).map(([k, groups]) => [k, groups.flatMap(g => g.items)])
+);
+const DEFAULT_SPECIALTIES = SPECIALTIES_BY_TYPE['Psicólogo'];
+
+// Lista para o filtro do diretório (todas as especialidades possíveis, sem repetição)
+const SPECIALTIES = Array.from(new Set(
+  Object.values(SPECIALTIES_BY_TYPE).flat()
+)).sort();
+
+// Máscara de telefone brasileiro — armazena só dígitos, exibe formatado
+function maskPhone(raw: string): string {
+  const d = raw.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 2)  return d.length ? `(${d}` : '';
+  if (d.length <= 7)  return `(${d.slice(0,2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;
+  return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;
+}
+function unmaskedPhone(masked: string): string {
+  return masked.replace(/\D/g, '');
+}
 
 function SocialIcon({ type }: { type: string }) {
   const cls = 'w-4 h-4';
@@ -115,6 +298,7 @@ export default function DirectoryView() {
 
   // edit form
   const [eName, setEName]             = useState('');
+  const [eProfType, setEProfType]     = useState('Psicólogo');
   const [eCrp, setECrp]               = useState('');
   const [eBio, setEBio]               = useState('');
   const [eAvatar, setEAvatar]         = useState('');
@@ -137,10 +321,28 @@ export default function DirectoryView() {
   const [eExtraLinks, setEExtraLinks] = useState<Array<{ label: string; url: string }>>([]);
   const [newLinkLabel, setNewLinkLabel] = useState('');
   const [newLinkUrl, setNewLinkUrl]   = useState('');
+  const [newSpecialty, setNewSpecialty] = useState('');
   const [saving, setSaving]           = useState(false);
   const [step, setStep]               = useState(1);
   const [avatarFile, setAvatarFile]   = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
+
+  // slug
+  const [eSlug, setESlug]             = useState('');
+  const [slugStatus, setSlugStatus]   = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
+  const [slugMessage, setSlugMessage] = useState('');
+  const slugTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // endereço detalhado
+  const [eCep, setECep]               = useState('');
+  const [eStreet, setEStreet]         = useState('');
+  const [eNumber, setENumber]         = useState('');
+  const [eComplement, setEComplement] = useState('');
+  const [eNeighborhood, setENeighborhood] = useState('');
+  const [eCity, setECity]             = useState('');
+  const [eState, setEState]           = useState('');
+  const [cepLoading, setCepLoading]   = useState(false);
+  const [cepError, setCepError]       = useState('');
 
   const load = () => {
     setLoading(true);
@@ -161,14 +363,66 @@ export default function DirectoryView() {
 
   const LANGUAGES_OPTIONS = ['Português', 'Inglês', 'Espanhol', 'Francês', 'Italiano', 'Alemão'];
 
+  const checkSlugAvailability = (slug: string) => {
+    if (slugTimer.current) clearTimeout(slugTimer.current);
+    if (!slug) { setSlugStatus('idle'); setSlugMessage(''); return; }
+    const clean = slug.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(clean)) {
+      setSlugStatus('invalid');
+      setSlugMessage('Use apenas letras minúsculas, números e hífens.');
+      return;
+    }
+    setSlugStatus('checking');
+    slugTimer.current = setTimeout(async () => {
+      try {
+        const res = await professionalsApi.checkSlug(clean);
+        if (res.available) {
+          setSlugStatus('available');
+          setSlugMessage('Disponível!');
+        } else {
+          setSlugStatus('taken');
+          setSlugMessage(res.reason ?? 'Já está em uso.');
+        }
+      } catch {
+        setSlugStatus('idle');
+        setSlugMessage('');
+      }
+    }, 500);
+  };
+
+  const handleSlugChange = (raw: string) => {
+    const clean = raw.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    setESlug(clean);
+    checkSlugAvailability(clean);
+  };
+
   const openEdit = (prof: Professional) => {
     setEName(prof.name);
-    setECrp(prof.crp);
+    // Detecta tipo pelo prefixo do registro salvo
+    const crpUpper = (prof.crp ?? '').toUpperCase();
+    const detectedType = PROF_TYPES.find(t =>
+      t.council && crpUpper.startsWith(t.council + ' ') ||
+      (t.council === 'CRP' && /^\d{2}\//.test(prof.crp ?? '')) ||
+      (t.council === 'CRM' && /^[A-Z]{2}\s/.test(crpUpper))
+    )?.label ?? 'Psicólogo';
+    setEProfType(detectedType);
+    // Remove o prefixo do conselho do número salvo (se tiver)
+    const council = PROF_TYPES.find(t => t.label === detectedType)?.council ?? '';
+    const rawNum = prof.crp?.replace(new RegExp(`^${council}\\s*`, 'i'), '') ?? '';
+    setECrp(rawNum);
     setEBio(prof.bio);
     setEAvatar(prof.avatar ?? '');
     setEPrice(toNumericValue(prof.price_per_session, 140));
     setELocation(prof.location);
-    setEWhatsapp(prof.contact_whatsapp ?? '');
+    setEWhatsapp(maskPhone(prof.contact_whatsapp ?? ''));
+    // Popula endereço — location salvo como "Cidade/UF" simples ou endereço completo
+    setECep(''); setEStreet(''); setENumber(''); setEComplement('');
+    setENeighborhood(''); setCepError('');
+    const loc = prof.location ?? '';
+    // Tenta detectar "Cidade/UF" (formato curto)
+    const cityUf = loc.match(/^(.+?)\/([A-Z]{2})$/);
+    if (cityUf) { setECity(cityUf[1].trim()); setEState(cityUf[2]); }
+    else { setECity(loc); setEState(''); }
     setEColor(prof.accent_color ?? '#a75a35');
     setESpecialties(prof.specialties);
     setEServices(prof.services);
@@ -183,6 +437,9 @@ export default function DirectoryView() {
     setETwitter(prof.twitter ?? '');
     setEWebsite(prof.website ?? '');
     setEExtraLinks(prof.extra_links ?? []);
+    setESlug(prof.slug ?? '');
+    setSlugStatus('idle');
+    setSlugMessage('');
     setAvatarFile(null);
     setAvatarPreview('');
     setStep(1);
@@ -199,11 +456,21 @@ export default function DirectoryView() {
         const { avatarUrl } = await uploadApi.uploadAvatar(avatarFile);
         finalAvatar = avatarUrl;
       }
+      // Monta o registro completo: conselho + número
+      const profTypeObj = PROF_TYPES.find(t => t.label === eProfType);
+      const council = profTypeObj?.council ?? '';
+      const fullCrp = eCrp ? (council ? `${council} ${eCrp}` : eCrp) : '';
+
+      // Monta location a partir dos campos de endereço
+      const locationParts = [eStreet && eNumber ? `${eStreet}, ${eNumber}` : eStreet, eComplement, eNeighborhood, eCity && eState ? `${eCity}/${eState}` : eCity].filter(Boolean);
+      const builtLocation = locationParts.join(' — ') || eLocation;
+
       await professionalsApi.updateMe({
-        name: eName, crp: eCrp, bio: eBio,
+        name: eName, crp: fullCrp, bio: eBio,
         avatar: finalAvatar,
-        price_per_session: ePrice, location: eLocation,
-        contact_whatsapp: eWhatsapp, accent_color: eColor,
+        slug: eSlug || undefined,
+        price_per_session: ePrice, location: builtLocation,
+        contact_whatsapp: unmaskedPhone(eWhatsapp), accent_color: eColor,
         specialties: eSpecialties, services: eServices,
         languages: eLanguages,
         schedule: eSchedule.map(s => {
@@ -312,9 +579,7 @@ export default function DirectoryView() {
                   setBooked(false);
                   setTimeSlot('');
                   setBookMsg('');
-                  window.history.pushState(null, '', `/profissional/${prof.user_id}`);
                 }}
-                onViewSite={() => window.open(`/profissional/${prof.user_id}`, '_blank')}
                 onEdit={() => openEdit(prof)}
               />
               </React.Fragment>
@@ -326,128 +591,17 @@ export default function DirectoryView() {
   );
 
   // ── DETAIL ────────────────────────────────────────────────────────────────────
-  if (view === 'detail' && selected) return (
-    <PageWrapper id={`directory-detail-${selected.id}`}>
-      <div className="max-w-3xl mx-auto space-y-5 animate-fadeIn">
-        <button onClick={() => { setView('list'); window.history.pushState(null, '', '/diretorio'); }} className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-brand-clay bg-white border border-brand-sand px-4 py-2 rounded-xl transition">
-          <ArrowLeft className="w-4 h-4" />Voltar ao diretório
-        </button>
-
-        <ContentCard padding="lg">
-          {/* Hero */}
-          <div className="flex flex-col sm:flex-row gap-5 mb-6 pb-6 border-b border-brand-sand/60">
-            {selected.avatar ? (
-              <img src={selected.avatar} alt={selected.name} className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl object-cover border-2 border-brand-sand shadow-md shrink-0" />
-            ) : (
-              <AvatarFallback name={selected.name} size="lg" />
-            )}
-            <div className="flex-1">
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <h2 className="text-xl sm:text-2xl font-serif font-bold text-brand-navy">{selected.name}</h2>
-                <a href={`/profissional/${selected.user_id}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-brand-moss hover:text-brand-moss-dark font-bold shrink-0">
-                  <Globe className="w-4 h-4" />Ver site público
-                </a>
-              </div>
-              {selected.crp && <p className="text-xs font-mono text-slate-400 mb-2">{selected.crp}</p>}
-              <div className="flex items-center gap-1 mb-3">
-                {[1,2,3,4,5].map(i => (
-                  <Star key={i} className={`w-4 h-4 ${i <= Math.round(toNumericValue(selected.rating)) ? 'fill-amber-400 stroke-amber-400' : 'stroke-slate-200'}`} />
-                ))}
-                <span className="text-sm font-bold text-slate-700 ml-1">{toNumericValue(selected.rating).toFixed(1)}</span>
-                <span className="text-xs text-slate-400">({selected.reviews_count} avaliações)</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {selected.specialties.map(s => (
-                  <span key={s} className="text-[10px] font-semibold bg-brand-sand/60 text-brand-clay-dark px-2.5 py-1 rounded-full border border-brand-sand">{s}</span>
-                ))}
-              </div>
-              <SocialLinks prof={selected} size="md" />
-            </div>
-          </div>
-
-          {/* Bio */}
-          <div className="space-y-4 mb-6">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Sobre</p>
-              <p className="text-sm text-slate-600 leading-relaxed">{selected.bio}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-brand-sand/30 rounded-xl p-3">
-                <p className="text-[10px] text-slate-400 font-semibold mb-0.5">Localização</p>
-                <p className="text-xs font-bold text-brand-navy flex items-center gap-1"><MapPin className="w-3 h-3 text-brand-clay" />{selected.location}</p>
-              </div>
-              <div className="bg-brand-sand/30 rounded-xl p-3">
-                <p className="text-[10px] text-slate-400 font-semibold mb-0.5">Sessão</p>
-                <p className="text-xs font-bold text-brand-navy flex items-center gap-1"><Coins className="w-3 h-3 text-brand-clay" />R$ {formatCurrency(selected.price_per_session)}/h</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Services */}
-          {selected.services.length > 0 && (
-            <div className="mb-6">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Serviços</p>
-              <div className="space-y-1.5">
-                {selected.services.map(s => (
-                  <div key={s} className="flex items-center gap-2 text-xs text-slate-600">
-                    <Check className="w-3.5 h-3.5 text-brand-moss shrink-0" />{s}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Schedule */}
-          {selected.schedule.length > 0 && (
-            <div className="mb-6">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Agenda Disponível</p>
-              <div className="flex flex-wrap gap-2">
-                {selected.schedule.map(slot => (
-                  <button key={`${slot.day}-${slot.hours}`}
-                    onClick={() => setTimeSlot(`${slot.day} ${slot.hours}`)}
-                    className={`text-xs px-3 py-1.5 rounded-lg border font-semibold transition ${
-                      timeSlot === `${slot.day} ${slot.hours}` ? 'bg-brand-clay text-white border-transparent' : 'bg-white text-slate-600 border-brand-sand hover:border-brand-clay'
-                    }`}>
-                    {slot.day} {slot.hours}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Booking */}
-          {booked ? (
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-3 animate-fadeIn">
-              <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs font-bold text-emerald-800">Sessão solicitada com sucesso!</p>
-                <p className="text-[11px] text-emerald-600 mt-0.5">Um profissional irá confirmar via WhatsApp em breve.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3 pt-4 border-t border-brand-sand/50">
-              <textarea rows={3} placeholder="Mensagem inicial (opcional)..." value={bookMsg} onChange={e => setBookMsg(e.target.value)}
-                className="w-full text-xs text-brand-navy bg-brand-cream border border-brand-sand px-3 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/30 transition resize-none" />
-              <div className="flex flex-col sm:flex-row gap-2">
-                {selected.contact_whatsapp && (
-                  <a href={`https://wa.me/${selected.contact_whatsapp}`} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition flex-1">
-                    <Phone className="w-4 h-4" />WhatsApp
-                  </a>
-                )}
-                <button onClick={() => { if (!timeSlot) return; setBooked(true); }}
-                  disabled={!timeSlot}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-clay hover:bg-brand-clay-dark disabled:opacity-50 text-white text-xs font-bold rounded-xl transition flex-1">
-                  <Calendar className="w-4 h-4" />Agendar {timeSlot ? `(${timeSlot})` : 'Sessão'}
-                </button>
-              </div>
-            </div>
-          )}
-        </ContentCard>
-      </div>
-    </PageWrapper>
-  );
+  if (view === 'detail' && selected) {
+    return (
+      <ProfDetailView
+        prof={selected}
+        timeSlot={timeSlot} setTimeSlot={setTimeSlot}
+        bookMsg={bookMsg} setBookMsg={setBookMsg}
+        booked={booked} setBooked={setBooked}
+        onBack={() => { setView('list'); window.history.pushState(null, '', '/diretorio'); }}
+      />
+    );
+  }
 
   // ── PUBLIC SITE ───────────────────────────────────────────────────────────────
   if (view === 'public-site' && selected) {
@@ -456,7 +610,7 @@ export default function DirectoryView() {
 
   // ── EDIT PROFILE ──────────────────────────────────────────────────────────────
   const STEP_LABELS = ['Informações', 'Serviços', 'Redes Sociais', 'Aparência'];
-  const STEP_ICONS  = [Stethoscope, Coins, Link2, Globe];
+  const STEP_ICONS  = [Stethoscope, MapPin, Link2, Globe];
 
   return (
     <PageWrapper id="profile-edit-view">
@@ -511,6 +665,7 @@ export default function DirectoryView() {
           <div className="space-y-5">
             <PanelCard title="Informações Básicas" icon={Stethoscope}>
               <div className="space-y-4">
+                {/* Nome + Tipo */}
                 <FormRow cols={2}>
                   <Input
                     label="Nome completo"
@@ -519,33 +674,205 @@ export default function DirectoryView() {
                     required
                     placeholder="Seu nome profissional"
                   />
-                  <Input
-                    label="Registro profissional (CRP, CRESS, etc)"
-                    value={eCrp}
-                    onChange={e => setECrp(e.target.value)}
-                    placeholder="Ex: CRP 06/123456"
-                  />
+                  {/* Tipo de profissional */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Área de atuação</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {PROF_TYPES.map(pt => (
+                        <button
+                          key={pt.label}
+                          type="button"
+                          onClick={() => {
+                            setEProfType(pt.label);
+                            setECrp('');
+                            setESpecialties([]);
+                          }}
+                          className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all ${
+                            eProfType === pt.label
+                              ? 'bg-brand-clay text-white border-brand-clay shadow-sm'
+                              : 'bg-white text-slate-500 border-slate-200 hover:border-brand-clay hover:text-brand-clay'
+                          }`}
+                        >
+                          {pt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </FormRow>
-                <Textarea
-                  label="Bio / Apresentação"
-                  value={eBio}
-                  onChange={e => setEBio(e.target.value)}
-                  rows={4}
-                  placeholder="Conte sobre você, sua abordagem e o que oferece..."
-                  maxLength={600}
-                />
+
+                {/* Registro profissional com máscara dinâmica */}
+                {(() => {
+                  const pt = PROF_TYPES.find(t => t.label === eProfType)!;
+                  return (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1">
+                        {pt.council ? `Número do ${pt.council}` : 'Número do registro (opcional)'}
+                        <span className="ml-1 text-[10px] font-normal text-slate-400">(opcional)</span>
+                      </label>
+                      <div className="flex items-center gap-0 rounded-xl border border-brand-sand overflow-hidden focus-within:ring-1 focus-within:ring-brand-clay transition">
+                        {pt.council && (
+                          <span className="px-3 py-2.5 bg-slate-50 text-xs font-bold text-slate-500 border-r border-brand-sand whitespace-nowrap shrink-0">
+                            {pt.council}
+                          </span>
+                        )}
+                        <input
+                          type="text"
+                          value={eCrp}
+                          onChange={e => setECrp(pt.mask(e.target.value))}
+                          placeholder={pt.placeholder}
+                          className="flex-1 px-3 py-2.5 text-xs font-mono text-brand-navy bg-white outline-none min-w-0"
+                        />
+                      </div>
+                      {!eCrp && (
+                        <p className="text-[10px] text-slate-400 mt-1">Se não preenchido, o registro não aparece no seu perfil.</p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
+            </PanelCard>
+
+            <PanelCard title="Especialidades & Atuação" icon={Stethoscope} description="Selecione todas que se aplicam à sua prática">
+              <div className="space-y-5">
+                {/* Grupos temáticos */}
+                {(SPEC_GROUPS_BY_TYPE[eProfType] ?? SPEC_GROUPS_BY_TYPE['Outro']).map(group => (
+                  <div key={group.label}>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{group.label}</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const allSelected = group.items.every(s => eSpecialties.includes(s));
+                          if (allSelected) {
+                            setESpecialties(prev => prev.filter(s => !group.items.includes(s)));
+                          } else {
+                            setESpecialties(prev => Array.from(new Set([...prev, ...group.items])));
+                          }
+                        }}
+                        className="text-[9px] font-bold text-brand-clay hover:underline"
+                      >
+                        {group.items.every(s => eSpecialties.includes(s)) ? 'desmarcar todos' : 'marcar todos'}
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {group.items.map(s => (
+                        <button key={s} type="button"
+                          onClick={() => setESpecialties(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                          className={`text-xs font-semibold px-3 py-1.5 rounded-xl border-2 transition-all ${
+                            eSpecialties.includes(s)
+                              ? 'bg-brand-clay text-white border-brand-clay shadow-sm'
+                              : 'bg-white text-slate-500 border-zinc-200 hover:border-brand-clay hover:text-brand-clay'
+                          }`}>
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Customizadas fora dos grupos */}
+                {eSpecialties.filter(s => !(SPECIALTIES_BY_TYPE[eProfType] ?? DEFAULT_SPECIALTIES).includes(s)).length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Adicionadas por você</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {eSpecialties.filter(s => !(SPECIALTIES_BY_TYPE[eProfType] ?? DEFAULT_SPECIALTIES).includes(s)).map(s => (
+                        <span key={s} className="inline-flex items-center gap-1 bg-brand-clay text-white text-xs font-semibold px-3 py-1.5 rounded-xl">
+                          {s}
+                          <button type="button" onClick={() => setESpecialties(prev => prev.filter(x => x !== s))}
+                            className="hover:text-white/70 transition ml-0.5">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Input livre */}
+                <div className="flex gap-2 pt-1 border-t border-zinc-100">
+                  <input
+                    type="text"
+                    value={newSpecialty}
+                    onChange={e => setNewSpecialty(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = newSpecialty.trim();
+                        if (val && !eSpecialties.includes(val)) { setESpecialties(prev => [...prev, val]); setNewSpecialty(''); }
+                      }
+                    }}
+                    placeholder="Adicionar que não está na lista..."
+                    className="flex-1 text-xs text-brand-navy bg-white border border-brand-sand px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-clay transition"
+                  />
+                  <button type="button"
+                    onClick={() => {
+                      const val = newSpecialty.trim();
+                      if (val && !eSpecialties.includes(val)) { setESpecialties(prev => [...prev, val]); setNewSpecialty(''); }
+                    }}
+                    className="flex items-center gap-1 px-3 py-2 rounded-xl border border-brand-sand text-xs font-bold text-brand-clay hover:border-brand-clay hover:bg-brand-sand/30 transition">
+                    <Plus className="w-3.5 h-3.5" />Adicionar
+                  </button>
+                </div>
+              </div>
+            </PanelCard>
+
+            {/* URL personalizada */}
+            <PanelCard title="Endereço Público" icon={Globe} description="Como você quer aparecer na URL do seu site">
+              <div>
+                <div className="flex items-center gap-0 rounded-xl border border-brand-sand overflow-hidden focus-within:ring-1 focus-within:ring-brand-clay focus-within:border-brand-clay transition">
+                  <span className="px-3 py-2.5 bg-slate-50 text-xs text-slate-400 font-mono border-r border-brand-sand whitespace-nowrap shrink-0">
+                    /profissional/
+                  </span>
+                  <input
+                    type="text"
+                    value={eSlug}
+                    onChange={e => handleSlugChange(e.target.value)}
+                    placeholder="karen-gomes"
+                    className="flex-1 px-3 py-2.5 text-xs font-mono text-brand-navy bg-white outline-none min-w-0"
+                    spellCheck={false}
+                  />
+                  {slugStatus === 'checking' && (
+                    <span className="px-3 text-slate-400 text-[10px] shrink-0">verificando...</span>
+                  )}
+                  {slugStatus === 'available' && (
+                    <span className="px-3 text-emerald-600 text-[10px] font-bold shrink-0 flex items-center gap-1">
+                      <Check size={11} />Disponível
+                    </span>
+                  )}
+                  {(slugStatus === 'taken' || slugStatus === 'invalid') && (
+                    <span className="px-3 text-red-500 text-[10px] font-bold shrink-0 flex items-center gap-1">
+                      <X size={11} />{slugStatus === 'invalid' ? 'Inválido' : 'Em uso'}
+                    </span>
+                  )}
+                </div>
+                {slugMessage && (
+                  <p className={`text-[11px] mt-1 ${slugStatus === 'available' ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {slugMessage}
+                  </p>
+                )}
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Apenas letras minúsculas, números e hífens. Ex: <span className="font-mono">karen-gomes</span>
+                </p>
+              </div>
+            </PanelCard>
+
+            <PanelCard title="Bio / Apresentação" icon={Stethoscope}>
+              <Textarea
+                label=""
+                value={eBio}
+                onChange={e => setEBio(e.target.value)}
+                rows={4}
+                placeholder="Conte sobre você, sua abordagem e o que oferece..."
+                maxLength={600}
+              />
             </PanelCard>
 
             <PanelCard title="Foto de Perfil" icon={Users} description="Escolha uma foto do seu dispositivo">
               <div className="flex items-start gap-4">
                 <div className="shrink-0">
                   {(avatarPreview || eAvatar) ? (
-                    <img
-                      src={avatarPreview || eAvatar}
-                      alt="preview"
-                      className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
-                    />
+                    <img src={avatarPreview || eAvatar} alt="preview"
+                      className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg" />
                   ) : (
                     <div className="w-20 h-20 rounded-full bg-slate-200 border-4 border-white shadow-lg flex items-center justify-center text-xl font-black text-slate-500">
                       {eName.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase() || '?'}
@@ -553,53 +880,48 @@ export default function DirectoryView() {
                   )}
                 </div>
                 <div className="flex-1 space-y-2">
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Foto de perfil</label>
                   <label className="flex items-center gap-2 cursor-pointer w-fit px-4 py-2 rounded-xl border-2 border-dashed border-brand-clay/40 hover:border-brand-clay bg-brand-clay/5 hover:bg-brand-clay/10 transition text-xs font-semibold text-brand-clay">
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
                     </svg>
                     {avatarFile ? avatarFile.name : 'Selecionar arquivo'}
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/gif"
-                      className="hidden"
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden"
                       onChange={ev => {
                         const file = ev.target.files?.[0];
                         if (!file) return;
-                        setAvatarFile(file);
-                        const reader = new FileReader();
-                        reader.onload = r => setAvatarPreview(r.target?.result as string ?? '');
-                        reader.readAsDataURL(file);
+                        const img = new Image();
+                        const url = URL.createObjectURL(file);
+                        img.onload = () => {
+                          const MAX = 800;
+                          let { width, height } = img;
+                          if (width > MAX || height > MAX) {
+                            if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+                            else { width = Math.round(width * MAX / height); height = MAX; }
+                          }
+                          const canvas = document.createElement('canvas');
+                          canvas.width = width; canvas.height = height;
+                          canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
+                          canvas.toBlob(blob => {
+                            if (!blob) return;
+                            const compressed = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+                            setAvatarFile(compressed);
+                            setAvatarPreview(canvas.toDataURL('image/jpeg', 0.85));
+                            URL.revokeObjectURL(url);
+                          }, 'image/jpeg', 0.85);
+                        };
+                        img.src = url;
                       }}
                     />
                   </label>
                   {(avatarPreview || eAvatar) && (
-                    <button
-                      type="button"
+                    <button type="button"
                       onClick={() => { setAvatarFile(null); setAvatarPreview(''); setEAvatar(''); }}
-                      className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1"
-                    >
+                      className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1">
                       <X className="w-3 h-3" /> Remover foto
                     </button>
                   )}
-                  <p className="text-[11px] text-slate-400">JPEG, PNG, WEBP ou GIF · máx. 5 MB</p>
+                  <p className="text-[11px] text-slate-400">JPEG, PNG, WEBP ou GIF · comprimida automaticamente</p>
                 </div>
-              </div>
-            </PanelCard>
-
-            <PanelCard title="Especialidades" icon={Stethoscope} description="Selecione as áreas em que você atua">
-              <div className="flex flex-wrap gap-2">
-                {SPECIALTIES.map(s => (
-                  <button key={s} type="button"
-                    onClick={() => setESpecialties(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl border-2 transition-all ${
-                      eSpecialties.includes(s)
-                        ? 'bg-brand-clay text-white border-brand-clay shadow-sm shadow-brand-clay/20'
-                        : 'bg-white text-slate-600 border-zinc-200 hover:border-brand-clay hover:text-brand-clay'
-                    }`}>
-                    {s}
-                  </button>
-                ))}
               </div>
             </PanelCard>
           </div>
@@ -608,32 +930,116 @@ export default function DirectoryView() {
         {/* ── STEP 2 ── */}
         {step === 2 && (
           <div className="space-y-5">
-            <PanelCard title="Serviços & Valores" icon={Coins}>
+            <PanelCard title="Localização do Atendimento" icon={MapPin}>
               <div className="space-y-4">
-                <FormRow cols={3}>
+
+                {/* CEP com busca automática */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">CEP</label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1 max-w-[160px]">
+                      <input
+                        type="text"
+                        value={eCep}
+                        onChange={e => {
+                          const raw = e.target.value.replace(/\D/g, '').slice(0, 8);
+                          const masked = raw.length > 5 ? `${raw.slice(0,5)}-${raw.slice(5)}` : raw;
+                          setECep(masked);
+                          setCepError('');
+                          if (raw.length === 8) {
+                            setCepLoading(true);
+                            fetch(`https://viacep.com.br/ws/${raw}/json/`)
+                              .then(r => r.json())
+                              .then(d => {
+                                if (d.erro) { setCepError('CEP não encontrado.'); setCepLoading(false); return; }
+                                setEStreet(d.logradouro ?? '');
+                                setENeighborhood(d.bairro ?? '');
+                                setECity(d.localidade ?? '');
+                                setEState(d.uf ?? '');
+                                setCepLoading(false);
+                              })
+                              .catch(() => { setCepError('Erro ao buscar CEP.'); setCepLoading(false); });
+                          }
+                        }}
+                        placeholder="00000-000"
+                        className="w-full text-xs font-mono text-brand-navy bg-white border border-brand-sand px-3 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-clay transition"
+                        maxLength={9}
+                      />
+                      {cepLoading && (
+                        <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                          <RefreshCw className="w-3 h-3 text-brand-clay animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400 self-center">Preenchimento automático pelo CEP</p>
+                  </div>
+                  {cepError && <p className="text-[11px] text-red-500 mt-1">{cepError}</p>}
+                </div>
+
+                {/* Logradouro + Número */}
+                <FormRow cols={2}>
                   <Input
-                    label="Valor por sessão (R$)"
-                    type="number"
-                    value={String(ePrice)}
-                    onChange={e => setEPrice(Number(e.target.value))}
-                    addonLeft="R$"
-                    min="0"
+                    label="Rua / Avenida"
+                    value={eStreet}
+                    onChange={e => setEStreet(e.target.value)}
+                    placeholder="Rua das Flores"
                   />
                   <Input
-                    label="Localização"
-                    value={eLocation}
-                    onChange={e => setELocation(e.target.value)}
-                    placeholder="Tatuí - SP / Online"
-                    iconLeft={<MapPin size={14} />}
-                  />
-                  <Input
-                    label="WhatsApp"
-                    value={eWhatsapp}
-                    onChange={e => setEWhatsapp(e.target.value)}
-                    placeholder="5511999990000"
-                    hint="Somente números com DDI"
+                    label="Número"
+                    value={eNumber}
+                    onChange={e => setENumber(e.target.value)}
+                    placeholder="220"
                   />
                 </FormRow>
+
+                {/* Complemento + Bairro */}
+                <FormRow cols={2}>
+                  <Input
+                    label="Complemento"
+                    value={eComplement}
+                    onChange={e => setEComplement(e.target.value)}
+                    placeholder="Sala 3 / Apto 12"
+                  />
+                  <Input
+                    label="Bairro"
+                    value={eNeighborhood}
+                    onChange={e => setENeighborhood(e.target.value)}
+                    placeholder="Centro"
+                  />
+                </FormRow>
+
+                {/* Cidade + Estado */}
+                <FormRow cols={2}>
+                  <Input
+                    label="Cidade"
+                    value={eCity}
+                    onChange={e => setECity(e.target.value)}
+                    placeholder="Tatuí"
+                  />
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Estado (UF)</label>
+                    <select
+                      value={eState}
+                      onChange={e => setEState(e.target.value)}
+                      className="w-full text-xs text-brand-navy bg-white border border-brand-sand px-3 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-clay transition"
+                    >
+                      <option value="">Selecione</option>
+                      {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => (
+                        <option key={uf} value={uf}>{uf}</option>
+                      ))}
+                    </select>
+                  </div>
+                </FormRow>
+
+                {/* WhatsApp */}
+                <Input
+                  label="WhatsApp para contato"
+                  value={eWhatsapp}
+                  onChange={e => setEWhatsapp(maskPhone(e.target.value))}
+                  placeholder="(55) 99999-9999"
+                  hint="DDI + DDD + número"
+                  maxLength={19}
+                />
               </div>
             </PanelCard>
 
@@ -721,14 +1127,14 @@ export default function DirectoryView() {
             <PanelCard title="Redes Sociais" icon={Link2} description="Aparecerão no seu perfil e site público">
               <FormRow cols={2}>
                 {([
-                  { key: 'instagram', label: 'Instagram', placeholder: '@seuperfil', val: eInstagram, set: setEInstagram },
-                  { key: 'whatsapp',  label: 'WhatsApp',  placeholder: '5511999990000', val: eWhatsapp, set: setEWhatsapp },
-                  { key: 'linkedin',  label: 'LinkedIn',  placeholder: 'seu-perfil', val: eLinkedin, set: setELinkedin },
-                  { key: 'facebook',  label: 'Facebook',  placeholder: 'seuperfil', val: eFacebook, set: setEFacebook },
-                  { key: 'tiktok',    label: 'TikTok',    placeholder: '@seuperfil', val: eTiktok, set: setETiktok },
-                  { key: 'twitter',   label: 'Twitter / X', placeholder: '@seuperfil', val: eTwitter, set: setETwitter },
-                  { key: 'website',   label: 'Site Pessoal', placeholder: 'https://', val: eWebsite, set: setEWebsite },
-                ] as const).map(field => (
+                  { key: 'instagram', label: 'Instagram',   placeholder: '@seuperfil',       val: eInstagram, set: setEInstagram },
+                  { key: 'whatsapp',  label: 'WhatsApp',    placeholder: '(55) 99999-9999',  val: eWhatsapp,  set: (v: string) => setEWhatsapp(maskPhone(v)) },
+                  { key: 'linkedin',  label: 'LinkedIn',    placeholder: 'seu-perfil',        val: eLinkedin,  set: setELinkedin },
+                  { key: 'facebook',  label: 'Facebook',    placeholder: 'seuperfil',         val: eFacebook,  set: setEFacebook },
+                  { key: 'tiktok',    label: 'TikTok',      placeholder: '@seuperfil',        val: eTiktok,    set: setETiktok },
+                  { key: 'twitter',   label: 'Twitter / X', placeholder: '@seuperfil',        val: eTwitter,   set: setETwitter },
+                  { key: 'website',   label: 'Site Pessoal',placeholder: 'https://',          val: eWebsite,   set: setEWebsite },
+                ] as Array<{ key: string; label: string; placeholder: string; val: string; set: (v: string) => void }>).map(field => (
                   <Input
                     key={field.key}
                     label={field.label}
@@ -857,60 +1263,128 @@ export default function DirectoryView() {
 
 // ── MEMBER CARD ──────────────────────────────────────────────────────────────
 
-function MemberCard({ prof, isOwn, onViewProfile, onViewSite, onEdit }: {
+function MemberCard({ prof, isOwn, onViewProfile, onEdit }: {
   prof: Professional;
   isOwn: boolean;
   onViewProfile: () => void;
-  onViewSite: () => void;
   onEdit: () => void;
 }) {
-  const accent = prof.accent_color ?? '#7c2d3e';
+  const [imgErr, setImgErr] = React.useState(false);
+  const accent   = prof.accent_color ?? '#7c2d3e';
   const initials = prof.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  const publicUrl = prof.slug ? `/profissional/${prof.slug}` : `/profissional/${prof.user_id}`;
+  const showImg  = !!prof.avatar && !imgErr;
 
   return (
-    <div className="bg-white border border-brand-sand/60 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col">
-      {/* Banner + avatar */}
-      <div className="relative h-24 shrink-0" style={{ background: `linear-gradient(135deg, ${accent}cc 0%, ${accent}66 100%)` }}>
-        <div className="absolute inset-0 opacity-20"
-          style={{ backgroundImage: 'radial-gradient(circle at 20% 80%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.2) 0%, transparent 50%)' }} />
+    <div className="bg-white border border-brand-sand/60 rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 group flex flex-col overflow-visible">
+
+      {/* ── Banner (sem overflow-hidden, para o avatar sobrepor) ── */}
+      <div
+        className="relative h-28 rounded-t-2xl overflow-hidden shrink-0"
+        style={{ background: `linear-gradient(135deg, ${accent}dd 0%, ${accent}88 100%)` }}
+      >
+        {/* Decoração de fundo */}
+        <span className="absolute -top-3 -right-3 w-20 h-20 rounded-full border border-white/10" />
+        <span className="absolute bottom-2 left-4 text-2xl text-white/10 font-serif select-none">♩</span>
+        <span className="absolute top-3 right-10 text-lg text-white/10 font-serif select-none">♫</span>
+
+        {/* Badge "Você" */}
         {isOwn && (
-          <span className="absolute top-2 right-2 text-[9px] bg-white/20 text-white px-2 py-0.5 rounded-full font-bold backdrop-blur-sm">Você</span>
+          <span className="absolute top-2.5 left-3 text-[9px] bg-white/25 text-white px-2 py-0.5 rounded-full font-bold backdrop-blur-sm">
+            Você
+          </span>
         )}
+
+        {/* Link site público */}
+        <a
+          href={publicUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={e => e.stopPropagation()}
+          title="Abrir site público"
+          className="absolute top-2.5 right-2.5 flex items-center gap-1 text-[9px] font-bold text-white/75 hover:text-white bg-black/20 hover:bg-black/40 px-2 py-1 rounded-full transition backdrop-blur-sm border border-white/15"
+        >
+          <Globe className="w-2.5 h-2.5" />Site
+        </a>
       </div>
 
-      {/* Avatar centralizado sobrepondo o banner */}
-      <div className="flex justify-center -mt-10 mb-2 px-4">
-        {prof.avatar ? (
-          <img src={prof.avatar} alt={prof.name}
-            className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg" />
+      {/* ── Avatar sobreposto — fora do banner ── */}
+      <div className="flex justify-center -mt-9 mb-0 z-10 relative">
+        {showImg ? (
+          <img
+            src={prof.avatar}
+            alt={prof.name}
+            onError={() => setImgErr(true)}
+            className="w-[72px] h-[72px] rounded-full object-cover border-[3px] border-white shadow-lg"
+          />
         ) : (
-          <div className="w-20 h-20 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-xl font-black bg-slate-200 text-slate-500">
+          <div
+            className="w-[72px] h-[72px] rounded-full border-[3px] border-white shadow-lg flex items-center justify-center text-lg font-black"
+            style={{ background: `linear-gradient(135deg, ${accent}30, ${accent}70)`, color: accent }}
+          >
             {initials}
           </div>
         )}
       </div>
 
-      {/* Content */}
-      <div className="px-4 pb-4 flex flex-col flex-1">
-        <div className="text-center mb-3">
-          <h3 className="text-sm font-bold text-brand-clay group-hover:text-brand-clay-dark transition leading-tight">{prof.name}</h3>
-          {prof.crp ? (
-            <span className="inline-block mt-1 text-[9px] font-mono bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{prof.crp}</span>
-          ) : (
-            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mt-1">Profissional</p>
+      {/* ── Conteúdo ── */}
+      <div className="px-4 pt-2.5 pb-4 flex flex-col flex-1">
+
+        {/* Nome + CRP */}
+        <div className="text-center mb-2.5">
+          <h3 className="text-sm font-bold text-slate-800 group-hover:text-brand-clay transition leading-snug">
+            {prof.name}
+          </h3>
+          {prof.crp && (
+            <span className="inline-block mt-1 text-[9px] font-mono bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full tracking-wider">
+              {prof.crp}
+            </span>
           )}
         </div>
 
-        {/* Bio snippet */}
-        <p className="text-[11px] text-slate-500 text-center leading-relaxed mb-3 line-clamp-3 flex-1">
-          {prof.bio || 'Olá! Faça parte da nossa rede de profissionais em Tatuí.'}
-        </p>
+        {/* Especialidades (pills pequenas) */}
+        {prof.specialties?.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-1 mb-2.5">
+            {prof.specialties.slice(0, 3).map(s => (
+              <span
+                key={s}
+                className="text-[9px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ background: `${accent}12`, color: accent, border: `1px solid ${accent}30` }}
+              >
+                {s}
+              </span>
+            ))}
+            {prof.specialties.length > 3 && (
+              <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">
+                +{prof.specialties.length - 3}
+              </span>
+            )}
+          </div>
+        )}
 
-        {/* Ver Perfil button */}
+        {/* Localização */}
+        {prof.location && (
+          <div className="flex items-center justify-center gap-1 text-[10px] text-slate-500 mb-2.5">
+            <MapPin className="w-3 h-3 shrink-0" style={{ color: accent }} />
+            {prof.location}
+          </div>
+        )}
+
+        {/* Bio snippet */}
+        {prof.bio && (
+          <p className="text-[11px] text-slate-400 text-center leading-relaxed mb-3 line-clamp-2 flex-1">
+            {prof.bio}
+          </p>
+        )}
+        {!prof.bio && <div className="flex-1" />}
+
+        {/* Botão Ver Perfil */}
         <button
           onClick={onViewProfile}
-          className="w-full flex items-center justify-center gap-1.5 py-2 border border-brand-sand hover:border-brand-clay hover:bg-brand-sand/30 text-brand-navy text-[11px] font-bold rounded-xl transition mb-3">
-          <Users className="w-3.5 h-3.5" />Ver Perfil Detalhado
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 text-white text-[11px] font-bold rounded-xl transition-all active:scale-95 mb-2.5 shadow-sm"
+          style={{ background: `linear-gradient(135deg, ${accent}ee, ${accent}bb)` }}
+        >
+          <Users className="w-3.5 h-3.5" />Ver Perfil
         </button>
 
         {/* Social links */}
@@ -929,6 +1403,244 @@ const WA_ICON = (
     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
   </svg>
 );
+
+// ─── Detalhe do profissional ──────────────────────────────────────────────────
+
+function ProfDetailView({ prof, timeSlot, setTimeSlot, bookMsg, setBookMsg, booked, setBooked, onBack }: {
+  prof: Professional;
+  timeSlot: string; setTimeSlot: (v: string) => void;
+  bookMsg: string; setBookMsg: (v: string) => void;
+  booked: boolean; setBooked: (v: boolean) => void;
+  onBack: () => void;
+}) {
+  const [imgError, setImgError] = useState(false);
+  const accent   = prof.accent_color || '#5a7a3a';
+  const rating   = toNumericValue(prof.rating);
+  const initials = prof.name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
+  const showImg  = !!prof.avatar && !imgError;
+  const publicUrl = prof.slug ? `/profissional/${prof.slug}` : `/profissional/${prof.user_id}`;
+  const hasSocials = !!(prof.contact_whatsapp || prof.instagram || prof.linkedin || prof.facebook || prof.twitter || prof.website || prof.tiktok || (prof.extra_links ?? []).length);
+
+  return (
+    <PageWrapper id={`directory-detail-${prof.id}`}>
+      <div className="max-w-3xl mx-auto animate-fadeIn pb-12">
+
+        {/* ── Voltar ── */}
+        <button onClick={onBack}
+          className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-brand-clay mb-5 transition group">
+          <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+          Voltar ao diretório
+        </button>
+
+        {/* ── Hero ── */}
+        <div className="rounded-3xl overflow-hidden shadow-lg mb-5 border border-slate-100/80">
+
+          {/* Banner */}
+          <div className="h-36 sm:h-44 relative overflow-hidden"
+            style={{ background: `linear-gradient(135deg, #0a1208 0%, #182618 40%, ${accent} 100%)` }}>
+            <span className="absolute top-4 left-6 text-6xl opacity-[0.07] font-serif text-white select-none">♩</span>
+            <span className="absolute top-6 right-16 text-4xl opacity-[0.07] font-serif text-white select-none">♫</span>
+            <span className="absolute bottom-4 left-1/3 text-3xl opacity-[0.05] font-serif text-white select-none">♪</span>
+
+            <a href={publicUrl} target="_blank" rel="noopener noreferrer"
+              className="absolute top-3 right-3 flex items-center gap-1.5 text-[11px] font-bold text-white/80 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full transition border border-white/20 backdrop-blur-sm">
+              <Globe className="w-3 h-3" />Ver site público
+            </a>
+          </div>
+
+          {/* Conteúdo do hero */}
+          <div className="bg-white px-5 sm:px-7 pb-6">
+            {/* Avatar + nome lado a lado */}
+            <div className="flex items-end gap-4 -mt-11 mb-4">
+              <div className="shrink-0 z-10">
+                {showImg ? (
+                  <img src={prof.avatar} alt={prof.name} onError={() => setImgError(true)}
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-4 border-white shadow-xl"
+                    style={{ boxShadow: `0 8px 24px ${accent}30` }} />
+                ) : (
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-4 border-white shadow-xl flex items-center justify-center text-2xl font-black"
+                    style={{ background: `linear-gradient(135deg, ${accent}30, ${accent}70)`, color: accent }}>
+                    {initials}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0 pb-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-xl sm:text-2xl font-serif font-black text-slate-800 leading-tight">{prof.name}</h2>
+                  <div className="flex items-center gap-1" style={{ color: accent }}>
+                    <ShieldCheck className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Verificado</span>
+                  </div>
+                </div>
+                {prof.crp && (
+                  <p className="text-[11px] font-mono font-semibold tracking-widest mt-0.5" style={{ color: `${accent}aa` }}>
+                    {prof.crp}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Especialidades */}
+            {prof.specialties?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {prof.specialties.map(s => (
+                  <span key={s} className="text-[11px] font-semibold px-3 py-1 rounded-full"
+                    style={{ background: `${accent}12`, color: accent, border: `1.5px solid ${accent}28` }}>
+                    {s}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Localização + Rating + Idiomas */}
+            <div className="flex flex-wrap items-center gap-3">
+              {prof.location && (
+                <div className="flex items-center gap-1.5 text-sm text-slate-500 font-medium">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: accent }} />
+                  {prof.location}
+                </div>
+              )}
+              {rating > 0 && (
+                <div className="flex items-center gap-1 bg-amber-50 border border-amber-100 rounded-full px-3 py-1">
+                  {[1,2,3,4,5].map(i => (
+                    <Star key={i} className={`w-3 h-3 ${i <= Math.round(rating) ? 'fill-amber-400 stroke-amber-400' : 'stroke-slate-200'}`} />
+                  ))}
+                  <span className="text-xs font-black text-amber-700 ml-1">{rating.toFixed(1)}</span>
+                  {toNumericValue(prof.reviews_count) > 0 && (
+                    <span className="text-[10px] text-slate-400 ml-0.5">({prof.reviews_count})</span>
+                  )}
+                </div>
+              )}
+              {prof.languages?.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {prof.languages.map((l: string) => (
+                    <span key={l} className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">{l}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Corpo: 2 colunas desktop ── */}
+        <div className="flex flex-col lg:flex-row gap-4 items-start">
+
+          {/* Esquerda */}
+          <div className="flex-1 min-w-0 space-y-4">
+
+            {prof.bio && (
+              <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-0.5 h-4 rounded-full" style={{ background: accent }} />
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: accent }}>Sobre</p>
+                </div>
+                <p className="text-sm text-slate-600 leading-relaxed">{prof.bio}</p>
+              </div>
+            )}
+
+            {prof.services?.length > 0 && (
+              <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-0.5 h-4 rounded-full" style={{ background: accent }} />
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: accent }}>Serviços</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {prof.services.map(s => (
+                    <div key={s} className="flex items-center gap-2.5 text-sm text-slate-700 font-medium px-3 py-2.5 rounded-xl"
+                      style={{ background: `${accent}08`, border: `1px solid ${accent}18` }}>
+                      <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+                        style={{ background: `linear-gradient(135deg, ${accent}55, ${accent})` }}>
+                        <Check className="w-2.5 h-2.5 text-white" />
+                      </div>
+                      {s}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {prof.schedule?.length > 0 && (
+              <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-0.5 h-4 rounded-full" style={{ background: accent }} />
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: accent }}>Agenda</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {prof.schedule.map(slot => (
+                    <button key={`${slot.day}-${slot.hours}`}
+                      onClick={() => setTimeSlot(`${slot.day} ${slot.hours}`)}
+                      className="text-xs px-3 py-2 rounded-xl font-semibold transition-all"
+                      style={timeSlot === `${slot.day} ${slot.hours}`
+                        ? { background: accent, color: '#fff', boxShadow: `0 4px 12px ${accent}40` }
+                        : { background: `${accent}0d`, color: accent, border: `1.5px solid ${accent}28` }
+                      }>
+                      {slot.day} {slot.hours}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {hasSocials && (
+              <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-0.5 h-4 rounded-full bg-slate-300" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Redes & Links</p>
+                </div>
+                <SocialLinks prof={prof} size="md" />
+              </div>
+            )}
+          </div>
+
+          {/* Direita — contato sticky */}
+          <div className="w-full lg:w-64 xl:w-72 shrink-0">
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 lg:sticky lg:top-4">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-0.5 h-4 rounded-full" style={{ background: accent }} />
+                <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: accent }}>Entrar em Contato</p>
+              </div>
+
+              {booked ? (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3">
+                  <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold text-emerald-800">Solicitado!</p>
+                    <p className="text-[11px] text-emerald-600 mt-0.5">O profissional confirmará em breve.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  <textarea rows={3} placeholder="Mensagem inicial (opcional)..." value={bookMsg}
+                    onChange={e => setBookMsg(e.target.value)}
+                    className="w-full text-xs text-slate-700 bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 transition resize-none"
+                    style={{ '--tw-ring-color': `${accent}30` } as React.CSSProperties} />
+                  {prof.contact_whatsapp && (
+                    <a href={`https://wa.me/${prof.contact_whatsapp}`} target="_blank" rel="noopener noreferrer"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-xl transition active:scale-95">
+                      <Phone className="w-4 h-4" />WhatsApp
+                    </a>
+                  )}
+                  <button onClick={() => { if (timeSlot) setBooked(true); }}
+                    disabled={!timeSlot}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-white text-sm font-bold rounded-xl transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ background: timeSlot ? accent : '#94a3b8' }}>
+                    <Calendar className="w-4 h-4" />
+                    {timeSlot ? `Agendar` : 'Selecione um horário'}
+                  </button>
+                  {timeSlot && (
+                    <p className="text-center text-[10px] text-slate-400">{timeSlot}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </PageWrapper>
+  );
+}
+
+// ─── Preview do site público (dentro do admin) ────────────────────────────────
 
 function ProfessionalPublicSite({ prof, onBack, onSchedule }: {
   prof: Professional;
@@ -1067,28 +1779,15 @@ function ProfessionalPublicSite({ prof, onBack, onSchedule }: {
         </div>
 
         {/* ── DETALHES ── */}
-        {(prof.location || toNumericValue(prof.price_per_session) > 0) && (
+        {prof.location && (
           <div className="bg-white/70 backdrop-blur rounded-2xl overflow-hidden mb-4 mx-1 border border-white shadow-sm">
-            {prof.location && (
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-[#f0e4d4]">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: `${accent}15` }}>
-                  <MapPin className="w-4 h-4" style={{ color: accent }} />
-                </div>
-                <span className="text-sm text-[#3d3d3d] font-medium">{prof.location}</span>
+            <div className="flex items-center gap-3 px-5 py-4">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: `${accent}15` }}>
+                <MapPin className="w-4 h-4" style={{ color: accent }} />
               </div>
-            )}
-            {toNumericValue(prof.price_per_session) > 0 && (
-              <div className="flex items-center gap-3 px-5 py-4">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: `${accent}15` }}>
-                  <Coins className="w-4 h-4" style={{ color: accent }} />
-                </div>
-                <span className="text-sm text-[#3d3d3d] font-medium">
-                  R$ {formatCurrency(prof.price_per_session)} por sessão
-                </span>
-              </div>
-            )}
+              <span className="text-sm text-[#3d3d3d] font-medium">{prof.location}</span>
+            </div>
           </div>
         )}
 

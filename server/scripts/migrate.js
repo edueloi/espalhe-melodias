@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS user_preferences (
 CREATE TABLE IF NOT EXISTS professional_profiles (
   id                CHAR(36)       NOT NULL PRIMARY KEY,
   user_id           CHAR(36)       NOT NULL UNIQUE,
+  slug              VARCHAR(100)   UNIQUE,
   crp               VARCHAR(50)    NOT NULL,
   specialties       JSON           NOT NULL,
   bio               TEXT,
@@ -122,7 +123,8 @@ CREATE TABLE IF NOT EXISTS professional_profiles (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-  CONSTRAINT fk_prof_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  CONSTRAINT fk_prof_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_prof_slug (slug)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Forum Topics ──────────────────────────────────────────────────────────────
@@ -423,6 +425,19 @@ async function migrate() {
       { table: 'forum_topics',  column: 'author_crp',       def: 'VARCHAR(50)' },
       { table: 'forum_replies', column: 'author_specialty', def: 'VARCHAR(150)' },
       { table: 'forum_replies', column: 'author_crp',       def: 'VARCHAR(50)' },
+      // professional_profiles extras
+      { table: 'professional_profiles', column: 'theme',         def: "ENUM('forest','ocean','rose','gold')" },
+      { table: 'professional_profiles', column: 'rating',        def: 'DECIMAL(3,2) DEFAULT 0' },
+      { table: 'professional_profiles', column: 'reviews_count', def: 'INT NOT NULL DEFAULT 0' },
+      { table: 'professional_profiles', column: 'languages',     def: 'JSON' },
+      { table: 'professional_profiles', column: 'extra_links',   def: 'JSON' },
+      { table: 'professional_profiles', column: 'instagram',     def: 'VARCHAR(200)' },
+      { table: 'professional_profiles', column: 'linkedin',      def: 'VARCHAR(200)' },
+      { table: 'professional_profiles', column: 'facebook',      def: 'VARCHAR(200)' },
+      { table: 'professional_profiles', column: 'tiktok',        def: 'VARCHAR(200)' },
+      { table: 'professional_profiles', column: 'twitter',       def: 'VARCHAR(200)' },
+      { table: 'professional_profiles', column: 'website',       def: 'VARCHAR(300)' },
+      { table: 'professional_profiles', column: 'slug',          def: 'VARCHAR(100) UNIQUE' },
     ];
     for (const { table, column, def } of extraCols) {
       const [rows] = await conn.query(
