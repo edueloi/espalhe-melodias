@@ -6,7 +6,7 @@ import {
   Stethoscope, Calendar, X, Edit3, ExternalLink, Instagram,
   Linkedin, Facebook, Twitter, Link2, Youtube,
 } from 'lucide-react';
-import { professionalsApi, type Professional } from '../lib/api';
+import { professionalsApi, uploadApi, type Professional } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import {
   PageWrapper, SectionTitle, ContentCard, PanelCard, FormRow, Divider,
@@ -139,6 +139,8 @@ export default function DirectoryView() {
   const [newLinkUrl, setNewLinkUrl]   = useState('');
   const [saving, setSaving]           = useState(false);
   const [step, setStep]               = useState(1);
+  const [avatarFile, setAvatarFile]   = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
 
   const load = () => {
     setLoading(true);
@@ -181,6 +183,8 @@ export default function DirectoryView() {
     setETwitter(prof.twitter ?? '');
     setEWebsite(prof.website ?? '');
     setEExtraLinks(prof.extra_links ?? []);
+    setAvatarFile(null);
+    setAvatarPreview('');
     setStep(1);
     setSelected(prof);
     setView('edit');
@@ -190,9 +194,14 @@ export default function DirectoryView() {
     e.preventDefault();
     setSaving(true);
     try {
+      let finalAvatar = eAvatar || undefined;
+      if (avatarFile) {
+        const { avatarUrl } = await uploadApi.uploadAvatar(avatarFile);
+        finalAvatar = avatarUrl;
+      }
       await professionalsApi.updateMe({
         name: eName, crp: eCrp, bio: eBio,
-        avatar: eAvatar || undefined,
+        avatar: finalAvatar,
         price_per_session: ePrice, location: eLocation,
         contact_whatsapp: eWhatsapp, accent_color: eColor,
         specialties: eSpecialties, services: eServices,
@@ -528,25 +537,52 @@ export default function DirectoryView() {
               </div>
             </PanelCard>
 
-            <PanelCard title="Foto de Perfil" icon={Users} description="URL da sua foto profissional">
+            <PanelCard title="Foto de Perfil" icon={Users} description="Escolha uma foto do seu dispositivo">
               <div className="flex items-start gap-4">
                 <div className="shrink-0">
-                  {eAvatar ? (
-                    <img src={eAvatar} alt="preview" className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg" />
+                  {(avatarPreview || eAvatar) ? (
+                    <img
+                      src={avatarPreview || eAvatar}
+                      alt="preview"
+                      className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
+                    />
                   ) : (
                     <div className="w-20 h-20 rounded-full bg-slate-200 border-4 border-white shadow-lg flex items-center justify-center text-xl font-black text-slate-500">
                       {eName.split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase() || '?'}
                     </div>
                   )}
                 </div>
-                <div className="flex-1">
-                  <Input
-                    label="URL da foto"
-                    value={eAvatar}
-                    onChange={e => setEAvatar(e.target.value)}
-                    placeholder="https://..."
-                    hint="Cole o link direto de uma imagem (ex: Unsplash, Google Photos)"
-                  />
+                <div className="flex-1 space-y-2">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Foto de perfil</label>
+                  <label className="flex items-center gap-2 cursor-pointer w-fit px-4 py-2 rounded-xl border-2 border-dashed border-brand-clay/40 hover:border-brand-clay bg-brand-clay/5 hover:bg-brand-clay/10 transition text-xs font-semibold text-brand-clay">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    {avatarFile ? avatarFile.name : 'Selecionar arquivo'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      onChange={ev => {
+                        const file = ev.target.files?.[0];
+                        if (!file) return;
+                        setAvatarFile(file);
+                        const reader = new FileReader();
+                        reader.onload = r => setAvatarPreview(r.target?.result as string ?? '');
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                  {(avatarPreview || eAvatar) && (
+                    <button
+                      type="button"
+                      onClick={() => { setAvatarFile(null); setAvatarPreview(''); setEAvatar(''); }}
+                      className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1"
+                    >
+                      <X className="w-3 h-3" /> Remover foto
+                    </button>
+                  )}
+                  <p className="text-[11px] text-slate-400">JPEG, PNG, WEBP ou GIF · máx. 5 MB</p>
                 </div>
               </div>
             </PanelCard>

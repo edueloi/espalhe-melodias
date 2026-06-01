@@ -46,12 +46,13 @@ export async function listProfessionals(req: AuthRequest, res: Response): Promis
 
   const data = rows.map(r => ({
     ...r,
-    specialties: parseJson<string[]>(r.specialties, []),
-    services:    parseJson<string[]>(r.services, []),
-    schedule:    parseJson(r.schedule, []),
-    languages:   parseJson<string[]>(r.languages, []),
+    specialties:  parseJson<string[]>(r.specialties, []),
+    services:     parseJson<string[]>(r.services, []),
+    schedule:     parseJson(r.schedule, []),
+    languages:    parseJson<string[]>(r.languages, []),
+    extra_links:  parseJson(r.extra_links, []),
     price_per_session: toNumber(r.price_per_session),
-    rating: toNumber(r.rating),
+    rating:        toNumber(r.rating),
     reviews_count: toNumber(r.reviews_count),
   }));
 
@@ -74,12 +75,13 @@ export async function getProfessional(req: AuthRequest, res: Response): Promise<
     success: true,
     data: {
       ...row,
-      specialties: parseJson<string[]>(row.specialties, []),
-      services:    parseJson<string[]>(row.services, []),
-      schedule:    parseJson(row.schedule, []),
-      languages:   parseJson<string[]>(row.languages, []),
+      specialties:  parseJson<string[]>(row.specialties, []),
+      services:     parseJson<string[]>(row.services, []),
+      schedule:     parseJson(row.schedule, []),
+      languages:    parseJson<string[]>(row.languages, []),
+      extra_links:  parseJson(row.extra_links, []),
       price_per_session: toNumber(row.price_per_session),
-      rating: toNumber(row.rating),
+      rating:        toNumber(row.rating),
       reviews_count: toNumber(row.reviews_count),
     },
   });
@@ -90,11 +92,15 @@ export async function upsertProfessional(req: AuthRequest, res: Response): Promi
 
   const {
     name, crp, specialties, bio, pricePerSession, contactWhatsapp,
-    services, schedule, location, accentColor, languages,
+    services, schedule, location, accentColor, theme, languages,
+    instagram, linkedin, facebook, tiktok, twitter, website, extraLinks,
   } = req.body as {
     name?: string; crp: string; specialties: string[]; bio: string; pricePerSession: number;
     contactWhatsapp?: string; services: string[]; schedule: unknown[];
-    location: string; accentColor?: string; languages: string[];
+    location: string; accentColor?: string; theme?: string; languages: string[];
+    instagram?: string; linkedin?: string; facebook?: string;
+    tiktok?: string; twitter?: string; website?: string;
+    extraLinks?: Array<{ label: string; url: string }>;
   };
 
   const existing = await queryOne<{ id: string }>(
@@ -122,7 +128,15 @@ export async function upsertProfessional(req: AuthRequest, res: Response): Promi
          schedule          = COALESCE(?, schedule),
          location          = COALESCE(?, location),
          accent_color      = COALESCE(?, accent_color),
+         theme             = COALESCE(?, theme),
          languages         = COALESCE(?, languages),
+         instagram         = COALESCE(?, instagram),
+         linkedin          = COALESCE(?, linkedin),
+         facebook          = COALESCE(?, facebook),
+         tiktok            = COALESCE(?, tiktok),
+         twitter           = COALESCE(?, twitter),
+         website           = COALESCE(?, website),
+         extra_links       = COALESCE(?, extra_links),
          updated_at        = ?
        WHERE user_id = ?`,
       [
@@ -130,8 +144,11 @@ export async function upsertProfessional(req: AuthRequest, res: Response): Promi
         pricePerSession ?? null, contactWhatsapp ?? null,
         services ? JSON.stringify(services) : null,
         schedule ? JSON.stringify(schedule) : null,
-        location ?? null, accentColor ?? null,
+        location ?? null, accentColor ?? null, theme ?? null,
         languages ? JSON.stringify(languages) : null,
+        instagram ?? null, linkedin ?? null, facebook ?? null,
+        tiktok ?? null, twitter ?? null, website ?? null,
+        extraLinks ? JSON.stringify(extraLinks) : null,
         now, req.user.userId,
       ],
     );
@@ -141,12 +158,18 @@ export async function upsertProfessional(req: AuthRequest, res: Response): Promi
     await execute(
       `INSERT INTO professional_profiles
        (id, user_id, crp, specialties, bio, price_per_session, contact_whatsapp,
-        services, schedule, location, accent_color, languages, created_at, updated_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        services, schedule, location, accent_color, theme, languages,
+        instagram, linkedin, facebook, tiktok, twitter, website, extra_links,
+        created_at, updated_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         id, req.user.userId, crp, JSON.stringify(specialties), bio, pricePerSession,
         contactWhatsapp ?? null, JSON.stringify(services), JSON.stringify(schedule),
-        location, accentColor ?? null, JSON.stringify(languages), now, now,
+        location, accentColor ?? null, theme ?? null, JSON.stringify(languages),
+        instagram ?? null, linkedin ?? null, facebook ?? null,
+        tiktok ?? null, twitter ?? null, website ?? null,
+        extraLinks ? JSON.stringify(extraLinks) : null,
+        now, now,
       ],
     );
     res.status(201).json({ success: true, data: { id } });

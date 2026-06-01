@@ -516,6 +516,8 @@ export const suggestionsApi = {
 
 // ─── Professionals ────────────────────────────────────────────────────────────
 
+export type ProfTheme = 'forest' | 'ocean' | 'rose' | 'gold';
+
 export interface Professional {
   id: string;
   user_id: string;
@@ -533,6 +535,7 @@ export interface Professional {
   schedule: Array<{ day: string; hours: string }>;
   location: string;
   accent_color?: string;
+  theme?: ProfTheme;
   languages: string[];
   // Social links
   instagram?: string;
@@ -576,6 +579,7 @@ export const professionalsApi = {
       schedule: data.schedule,
       location: data.location,
       accentColor: data.accent_color,
+      theme: data.theme,
       languages: data.languages,
       instagram: data.instagram,
       linkedin: data.linkedin,
@@ -674,4 +678,23 @@ export const blogsApi = {
   update: (id: string, data: Partial<BlogPost>) => put<void>(`/blogs/${id}`, data),
   delete: (id: string) => del<void>(`/blogs/${id}`),
   like: (id: string) => post<{ likes: number; liked: boolean }>(`/blogs/${id}/like`, {}),
+};
+
+// ─── Upload ───────────────────────────────────────────────────────────────────
+
+export const uploadApi = {
+  uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
+    const token = tokenStore.get();
+    const form = new FormData();
+    form.append('avatar', file);
+    const res = await fetch(`${BASE_URL}/upload/avatar`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    const body = await res.json().catch(() => ({})) as ApiResponse<{ avatarUrl: string }>;
+    if (!res.ok) throw new ApiError(body.message ?? `Erro ${res.status}`, res.status);
+    return body.data!;
+  },
+  deleteAvatar: () => del<void>('/upload/avatar'),
 };

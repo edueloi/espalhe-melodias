@@ -1,3 +1,4 @@
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -20,6 +21,8 @@ import professionalsRoutes from './routes/professionals';
 import blogsRoutes         from './routes/blogs';
 import inviteLinksRoutes      from './routes/inviteLinks';
 import memberRequestsRoutes   from './routes/memberRequests';
+import profPublicRoutes        from './routes/profPublic';
+import uploadRoutes            from './routes/upload';
 
 const app = express();
 
@@ -40,6 +43,9 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(config.isDev ? 'dev' : 'combined'));
+
+// Serve arquivos de upload (avatars, etc.)
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 
@@ -78,6 +84,12 @@ app.use('/api/professionals', professionalsRoutes);
 app.use('/api/blogs',         blogsRoutes);
 app.use('/api/invite-links',  inviteLinksRoutes);
 app.use('/api/member-requests', memberRequestsRoutes);
+app.use('/api/upload',         uploadRoutes);
+
+// ─── Rota pública do profissional (SEO, sem autenticação) ─────────────────────
+// Deve ficar ANTES do notFound para interceptar /profissional/:id
+
+app.use('/profissional', profPublicRoutes);
 
 // ─── 404 & Error Handler ──────────────────────────────────────────────────────
 

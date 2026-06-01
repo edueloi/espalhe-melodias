@@ -1,10 +1,82 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, XCircle } from 'lucide-react';
-import { professionalsApi, type Professional } from '../lib/api';
+import { XCircle } from 'lucide-react';
+import { professionalsApi, type Professional, type ProfTheme } from '../lib/api';
 
 interface Props {
   userId: string;
 }
+
+// ─── Temas ────────────────────────────────────────────────────────────────────
+
+export interface ThemePalette {
+  name: string;
+  label: string;
+  bannerFrom: string;
+  bannerMid: string;
+  bannerTo: string;
+  accent: string;
+  accentMuted: string;
+  accentLight: string;
+  textHeading: string;
+  textBody: string;
+  pageBg: string;
+  navBg: string;
+  navBorder: string;
+  cardBg: string;
+  cardBorder: string;
+}
+
+export const THEMES: Record<ProfTheme, ThemePalette> = {
+  forest: {
+    name: 'forest', label: 'Forest',
+    bannerFrom: '#1a2412', bannerMid: '#2d3a1e', bannerTo: '#5a6242',
+    accent: '#5a6242', accentMuted: '#808b5e', accentLight: '#e8eddc',
+    textHeading: '#1a2412', textBody: '#3d3d30',
+    pageBg: 'linear-gradient(160deg, #fbf8f3 0%, #f5ece1 60%, #eee8d8 100%)',
+    navBg: 'rgba(251,248,243,0.92)', navBorder: 'rgba(90,98,66,0.12)',
+    cardBg: 'rgba(255,255,255,0.72)', cardBorder: 'rgba(255,255,255,0.85)',
+  },
+  ocean: {
+    name: 'ocean', label: 'Ocean',
+    bannerFrom: '#0a1628', bannerMid: '#0e3460', bannerTo: '#0891b2',
+    accent: '#0891b2', accentMuted: '#22b5d4', accentLight: '#e0f5fa',
+    textHeading: '#0a1628', textBody: '#1e3045',
+    pageBg: 'linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 55%, #cce8f4 100%)',
+    navBg: 'rgba(240,249,255,0.92)', navBorder: 'rgba(8,145,178,0.12)',
+    cardBg: 'rgba(255,255,255,0.72)', cardBorder: 'rgba(255,255,255,0.85)',
+  },
+  rose: {
+    name: 'rose', label: 'Rose',
+    bannerFrom: '#3b0a18', bannerMid: '#7c1d3a', bannerTo: '#be4a6d',
+    accent: '#be4a6d', accentMuted: '#d4748f', accentLight: '#fce8ef',
+    textHeading: '#3b0a18', textBody: '#4a2030',
+    pageBg: 'linear-gradient(160deg, #fff5f8 0%, #ffe4ec 55%, #ffd6e3 100%)',
+    navBg: 'rgba(255,245,248,0.92)', navBorder: 'rgba(190,74,109,0.12)',
+    cardBg: 'rgba(255,255,255,0.72)', cardBorder: 'rgba(255,255,255,0.85)',
+  },
+  gold: {
+    name: 'gold', label: 'Gold',
+    bannerFrom: '#1c1000', bannerMid: '#5a3800', bannerTo: '#c8860a',
+    accent: '#c8860a', accentMuted: '#e0a83a', accentLight: '#fef3d0',
+    textHeading: '#1c1000', textBody: '#3d2800',
+    pageBg: 'linear-gradient(160deg, #fffbf0 0%, #fff3d0 55%, #ffedb0 100%)',
+    navBg: 'rgba(255,251,240,0.92)', navBorder: 'rgba(200,134,10,0.12)',
+    cardBg: 'rgba(255,255,255,0.72)', cardBorder: 'rgba(255,255,255,0.85)',
+  },
+};
+
+export function getTheme(prof: Professional): ThemePalette {
+  if (prof.theme && THEMES[prof.theme]) return THEMES[prof.theme];
+  const t = { ...THEMES.forest };
+  if (prof.accent_color) {
+    t.accent      = prof.accent_color;
+    t.accentMuted = prof.accent_color + 'cc';
+    t.accentLight = prof.accent_color + '18';
+  }
+  return t;
+}
+
+// ─── Página pública ───────────────────────────────────────────────────────────
 
 export default function ProfessionalPublicPage({ userId }: Props) {
   const [prof, setProf]       = useState<Professional | null>(null);
@@ -24,7 +96,8 @@ export default function ProfessionalPublicPage({ userId }: Props) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #1a2412 0%, #2d3a1e 50%, #3d2a1e 100%)' }}>
+      <div className="min-h-screen flex items-center justify-center"
+        style={{ background: 'linear-gradient(135deg, #1a2412 0%, #2d3a1e 50%, #3d2a1e 100%)' }}>
         <div className="text-center space-y-4">
           <div className="relative mx-auto w-20 h-20">
             <div className="absolute inset-0 rounded-full border-4 border-white/10 animate-ping" />
@@ -41,7 +114,8 @@ export default function ProfessionalPublicPage({ userId }: Props) {
 
   if (error || !prof) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'linear-gradient(135deg, #1a2412 0%, #2d3a1e 100%)' }}>
+      <div className="min-h-screen flex items-center justify-center p-6"
+        style={{ background: 'linear-gradient(135deg, #1a2412 0%, #2d3a1e 100%)' }}>
         <div className="w-full max-w-sm bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-8 text-center border border-white/20">
           <XCircle size={40} className="text-red-400 mx-auto mb-4" />
           <h2 className="font-serif text-xl font-bold text-white mb-2">Perfil não encontrado</h2>
@@ -54,42 +128,43 @@ export default function ProfessionalPublicPage({ userId }: Props) {
   return <StandaloneProfSite prof={prof} />;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const toNum = (v: unknown) => { const n = Number(v); return isFinite(n) ? n : 0; };
+const toNum   = (v: unknown) => { const n = Number(v); return isFinite(n) ? n : 0; };
 const fmtCurr = (v: unknown) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0 }).format(toNum(v));
 
-function useInView(threshold = 0.15) {
+function useInView(threshold = 0.12) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } }, { threshold });
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      { threshold },
+    );
     obs.observe(el);
     return () => obs.disconnect();
   }, [threshold]);
   return { ref, visible };
 }
 
-function AnimCard({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
+function AnimCard({ children, delay = 0, className = '' }: {
+  children: React.ReactNode; delay?: number; className?: string;
+}) {
   const { ref, visible } = useInView();
   return (
-    <div
-      ref={ref}
-      className={className}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(28px)',
-        transition: `opacity 0.55s cubic-bezier(.4,0,.2,1) ${delay}ms, transform 0.55s cubic-bezier(.4,0,.2,1) ${delay}ms`,
-      }}
-    >
+    <div ref={ref} className={className} style={{
+      opacity:    visible ? 1 : 0,
+      transform:  visible ? 'translateY(0)' : 'translateY(28px)',
+      transition: `opacity 0.55s cubic-bezier(.4,0,.2,1) ${delay}ms, transform 0.55s cubic-bezier(.4,0,.2,1) ${delay}ms`,
+    }}>
       {children}
     </div>
   );
 }
 
-// ─── SVGs inline ─────────────────────────────────────────────────────────────
+// ─── Ícones ───────────────────────────────────────────────────────────────────
 
 const WaIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -126,33 +201,35 @@ const socialIcons: Record<string, React.ReactNode> = {
   ),
   website: (
     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
     </svg>
   ),
   link: (
     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
     </svg>
   ),
 };
 
 const socialColors: Record<string, { bg: string; text: string; glow: string }> = {
-  whatsapp:  { bg: 'linear-gradient(135deg,#25d366,#128c7e)', text: '#fff', glow: 'rgba(37,211,102,0.35)' },
-  instagram: { bg: 'linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)', text: '#fff', glow: 'rgba(220,39,67,0.35)' },
-  linkedin:  { bg: 'linear-gradient(135deg,#0a66c2,#0077b5)', text: '#fff', glow: 'rgba(10,102,194,0.35)' },
-  facebook:  { bg: 'linear-gradient(135deg,#1877f2,#166fe5)', text: '#fff', glow: 'rgba(24,119,242,0.35)' },
-  tiktok:    { bg: 'linear-gradient(135deg,#010101,#2d2d2d)', text: '#fff', glow: 'rgba(1,1,1,0.35)' },
-  twitter:   { bg: 'linear-gradient(135deg,#1d9bf0,#0d8fd9)', text: '#fff', glow: 'rgba(29,155,240,0.35)' },
-  website:   { bg: 'linear-gradient(135deg,#5a6242,#3f452e)', text: '#fff', glow: 'rgba(90,98,66,0.35)' },
-  link:      { bg: 'linear-gradient(135deg,#64748b,#475569)', text: '#fff', glow: 'rgba(100,116,139,0.35)' },
+  whatsapp:  { bg: 'linear-gradient(135deg,#25d366,#128c7e)', text: '#fff', glow: 'rgba(37,211,102,0.3)' },
+  instagram: { bg: 'linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)', text: '#fff', glow: 'rgba(220,39,67,0.3)' },
+  linkedin:  { bg: 'linear-gradient(135deg,#0a66c2,#0077b5)', text: '#fff', glow: 'rgba(10,102,194,0.3)' },
+  facebook:  { bg: 'linear-gradient(135deg,#1877f2,#166fe5)', text: '#fff', glow: 'rgba(24,119,242,0.3)' },
+  tiktok:    { bg: 'linear-gradient(135deg,#010101,#2d2d2d)', text: '#fff', glow: 'rgba(1,1,1,0.3)' },
+  twitter:   { bg: 'linear-gradient(135deg,#1d9bf0,#0d8fd9)', text: '#fff', glow: 'rgba(29,155,240,0.3)' },
+  website:   { bg: 'linear-gradient(135deg,#5a6242,#3f452e)', text: '#fff', glow: 'rgba(90,98,66,0.3)' },
+  link:      { bg: 'linear-gradient(135deg,#64748b,#475569)', text: '#fff', glow: 'rgba(100,116,139,0.3)' },
 };
 
 // ─── Site standalone ──────────────────────────────────────────────────────────
 
 function StandaloneProfSite({ prof }: { prof: Professional }) {
-  const accent   = prof.accent_color ?? '#a75a35';
+  const theme    = getTheme(prof);
   const initials = prof.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
-  const [scrolled, setScrolled] = useState(false);
+  const [scrolled, setScrolled]       = useState(false);
   const [heroVisible, setHeroVisible] = useState(false);
 
   useEffect(() => {
@@ -169,29 +246,29 @@ function StandaloneProfSite({ prof }: { prof: Professional }) {
   const hasSocial = !!(prof.contact_whatsapp || prof.instagram || prof.linkedin ||
     prof.facebook || prof.tiktok || prof.twitter || prof.website || (prof.extra_links ?? []).length > 0);
 
-  return (
-    <div className="min-h-screen overflow-x-hidden" style={{ background: `linear-gradient(160deg, #fbf8f3 0%, #f5ece1 60%, #f0e4d4 100%)` }}>
+  const { accent, accentLight, bannerFrom, bannerMid, bannerTo, textHeading, cardBg, cardBorder } = theme;
 
-      {/* ── Navbar ── */}
+  return (
+    <div className="min-h-screen overflow-x-hidden" style={{ background: theme.pageBg }}>
+
+      {/* Navbar */}
       <nav
         className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 transition-all duration-300"
         style={{
-          background: scrolled ? 'rgba(251,248,243,0.92)' : 'transparent',
+          background:     scrolled ? theme.navBg : 'transparent',
           backdropFilter: scrolled ? 'blur(16px)' : 'none',
-          borderBottom: scrolled ? '1px solid rgba(167,90,53,0.1)' : 'none',
-          boxShadow: scrolled ? '0 2px 20px rgba(90,98,66,0.08)' : 'none',
+          borderBottom:   scrolled ? `1px solid ${theme.navBorder}` : 'none',
+          boxShadow:      scrolled ? '0 2px 20px rgba(0,0,0,0.06)' : 'none',
         }}
       >
         <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center shadow-lg"
-            style={{ background: `linear-gradient(135deg, #2d3a1e, ${accent})` }}
-          >
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-lg"
+            style={{ background: `linear-gradient(135deg, ${bannerFrom}, ${accent})` }}>
             <span className="text-xs text-white font-black italic font-serif">♩</span>
           </div>
           <div>
-            <p className="font-serif text-sm font-black text-[#2d3a1e] leading-none">Espalhe</p>
-            <p className="font-script text-base text-[#a75a35] leading-none -mt-0.5">Melodias</p>
+            <p className="font-serif text-sm font-black leading-none" style={{ color: textHeading }}>Espalhe</p>
+            <p className="font-script text-base leading-none -mt-0.5" style={{ color: accent }}>Melodias</p>
           </div>
         </div>
         <a
@@ -203,46 +280,37 @@ function StandaloneProfSite({ prof }: { prof: Professional }) {
         </a>
       </nav>
 
-      {/* ── Hero ── */}
+      {/* Hero */}
       <div className="relative">
-        {/* Banner */}
         <div
           className="relative h-64 sm:h-72 overflow-hidden"
-          style={{ background: `linear-gradient(135deg, #1a2412 0%, #2d3a1e 40%, ${accent} 100%)` }}
+          style={{ background: `linear-gradient(135deg, ${bannerFrom} 0%, ${bannerMid} 40%, ${bannerTo} 100%)` }}
         >
-          {/* Partículas decorativas animadas */}
           <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
-            {[
-              { top: '8%', left: '6%', size: 'text-5xl', delay: '0s', dur: '6s' },
-              { top: '12%', right: '8%', size: 'text-4xl', delay: '1s', dur: '7s' },
-              { top: '40%', left: '18%', size: 'text-7xl', delay: '2s', dur: '8s', opacity: '0.06' },
-              { bottom: '10%', right: '15%', size: 'text-3xl', delay: '0.5s', dur: '5s' },
-              { bottom: '20%', left: '50%', size: 'text-5xl', delay: '1.5s', dur: '9s' },
-            ].map((p, i) => (
-              <span
-                key={i}
-                className={`absolute font-serif text-white select-none ${p.size}`}
+            {(['♩','♫','♪','♬','𝄞'] as const).map((note, i) => (
+              <span key={i} className="absolute font-serif text-white select-none"
                 style={{
-                  top: p.top, left: p.left, right: (p as any).right, bottom: (p as any).bottom,
-                  opacity: p.opacity ?? 0.08,
-                  animation: `float${i % 3} ${p.dur} ease-in-out ${p.delay} infinite`,
-                }}
-              >
-                {['♩', '♫', '♪', '♬', '𝄞'][i]}
+                  fontSize: ['3rem','2.5rem','4rem','2rem','3.5rem'][i],
+                  top:      ['8%','14%','38%',undefined,'10%'][i],
+                  bottom:   [undefined,undefined,undefined,'8%',undefined][i],
+                  left:     ['6%',undefined,'17%','48%',undefined][i],
+                  right:    [undefined,'9%',undefined,undefined,'7%'][i],
+                  opacity:  0.09,
+                  animation: `profFloat${i % 3} ${[6,7,8,5,9][i]}s ease-in-out ${[0,1,2,0.5,1.5][i]}s infinite`,
+                }}>
+                {note}
               </span>
             ))}
-            {/* Círculos de fundo */}
-            <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full border border-white/8" style={{ animation: 'spin 40s linear infinite' }} />
-            <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full border border-white/6" style={{ animation: 'spin 60s linear reverse infinite' }} />
+            <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full border border-white/8"
+              style={{ animation: 'profSpin 40s linear infinite' }} />
+            <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full border border-white/6"
+              style={{ animation: 'profSpin 60s linear reverse infinite' }} />
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full"
-              style={{ background: `radial-gradient(circle, ${accent}20 0%, transparent 70%)` }} />
+              style={{ background: `radial-gradient(circle, ${accent}22 0%, transparent 70%)` }} />
           </div>
 
-          {/* Logo no banner */}
-          <div
-            className="absolute top-16 left-1/2 -translate-x-1/2 flex items-center gap-2"
-            style={{ opacity: heroVisible ? 1 : 0, transform: heroVisible ? 'translateY(0)' : 'translateY(-12px)', transition: 'all 0.6s ease' }}
-          >
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 flex items-center gap-2"
+            style={{ opacity: heroVisible ? 1 : 0, transform: heroVisible ? 'translateY(0)' : 'translateY(-14px)', transition: 'all 0.6s ease' }}>
             <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
               <span className="text-xs text-white font-black italic font-serif">♩</span>
             </div>
@@ -254,57 +322,39 @@ function StandaloneProfSite({ prof }: { prof: Professional }) {
         </div>
 
         {/* Avatar flutuante */}
-        <div
-          className="absolute left-1/2 -translate-x-1/2 -bottom-16"
-          style={{ opacity: heroVisible ? 1 : 0, transform: heroVisible ? 'scale(1)' : 'scale(0.8)', transition: 'all 0.7s cubic-bezier(.34,1.56,.64,1) 0.2s' }}
-        >
+        <div className="absolute left-1/2 -translate-x-1/2 -bottom-16"
+          style={{ opacity: heroVisible ? 1 : 0, transform: heroVisible ? 'scale(1)' : 'scale(0.8)', transition: 'all 0.7s cubic-bezier(.34,1.56,.64,1) 0.2s' }}>
           <div className="relative">
-            {/* Anel de brilho animado */}
-            <div
-              className="absolute -inset-2 rounded-full animate-pulse"
-              style={{ background: `radial-gradient(circle, ${accent}40 0%, transparent 70%)` }}
-            />
+            <div className="absolute -inset-2 rounded-full animate-pulse"
+              style={{ background: `radial-gradient(circle, ${accent}40 0%, transparent 70%)` }} />
             {prof.avatar ? (
-              <img
-                src={prof.avatar}
-                alt={prof.name}
+              <img src={prof.avatar} alt={prof.name}
                 className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-2xl relative z-10"
-                style={{ boxShadow: `0 8px 32px ${accent}40, 0 2px 8px rgba(0,0,0,0.2)` }}
-              />
+                style={{ boxShadow: `0 8px 32px ${accent}40, 0 2px 8px rgba(0,0,0,0.2)` }} />
             ) : (
-              <div
-                className="w-32 h-32 rounded-full border-4 border-white shadow-2xl flex items-center justify-center text-4xl font-black relative z-10"
-                style={{
-                  background: `linear-gradient(135deg, ${accent}30, ${accent}70)`,
-                  color: accent,
-                  boxShadow: `0 8px 32px ${accent}40, 0 2px 8px rgba(0,0,0,0.2)`,
-                }}
-              >
+              <div className="w-32 h-32 rounded-full border-4 border-white shadow-2xl flex items-center justify-center text-4xl font-black relative z-10"
+                style={{ background: `linear-gradient(135deg, ${accent}30, ${accent}70)`, color: accent,
+                  boxShadow: `0 8px 32px ${accent}40, 0 2px 8px rgba(0,0,0,0.2)` }}>
                 {initials}
               </div>
             )}
-            {/* Badge verificado */}
-            <div
-              className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center z-20 border-2 border-white"
-              style={{ boxShadow: '0 2px 12px rgba(90,98,66,0.25)' }}
-            >
-              <svg className="w-5 h-5 text-[#5a6242]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            <div className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center z-20 border-2 border-white"
+              style={{ boxShadow: `0 2px 12px ${accent}30` }}>
+              <svg className="w-5 h-5" style={{ color: accent }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
               </svg>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Conteúdo principal ── */}
+      {/* Conteúdo */}
       <div className="max-w-xl mx-auto px-4 pt-24 pb-16">
 
-        {/* Nome e info */}
-        <div
-          className="text-center mb-6"
-          style={{ opacity: heroVisible ? 1 : 0, transform: heroVisible ? 'translateY(0)' : 'translateY(20px)', transition: 'all 0.6s ease 0.35s' }}
-        >
-          <h1 className="font-serif text-3xl font-black text-[#1a2412] leading-tight">{prof.name}</h1>
+        {/* Nome */}
+        <div className="text-center mb-6"
+          style={{ opacity: heroVisible ? 1 : 0, transform: heroVisible ? 'translateY(0)' : 'translateY(20px)', transition: 'all 0.6s ease 0.35s' }}>
+          <h1 className="font-serif text-3xl font-black leading-tight" style={{ color: textHeading }}>{prof.name}</h1>
           {prof.crp && (
             <p className="text-xs font-mono font-bold mt-1.5 tracking-widest uppercase" style={{ color: `${accent}cc` }}>
               {prof.crp}
@@ -314,7 +364,7 @@ function StandaloneProfSite({ prof }: { prof: Professional }) {
             <div className="flex items-center justify-center gap-1 mt-3">
               <div className="flex items-center gap-0.5">
                 {[1,2,3,4,5].map(i => (
-                  <svg key={i} className={`w-4 h-4 transition-all duration-300 ${i <= Math.round(toNum(prof.rating)) ? 'fill-amber-400 drop-shadow-sm' : 'fill-slate-200'}`} viewBox="0 0 20 20">
+                  <svg key={i} className={`w-4 h-4 ${i <= Math.round(toNum(prof.rating)) ? 'fill-amber-400' : 'fill-slate-200'}`} viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
                   </svg>
                 ))}
@@ -330,17 +380,10 @@ function StandaloneProfSite({ prof }: { prof: Professional }) {
         {/* Especialidades */}
         {prof.specialties?.length > 0 && (
           <AnimCard delay={100} className="flex flex-wrap justify-center gap-2 mb-6">
-            {prof.specialties.map((s, i) => (
-              <span
-                key={s}
-                className="text-xs font-bold px-3.5 py-1.5 rounded-full transition-all duration-200 hover:scale-105 cursor-default"
-                style={{
-                  background: `${accent}12`,
-                  color: accent,
-                  border: `1.5px solid ${accent}35`,
-                  animationDelay: `${i * 60}ms`,
-                }}
-              >
+            {prof.specialties.map(s => (
+              <span key={s}
+                className="text-xs font-bold px-3.5 py-1.5 rounded-full cursor-default hover:scale-105 transition-transform duration-200"
+                style={{ background: accentLight, color: accent, border: `1.5px solid ${accent}35` }}>
                 {s}
               </span>
             ))}
@@ -349,25 +392,16 @@ function StandaloneProfSite({ prof }: { prof: Professional }) {
 
         {/* CTAs */}
         <AnimCard delay={150} className="flex gap-3 mb-6">
-          {prof.contact_whatsapp ? (
-            <a
-              href={`https://wa.me/${prof.contact_whatsapp}`}
-              target="_blank"
-              rel="noopener noreferrer"
+          {prof.contact_whatsapp && (
+            <a href={`https://wa.me/${prof.contact_whatsapp}`} target="_blank" rel="noopener noreferrer"
               className="flex-1 flex items-center justify-center gap-2.5 py-4 text-white text-sm font-black rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-95 select-none"
-              style={{
-                background: 'linear-gradient(135deg, #25d366, #128c7e)',
-                boxShadow: '0 4px 20px rgba(37,211,102,0.35)',
-              }}
-            >
+              style={{ background: 'linear-gradient(135deg,#25d366,#128c7e)', boxShadow: '0 4px 20px rgba(37,211,102,0.35)' }}>
               <WaIcon /> Entrar em contato
             </a>
-          ) : null}
-          <a
-            href="/diretorio"
+          )}
+          <a href="/diretorio"
             className="flex-1 flex items-center justify-center gap-2 py-4 bg-white text-sm font-black rounded-2xl transition-all duration-200 hover:scale-[1.02] active:scale-95 select-none shadow-md"
-            style={{ border: `2px solid ${accent}35`, color: accent }}
-          >
+            style={{ border: `2px solid ${accent}35`, color: accent }}>
             Ver todos os membros
           </a>
         </AnimCard>
@@ -375,32 +409,36 @@ function StandaloneProfSite({ prof }: { prof: Professional }) {
         {/* Localização e preço */}
         {(prof.location || toNum(prof.price_per_session) > 0) && (
           <AnimCard delay={200} className="mb-4">
-            <div className="rounded-2xl overflow-hidden border border-white/80 shadow-md" style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)' }}>
+            <div className="rounded-2xl overflow-hidden border shadow-md"
+              style={{ background: cardBg, backdropFilter: 'blur(12px)', borderColor: cardBorder }}>
               {prof.location && (
-                <div className="flex items-center gap-3.5 px-5 py-4 border-b border-[#f0e4d4]">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm" style={{ background: `linear-gradient(135deg, ${accent}20, ${accent}35)` }}>
-                    <svg className="w-4.5 h-4.5" style={{ color: accent }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <div className="flex items-center gap-3.5 px-5 py-4 border-b" style={{ borderColor: `${accent}15` }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: `linear-gradient(135deg, ${accent}20, ${accent}35)` }}>
+                    <svg className="w-4 h-4" style={{ color: accent }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                      <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                     </svg>
                   </div>
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Localização</p>
-                    <p className="text-sm font-semibold text-[#2d2d2d]">{prof.location}</p>
+                    <p className="text-sm font-semibold" style={{ color: textHeading }}>{prof.location}</p>
                   </div>
                 </div>
               )}
               {toNum(prof.price_per_session) > 0 && (
                 <div className="flex items-center gap-3.5 px-5 py-4">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm" style={{ background: `linear-gradient(135deg, #5a624220, #5a624235)` }}>
-                    <svg className="w-4.5 h-4.5 text-[#5a6242]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: `linear-gradient(135deg, ${accent}20, ${accent}35)` }}>
+                    <svg className="w-4 h-4" style={{ color: accent }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
                     </svg>
                   </div>
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Valor da sessão</p>
-                    <p className="text-sm font-bold text-[#2d2d2d]">
+                    <p className="text-sm">
                       <span className="text-base font-black" style={{ color: accent }}>R$ {fmtCurr(prof.price_per_session)}</span>
-                      <span className="text-slate-400 font-medium text-xs ml-1">/ sessão</span>
+                      <span className="text-slate-400 text-xs ml-1">/ sessão</span>
                     </p>
                   </div>
                 </div>
@@ -412,12 +450,13 @@ function StandaloneProfSite({ prof }: { prof: Professional }) {
         {/* Bio */}
         {prof.bio && (
           <AnimCard delay={250} className="mb-4">
-            <div className="rounded-2xl px-5 py-5 border border-white/80 shadow-md" style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)' }}>
+            <div className="rounded-2xl px-5 py-5 border shadow-md"
+              style={{ background: cardBg, backdropFilter: 'blur(12px)', borderColor: cardBorder }}>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-1 h-5 rounded-full" style={{ background: `linear-gradient(180deg, ${accent}, ${accent}60)` }} />
                 <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: accent }}>Sobre</span>
               </div>
-              <p className="text-sm text-[#3d3d3d] leading-relaxed">{prof.bio}</p>
+              <p className="text-sm leading-relaxed" style={{ color: theme.textBody }}>{prof.bio}</p>
             </div>
           </AnimCard>
         )}
@@ -425,52 +464,26 @@ function StandaloneProfSite({ prof }: { prof: Professional }) {
         {/* Serviços */}
         {prof.services?.length > 0 && (
           <AnimCard delay={300} className="mb-4">
-            <div className="rounded-2xl px-5 py-5 border border-white/80 shadow-md" style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)' }}>
+            <div className="rounded-2xl px-5 py-5 border shadow-md"
+              style={{ background: cardBg, backdropFilter: 'blur(12px)', borderColor: cardBorder }}>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-1 h-5 rounded-full" style={{ background: 'linear-gradient(180deg, #5a6242, #3f452e60)' }} />
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#5a6242]">Serviços</span>
+                <div className="w-1 h-5 rounded-full" style={{ background: `linear-gradient(180deg, ${accent}, ${accent}60)` }} />
+                <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: accent }}>Serviços</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {prof.services.map(s => (
-                  <div
-                    key={s}
-                    className="flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all duration-200 hover:scale-[1.02]"
-                    style={{ background: `${accent}08`, border: `1px solid ${accent}18` }}
-                  >
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ background: `linear-gradient(135deg, ${accent}30, ${accent}50)` }}>
+                  <div key={s}
+                    className="flex items-center gap-3 px-3.5 py-3 rounded-xl hover:scale-[1.02] transition-transform duration-200"
+                    style={{ background: `${accent}08`, border: `1px solid ${accent}18` }}>
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                      style={{ background: `linear-gradient(135deg, ${accent}40, ${accent}70)` }}>
                       <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
                       </svg>
                     </div>
-                    <span className="text-sm font-semibold text-[#2d2d2d]">{s}</span>
+                    <span className="text-sm font-semibold" style={{ color: textHeading }}>{s}</span>
                   </div>
                 ))}
-              </div>
-            </div>
-          </AnimCard>
-        )}
-
-        {/* Horários */}
-        {prof.schedule?.length > 0 && (
-          <AnimCard delay={320} className="mb-4">
-            <div className="rounded-2xl px-5 py-5 border border-white/80 shadow-md" style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)' }}>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-1 h-5 rounded-full" style={{ background: 'linear-gradient(180deg, #a75a35, #a75a3560)' }} />
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#a75a35]">Horários Disponíveis</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {(prof.schedule as unknown as Array<string | {day:string;hours:string}>).map((slot, i) => {
-                  const label = typeof slot === 'string' ? slot : `${slot.day} ${slot.hours}`;
-                  return (
-                    <span key={i} className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl"
-                      style={{ background: `${accent}10`, color: accent, border: `1px solid ${accent}25` }}>
-                      <svg className="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
-                      </svg>
-                      {label}
-                    </span>
-                  );
-                })}
               </div>
             </div>
           </AnimCard>
@@ -479,16 +492,15 @@ function StandaloneProfSite({ prof }: { prof: Professional }) {
         {/* Idiomas */}
         {prof.languages?.length > 0 && (
           <AnimCard delay={340} className="mb-4">
-            <div className="rounded-2xl px-5 py-5 border border-white/80 shadow-md" style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)' }}>
+            <div className="rounded-2xl px-5 py-5 border shadow-md"
+              style={{ background: cardBg, backdropFilter: 'blur(12px)', borderColor: cardBorder }}>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-1 h-5 rounded-full bg-gradient-to-b from-blue-400 to-blue-600/60" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">Idiomas</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">Idiomas</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {prof.languages.map(l => (
-                  <span key={l} className="text-xs font-bold px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                    {l}
-                  </span>
+                  <span key={l} className="text-xs font-bold px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">{l}</span>
                 ))}
               </div>
             </div>
@@ -498,10 +510,12 @@ function StandaloneProfSite({ prof }: { prof: Professional }) {
         {/* Redes sociais */}
         {hasSocial && (
           <AnimCard delay={380} className="mb-4">
-            <div className="rounded-2xl px-5 py-5 border border-white/80 shadow-md" style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)' }}>
+            <div className="rounded-2xl px-5 py-5 border shadow-md"
+              style={{ background: cardBg, backdropFilter: 'blur(12px)', borderColor: cardBorder }}>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-1 h-5 rounded-full bg-gradient-to-b from-[#182638] to-[#182638]/60" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#182638]">Redes & Links</span>
+                <div className="w-1 h-5 rounded-full"
+                  style={{ background: `linear-gradient(180deg, ${bannerFrom}, ${bannerMid}80)` }} />
+                <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: bannerMid }}>Redes & Links</span>
               </div>
               <SocialGrid prof={prof} />
             </div>
@@ -510,20 +524,16 @@ function StandaloneProfSite({ prof }: { prof: Professional }) {
 
         {/* Badge Melodias */}
         <AnimCard delay={420} className="mb-6">
-          <div
-            className="rounded-2xl overflow-hidden shadow-lg border border-white/30"
-            style={{ background: 'linear-gradient(135deg, #1a2412 0%, #2d3a1e 50%, #182638 100%)' }}
-          >
+          <div className="rounded-2xl overflow-hidden shadow-lg border border-white/20"
+            style={{ background: `linear-gradient(135deg, ${bannerFrom} 0%, ${bannerMid} 55%, ${bannerTo} 100%)` }}>
             <div className="px-5 py-5 flex items-center gap-4">
-              <div
-                className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border border-white/25"
-                style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)' }}
-              >
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border border-white/25"
+                style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)' }}>
                 <span className="text-2xl font-serif font-black italic text-white leading-none">♩</span>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <p className="text-white font-black text-sm leading-tight">Rede Espalhe Melodias</p>
+                  <p className="text-white font-black text-sm">Rede Espalhe Melodias</p>
                   <svg className="w-4 h-4 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                   </svg>
@@ -533,7 +543,9 @@ function StandaloneProfSite({ prof }: { prof: Professional }) {
             </div>
             <div className="px-5 py-3.5 border-t border-white/10" style={{ background: 'rgba(255,255,255,0.06)' }}>
               <p className="text-[11px] text-white/50 leading-relaxed">
-                Este profissional é membro verificado da comunidade <strong className="text-white/70">Espalhe Melodias</strong> — uma rede comprometida com saúde mental e conexões humanas.
+                Este profissional é membro verificado da comunidade{' '}
+                <strong className="text-white/70">Espalhe Melodias</strong>{' '}
+                — uma rede comprometida com saúde mental e conexões humanas.
               </p>
             </div>
           </div>
@@ -542,27 +554,26 @@ function StandaloneProfSite({ prof }: { prof: Professional }) {
         {/* Footer */}
         <div className="text-center py-4">
           <div className="inline-flex flex-col items-center gap-1">
-            <div className="flex items-center gap-2 text-[#9a8a7a]">
-              <span className="font-serif italic text-xl">♩</span>
-              <span className="font-script text-xl text-[#a75a35]">Espalhe Melodias</span>
+            <div className="flex items-center gap-2">
+              <span className="font-serif italic text-xl" style={{ color: accent }}>♩</span>
+              <span className="font-script text-xl" style={{ color: accent }}>Melodias</span>
             </div>
-            <p className="text-[10px] text-[#b8a898] tracking-wide">Conectando pessoas através da saúde mental</p>
+            <p className="text-[10px] tracking-wide" style={{ color: `${accent}80` }}>Conectando pessoas através da saúde mental</p>
           </div>
         </div>
       </div>
 
-      {/* Animações inline */}
       <style>{`
-        @keyframes float0 { 0%,100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-14px) rotate(8deg); } }
-        @keyframes float1 { 0%,100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-10px) rotate(-6deg); } }
-        @keyframes float2 { 0%,100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-18px) rotate(12deg); } }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes profFloat0 { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-14px) rotate(8deg)} }
+        @keyframes profFloat1 { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-10px) rotate(-6deg)} }
+        @keyframes profFloat2 { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-18px) rotate(12deg)} }
+        @keyframes profSpin   { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
       `}</style>
     </div>
   );
 }
 
-// ─── Grid de redes sociais ────────────────────────────────────────────────────
+// ─── Grid social ──────────────────────────────────────────────────────────────
 
 function SocialGrid({ prof }: { prof: Professional }) {
   const links: Array<{ type: string; url: string; label: string }> = [];
@@ -580,18 +591,9 @@ function SocialGrid({ prof }: { prof: Professional }) {
       {links.map((l, i) => {
         const c = socialColors[l.type] ?? socialColors.link;
         return (
-          <a
-            key={i}
-            href={l.url}
-            target="_blank"
-            rel="noopener noreferrer"
+          <a key={i} href={l.url} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl font-bold text-xs transition-all duration-200 hover:scale-105 active:scale-95 hover:-translate-y-0.5 select-none"
-            style={{
-              background: c.bg,
-              color: c.text,
-              boxShadow: `0 4px 12px ${c.glow}`,
-            }}
-          >
+            style={{ background: c.bg, color: c.text, boxShadow: `0 4px 12px ${c.glow}` }}>
             {socialIcons[l.type] ?? socialIcons.link}
             <span className="truncate">{l.label}</span>
           </a>
