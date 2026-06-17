@@ -19,6 +19,7 @@ import {
   Link2,
 } from 'lucide-react';
 import { UserRole } from '../types';
+import { SIDEBAR_SPACING, ICON_SIZES, MARGIN, CONTENT_SPACING } from '@/src/theme';
 
 interface SidebarProps {
   currentTab: string;
@@ -90,24 +91,23 @@ export default function Sidebar({
   };
 
   return (
-    <aside id="system-sidebar" className="w-72 bg-brand-navy-dark text-slate-300 flex flex-col h-screen border-r border-[#1e2e42] shrink-0 sticky top-0 overflow-y-auto">
+    <aside id="system-sidebar" className={`${SIDEBAR_SPACING.width} bg-brand-navy-dark text-slate-300 flex flex-col h-screen border-r border-[#1e2e42] shrink-0 sticky top-0 overflow-y-auto`}>
       {/* Brand Logo - Melodias */}
-      <div className="p-6 border-b border-[#1e2e42] flex items-center justify-start space-x-3 bg-brand-navy/60">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-clay to-brand-moss flex items-center justify-center text-white shadow-lg shrink-0">
-          {/* Decorative Psychology symbol inside music note motif */}
-          <span className="text-lg font-serif font-black italic">♩Ψ</span>
+      <div className="px-3 sm:px-4 md:px-5 py-4 sm:py-5 border-b border-[#1e2e42] flex items-center justify-start gap-2 sm:gap-3 bg-brand-navy/60">
+        <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-tr from-brand-clay to-brand-moss flex items-center justify-center text-white shadow-lg shrink-0">
+          <span className="text-sm sm:text-lg font-serif font-black italic">♩Ψ</span>
         </div>
-        <div className="flex flex-col justify-center">
-          <span className="font-serif text-lg font-black tracking-wide text-brand-cream leading-none">Espalhe</span>
-          <span className="font-script text-2xl text-brand-clay-light font-normal leading-none -mt-1.5 pl-0.5">Melodias</span>
+        <div className="flex flex-col justify-center min-w-0">
+          <span className="font-serif text-sm sm:text-lg font-black tracking-wide text-brand-cream leading-none truncate">Espalhe</span>
+          <span className="font-script text-lg sm:text-2xl text-brand-clay-light font-normal leading-none -mt-0.5 sm:-mt-1.5 pl-0.5 truncate">Melodias</span>
         </div>
       </div>
 
       {/* Nav Link Groups */}
-      <div className="flex-1 px-4 py-6 space-y-7 overflow-y-auto custom-scrollbar">
+      <div className={`flex-1 ${SIDEBAR_SPACING.padding} ${SIDEBAR_SPACING.gap} overflow-y-auto custom-scrollbar`}>
         
         {/* NAVEGAÇÃO PRINCIPAL */}
-        <div className="space-y-1.5">
+        <div className="space-y-1 sm:space-y-1.5">
           {systemTabs.map((tab) => {
             const IconComponent = tab.icon;
             const isActive = currentTab === tab.id;
@@ -116,15 +116,15 @@ export default function Sidebar({
                 key={tab.id}
                 id={`sidebar-tab-${tab.id}`}
                 onClick={() => setCurrentTab(tab.id)}
-                className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-medium transition-all group ${
-                  isActive 
-                    ? 'bg-brand-moss text-white shadow-md shadow-brand-moss/20 font-semibold border-l-4 border-brand-clay' 
+                className={`w-full flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all group ${
+                  isActive
+                    ? 'bg-brand-moss text-white shadow-md shadow-brand-moss/20 font-semibold border-l-4 border-brand-clay'
                     : 'text-slate-400 hover:bg-brand-navy-light/40 hover:text-white'
                 }`}
               >
-                <div className="flex items-center space-x-3">
-                  <IconComponent className={`w-5 h-5 ${isActive ? 'text-brand-clay-light' : 'text-slate-450 group-hover:text-brand-clay-light'}`} />
-                  <span>{tab.label}</span>
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 ${isActive ? 'text-brand-clay-light' : 'text-slate-450 group-hover:text-brand-clay-light'}`} />
+                  <span className="truncate">{tab.label}</span>
                 </div>
               </button>
             );
@@ -132,8 +132,8 @@ export default function Sidebar({
         </div>
 
         {/* ADMINISTRAÇÃO */}
-        <div className="space-y-1.5">
-          <p className="px-4 text-[10px] font-bold tracking-wider uppercase text-slate-500">Administração</p>
+        <div className="space-y-1 sm:space-y-1.5">
+          <p className="px-3 sm:px-4 text-[9px] sm:text-[10px] font-bold tracking-wider uppercase text-slate-500">Administração</p>
           {adminTabs.filter(tab => hasAccess(tab.minRole)).map((tab) => {
             const IconComponent = tab.icon;
             const isActive = currentTab === tab.id;
@@ -142,18 +142,18 @@ export default function Sidebar({
                 key={tab.id}
                 id={`sidebar-tab-${tab.id}`}
                 onClick={() => setCurrentTab(tab.id)}
-                className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-medium transition-all group ${
-                  isActive 
-                    ? 'bg-brand-moss text-white shadow-md border-l-4 border-brand-clay' 
+                className={`w-full flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all group ${
+                  isActive
+                    ? 'bg-brand-moss text-white shadow-md border-l-4 border-brand-clay'
                     : 'text-slate-400 hover:bg-brand-navy-light/40 hover:text-white'
                 }`}
               >
-                <div className="flex items-center space-x-3">
-                  <IconComponent className={`w-5 h-5 ${isActive ? 'text-brand-clay-light' : 'text-slate-450 group-hover:text-brand-clay-light'}`} />
-                  <span>{tab.label}</span>
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 ${isActive ? 'text-brand-clay-light' : 'text-slate-450 group-hover:text-brand-clay-light'}`} />
+                  <span className="truncate">{tab.label}</span>
                 </div>
                 {tab.badge && tab.badge > 0 ? (
-                  <span className="bg-brand-clay text-white font-semibold text-xs px-2 py-0.5 rounded-full flex items-center justify-center animate-pulse min-w-[20px]">
+                  <span className="bg-brand-clay text-white font-semibold text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full flex items-center justify-center animate-pulse min-w-[20px] shrink-0">
                     {tab.badge}
                   </span>
                 ) : null}
@@ -163,8 +163,8 @@ export default function Sidebar({
         </div>
 
         {/* COMUNIDADE */}
-        <div className="space-y-1.5">
-          <p className="px-4 text-[10px] font-bold tracking-wider uppercase text-slate-500">Comunidade</p>
+        <div className="space-y-1 sm:space-y-1.5">
+          <p className="px-3 sm:px-4 text-[9px] sm:text-[10px] font-bold tracking-wider uppercase text-slate-500">Comunidade</p>
           {communityTabs.map((tab) => {
             const IconComponent = tab.icon;
             const isActive = currentTab === tab.id;
@@ -173,18 +173,18 @@ export default function Sidebar({
                 key={tab.id}
                 id={`sidebar-tab-${tab.id}`}
                 onClick={() => setCurrentTab(tab.id)}
-                className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-medium transition-all group ${
-                  isActive 
-                    ? 'bg-brand-moss text-white shadow-md border-l-4 border-brand-clay' 
+                className={`w-full flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all group ${
+                  isActive
+                    ? 'bg-brand-moss text-white shadow-md border-l-4 border-brand-clay'
                     : 'text-slate-400 hover:bg-brand-navy-light/40 hover:text-white'
                 }`}
               >
-                <div className="flex items-center space-x-3">
-                  <IconComponent className={`w-5 h-5 ${isActive ? 'text-brand-clay-light' : 'text-slate-450 group-hover:text-brand-clay-light'}`} />
-                  <span>{tab.label}</span>
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 ${isActive ? 'text-brand-clay-light' : 'text-slate-450 group-hover:text-brand-clay-light'}`} />
+                  <span className="truncate">{tab.label}</span>
                 </div>
                 {tab.badge && tab.badge > 0 ? (
-                  <span className="bg-[#f59e0b] text-slate-950 font-bold text-xs px-2 py-0.5 rounded-full flex items-center justify-center min-w-[20px]">
+                  <span className="bg-[#f59e0b] text-slate-950 font-bold text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full flex items-center justify-center min-w-[20px] shrink-0">
                     {tab.badge}
                   </span>
                 ) : null}
@@ -195,8 +195,8 @@ export default function Sidebar({
 
         {/* SUPER ADMIN */}
         {userRole === 'super-admin' && (
-          <div className="space-y-1.5">
-            <p className="px-4 text-[10px] font-bold tracking-wider uppercase text-slate-500">Super Admin</p>
+          <div className="space-y-1 sm:space-y-1.5">
+            <p className="px-3 sm:px-4 text-[9px] sm:text-[10px] font-bold tracking-wider uppercase text-slate-500">Super Admin</p>
             {superAdminTabs.map((tab) => {
               const IconComponent = tab.icon;
               const isActive = currentTab === tab.id;
@@ -205,15 +205,15 @@ export default function Sidebar({
                   key={tab.id}
                   id={`sidebar-tab-${tab.id}`}
                   onClick={() => setCurrentTab(tab.id)}
-                  className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-medium transition-all group ${
-                    isActive 
-                      ? 'bg-brand-moss text-white shadow-md border-l-4 border-brand-clay' 
+                  className={`w-full flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all group ${
+                    isActive
+                      ? 'bg-brand-moss text-white shadow-md border-l-4 border-brand-clay'
                       : 'text-slate-400 hover:bg-brand-navy-light/40 hover:text-white'
                   }`}
                 >
-                  <div className="flex items-center space-x-3">
-                    <IconComponent className={`w-5 h-5 ${isActive ? 'text-brand-clay-light' : 'text-slate-450 group-hover:text-brand-clay-light'}`} />
-                    <span>{tab.label}</span>
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 ${isActive ? 'text-brand-clay-light' : 'text-slate-450 group-hover:text-brand-clay-light'}`} />
+                    <span className="truncate">{tab.label}</span>
                   </div>
                 </button>
               );
@@ -224,35 +224,37 @@ export default function Sidebar({
       </div>
 
       {/* User Session Info */}
-      <div className="p-4 border-t border-[#1e2e42] bg-[#0c141e]">
-        <div className="flex items-center space-x-3 p-2 bg-brand-navy-light/30 border border-[#1e2e42] rounded-xl mb-3">
-          <img 
-            src={userAvatar} 
-            alt={userName} 
-            className="w-10 h-10 rounded-full object-cover border-2 border-brand-clay/70 shadow-inner"
+      <div className="p-3 sm:p-4 border-t border-[#1e2e42] bg-[#0c141e] shrink-0 space-y-2.5 sm:space-y-3">
+        <div className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 bg-brand-navy-light/30 border border-[#1e2e42] rounded-lg sm:rounded-xl">
+          <img
+            src={userAvatar}
+            alt={userName}
+            className="w-9 sm:w-10 h-9 sm:h-10 rounded-lg object-cover border-2 border-brand-clay/70 shadow-inner shrink-0"
           />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold text-slate-200 truncate">{userName}</p>
-            <p className="text-[10px] font-semibold text-brand-clay-light truncate tracking-wide">{getRoleLabel(userRole)}</p>
+            <p className="text-[9px] sm:text-[10px] font-semibold text-brand-clay-light truncate tracking-wide">{getRoleLabel(userRole)}</p>
           </div>
         </div>
 
         {/* Navigation buttons */}
-        <div className="grid grid-cols-1 gap-2">
+        <div className="grid grid-cols-1 gap-1.5 sm:gap-2">
           <button
             onClick={onGoToPublicSite}
-            className="w-full h-9 flex items-center justify-center space-x-2 rounded-lg bg-brand-moss/10 text-brand-moss-light hover:bg-brand-moss/20 hover:text-brand-cream border border-brand-moss/30 text-xs font-semibold transition-all cursor-pointer"
+            className="w-full h-8 sm:h-9 flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg bg-brand-moss/10 text-brand-moss-light hover:bg-brand-moss/20 hover:text-brand-cream border border-brand-moss/30 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer"
           >
-            <Globe className="w-3.5 h-3.5" />
-            <span>Ver Site Público</span>
+            <Globe className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Ver Site Público</span>
+            <span className="sm:hidden">Site Público</span>
           </button>
           <button
             id="btn-logout"
             onClick={onLogout}
-            className="w-full h-9 flex items-center justify-center space-x-2 rounded-lg bg-brand-clay/10 text-brand-clay-light hover:bg-brand-clay/20 hover:text-brand-cream border border-brand-clay/30 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer"
+            className="w-full h-8 sm:h-9 flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg bg-brand-clay/10 text-brand-clay-light hover:bg-brand-clay/20 hover:text-brand-cream border border-brand-clay/30 text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer"
           >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Sair da Conta</span>
+            <LogOut className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Sair da Conta</span>
+            <span className="sm:hidden">Sair</span>
           </button>
         </div>
       </div>

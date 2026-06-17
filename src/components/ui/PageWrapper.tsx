@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "@/src/lib/utils";
+import { CONTENT_SPACING } from "@/src/theme/spacing";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PageWrapper — Design System
@@ -27,11 +28,11 @@ export function PageWrapper({
         // Ocupa toda a largura útil do painel
         "w-full max-w-none min-w-0",
         // Padding horizontal — menor no mobile para aproveitar mais tela
-        "px-2 sm:px-4 lg:px-6 xl:px-8",
+        "px-3 sm:px-4 md:px-5 lg:px-6 xl:px-8",
         // Padding vertical
-        "pt-2 sm:pt-4 lg:pt-5",
+        "pt-3 sm:pt-4 md:pt-5 lg:pt-6",
         // Bottom spacing
-        mobileBottomPad ? "pb-24 sm:pb-5 lg:pb-6" : "pb-0",
+        mobileBottomPad ? "pb-24 sm:pb-6 md:pb-8 lg:pb-10" : "pb-0",
         className
       )}
       {...props}
@@ -66,25 +67,25 @@ export function SectionTitle({
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between",
-        divider && "mb-3 border-b border-zinc-100 pb-3 sm:mb-5 sm:pb-5",
+        "flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between",
+        divider && "mb-4 sm:mb-5 md:mb-6 border-b border-zinc-100 pb-4 sm:pb-5 md:pb-6",
         className
       )}
     >
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
         {Icon && (
-          <div className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl border border-amber-100 bg-amber-50">
-            <Icon size={15} className="text-amber-600 sm:text-[18px]" />
+          <div className="flex h-8 w-8 sm:h-9 md:h-10 sm:w-9 md:w-10 shrink-0 items-center justify-center rounded-lg sm:rounded-xl md:rounded-2xl border border-amber-100 bg-amber-50">
+            <Icon size={16} className="text-amber-600 sm:text-[18px] md:text-[20px]" />
           </div>
         )}
 
         <div className="min-w-0">
-          <h1 className="truncate font-display text-base font-black tracking-tight text-zinc-900 sm:text-xl lg:text-2xl">
+          <h1 className="truncate font-display text-base sm:text-lg md:text-xl lg:text-2xl font-black tracking-tight text-zinc-900">
             {title}
           </h1>
 
           {description && (
-            <p className="mt-0.5 text-xs leading-relaxed text-zinc-400 sm:text-sm">
+            <p className="mt-1 sm:mt-1.5 text-xs sm:text-sm leading-relaxed text-zinc-400">
               {description}
             </p>
           )}
@@ -92,7 +93,7 @@ export function SectionTitle({
       </div>
 
       {action && (
-        <div className="flex w-full items-center gap-2 sm:w-auto sm:justify-end">
+        <div className="flex w-full items-center gap-2 sm:gap-3 sm:w-auto sm:justify-end">
           {action}
         </div>
       )}
@@ -117,12 +118,12 @@ export function StatGrid({
 }: StatGridProps) {
   const colsMap: Record<number, string> = {
     2: "grid-cols-1 sm:grid-cols-2",
-    3: "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3",
-    4: "grid-cols-1 sm:grid-cols-2 xl:grid-cols-4",
+    3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+    4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
   };
 
   return (
-    <div className={cn("grid gap-2 sm:gap-4", colsMap[cols], className)} {...props}>
+    <div className={cn("grid gap-3 sm:gap-4 md:gap-5", colsMap[cols], className)} {...props}>
       {children}
     </div>
   );
@@ -148,15 +149,15 @@ export function ContentCard({
 }: ContentCardProps) {
   const paddingMap = {
     none: "",
-    sm: "p-2.5 sm:p-4",
-    md: "p-3 sm:p-5",
-    lg: "p-4 sm:p-6 lg:p-7",
+    sm: "p-2.5 sm:p-3 md:p-4",
+    md: "p-3 sm:p-4 md:p-5 lg:p-6",
+    lg: "p-4 sm:p-5 md:p-6 lg:p-7 xl:p-8",
   };
 
   return (
     <div
       className={cn(
-        "rounded-2xl border border-zinc-200 bg-white shadow-sm sm:rounded-3xl",
+        "rounded-xl sm:rounded-2xl border border-zinc-200 bg-white shadow-sm",
         paddingMap[padding],
         className
       )}
@@ -181,10 +182,10 @@ export function FormRow({ children, cols = 2, className }: FormRowProps) {
   const colsMap = {
     1: "grid-cols-1",
     2: "grid-cols-1 md:grid-cols-2",
-    3: "grid-cols-1 md:grid-cols-2 xl:grid-cols-3",
+    3: "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
   };
 
-  return <div className={cn("grid gap-3 sm:gap-4", colsMap[cols], className)}>{children}</div>;
+  return <div className={cn("grid gap-3 sm:gap-4 md:gap-5", colsMap[cols], className)}>{children}</div>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

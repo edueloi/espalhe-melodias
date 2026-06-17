@@ -10,6 +10,7 @@ import {
   Menu
 } from 'lucide-react';
 import { UserRole, AppUser } from '../types';
+import { HEADER_SPACING, ICON_SIZES, TYPOGRAPHY_CLASSES } from '@/src/theme';
 
 interface HeaderProps {
   currentUser: AppUser;
@@ -69,20 +70,20 @@ export default function Header({
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100/80 shadow-[0_1px_12px_0_rgba(0,0,0,0.06)]">
-      <div className="h-16 flex items-center gap-3 px-4 md:px-6">
+      <div className={`${HEADER_SPACING.height} flex items-center ${HEADER_SPACING.gap} ${HEADER_SPACING.padding}`}>
 
         {/* Hamburger — mobile only */}
         <button
           onClick={onToggleSidebar}
-          className="lg:hidden shrink-0 p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition"
+          className="lg:hidden shrink-0 p-2 sm:p-2.5 rounded-lg sm:rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition"
           aria-label="Abrir menu"
         >
-          <Menu className="w-5 h-5" />
+          <Menu className={ICON_SIZES.md} />
         </button>
 
         {/* Search bar */}
-        <div className={`flex-1 max-w-md relative transition-all duration-200 ${searchFocused ? 'max-w-xl' : ''}`}>
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+        <div className={`flex-1 max-w-xs sm:max-w-sm md:max-w-md relative transition-all duration-200 ${searchFocused ? 'max-w-sm sm:max-w-lg' : ''}`}>
+          <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 sm:pl-3 pointer-events-none">
             <Search className={`w-4 h-4 transition-colors ${searchFocused ? 'text-[#581a2e]' : 'text-slate-400'}`} />
           </span>
           <input
@@ -93,12 +94,12 @@ export default function Header({
             onChange={e => setSearchTerm(e.target.value)}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
-            className="w-full bg-slate-50 border border-slate-200 text-slate-700 placeholder-slate-400 text-sm pl-9 pr-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#581a2e]/30 focus:border-[#581a2e]/50 focus:bg-white transition-all"
+            className="w-full bg-slate-50 border border-slate-200 text-slate-700 placeholder-slate-400 text-xs sm:text-sm pl-8 sm:pl-9 pr-3 sm:pr-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#581a2e]/30 focus:border-[#581a2e]/50 focus:bg-white transition-all"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
+              className="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3 text-slate-400 hover:text-slate-600"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -110,14 +111,14 @@ export default function Header({
 
           {/* Simulador de acesso — colapsado em mobile */}
           {availableUsers.length > 0 && (
-          <div className="hidden sm:flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
+          <div className="hidden sm:flex items-center gap-2 sm:gap-2.5 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl px-2 sm:px-2.5 py-1.5">
             <Sparkles className="w-3.5 h-3.5 text-purple-500 shrink-0" />
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden md:block">Perfil</span>
+            <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden md:block">Perfil</span>
             <select
               id="user-role-switcher"
               value={currentUser.id}
               onChange={e => onUserSwitch(e.target.value)}
-              className="text-xs bg-transparent text-slate-700 font-semibold focus:outline-none cursor-pointer max-w-[130px] md:max-w-[180px]"
+              className="text-[10px] sm:text-xs bg-transparent text-slate-700 font-semibold focus:outline-none cursor-pointer max-w-[120px] sm:max-w-[130px] md:max-w-[180px]"
             >
               {availableUsers.map(user => (
                 <option key={user.id} value={user.id}>
@@ -132,9 +133,9 @@ export default function Header({
           <button
             onClick={onGoToPublicSite}
             title="Ver Site Público"
-            className="p-2 rounded-xl text-slate-500 hover:bg-brand-moss/10 hover:text-brand-moss transition"
+            className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl text-slate-500 hover:bg-brand-moss/10 hover:text-brand-moss transition"
           >
-            <Globe className="w-5 h-5" />
+            <Globe className={ICON_SIZES.md} />
           </button>
 
           {/* Reset */}
@@ -142,9 +143,9 @@ export default function Header({
           <button
             onClick={onResetData}
             title="Redefinir dados"
-            className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+            className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
           >
-            <RotateCcw className="w-4.5 h-4.5" />
+            <RotateCcw className={ICON_SIZES.md} />
           </button>
           )}
 
@@ -153,31 +154,31 @@ export default function Header({
             <button
               id="btn-notifications"
               onClick={() => setNotifOpen(v => !v)}
-              className="relative p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition"
+              className="relative p-2 sm:p-2.5 rounded-lg sm:rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition"
               aria-label="Notificações"
             >
-              <Bell className="w-5 h-5" />
+              <Bell className={ICON_SIZES.md} />
               {unreadCount > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white" />
               )}
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                  <span className="text-sm font-bold text-slate-800">Notificações</span>
-                  <span className="text-[10px] bg-rose-100 text-rose-600 font-bold px-2 py-0.5 rounded-full">{unreadCount} nova{unreadCount !== 1 ? 's' : ''}</span>
+              <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-xl sm:rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 max-h-[80vh] sm:max-h-96 flex flex-col">
+                <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-100 shrink-0">
+                  <span className="text-xs sm:text-sm font-bold text-slate-800">Notificações</span>
+                  <span className="text-[9px] sm:text-[10px] bg-rose-100 text-rose-600 font-bold px-2 py-0.5 rounded-full">{unreadCount} nova{unreadCount !== 1 ? 's' : ''}</span>
                 </div>
-                <div className="divide-y divide-slate-50 max-h-64 overflow-y-auto">
+                <div className="divide-y divide-slate-50 overflow-y-auto flex-1">
                   {notifications.length === 0 && (
-                    <div className="px-4 py-6 text-xs text-slate-400 text-center">
-                      Nenhuma notificaÃ§Ã£o no momento.
+                    <div className="px-3 sm:px-4 py-6 text-xs text-slate-400 text-center">
+                      Nenhuma notificação no momento.
                     </div>
                   )}
                   {notifications.map(notif => (
                     <div
                       key={notif.id}
-                      className={`px-4 py-3 text-xs transition ${notif.unread ? 'bg-pink-50/60' : 'hover:bg-slate-50'}`}
+                      className={`px-3 sm:px-4 py-2 sm:py-3 text-[11px] sm:text-xs transition ${notif.unread ? 'bg-pink-50/60' : 'hover:bg-slate-50'}`}
                     >
                       {notif.unread && <span className="inline-block w-1.5 h-1.5 bg-[#581a2e] rounded-full mr-1.5 mb-0.5" />}
                       <p className="text-slate-700 font-medium leading-snug">{notif.text}</p>
@@ -187,7 +188,7 @@ export default function Header({
                 </div>
                 <button
                   onClick={() => setNotifOpen(false)}
-                  className="w-full py-2.5 text-xs font-semibold text-[#581a2e] hover:bg-slate-50 border-t border-slate-100 transition"
+                  className="w-full py-2 sm:py-2.5 text-xs font-semibold text-[#581a2e] hover:bg-slate-50 border-t border-slate-100 transition shrink-0"
                 >
                   Fechar
                 </button>
@@ -199,12 +200,12 @@ export default function Header({
           <div ref={profileRef} className="relative">
             <button
               onClick={() => setProfileOpen(v => !v)}
-              className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-xl hover:bg-slate-100 transition group"
+              className="flex items-center gap-2 pl-1 sm:pl-1.5 pr-2 sm:pr-2.5 py-1 rounded-lg sm:rounded-xl hover:bg-slate-100 transition group shrink-0"
             >
               <img
                 src={currentUser.avatar}
                 alt={currentUser.name}
-                className="w-8 h-8 rounded-lg object-cover ring-1 ring-slate-200 group-hover:ring-[#581a2e]/40 transition"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg object-cover ring-1 ring-slate-200 group-hover:ring-[#581a2e]/40 transition shrink-0"
               />
               <div className="hidden md:flex flex-col items-start leading-tight">
                 <span className="text-xs font-bold text-slate-800 max-w-[100px] truncate">{currentUser.name.split(' ')[0]}</span>
@@ -214,19 +215,19 @@ export default function Header({
             </button>
 
             {profileOpen && (
-              <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
-                <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
-                  <img src={currentUser.avatar} alt={currentUser.name} className="w-9 h-9 rounded-lg object-cover" />
-                  <div>
-                    <p className="text-xs font-bold text-slate-800">{currentUser.name}</p>
-                    <p className="text-[10px] text-slate-500">{currentUser.email}</p>
+              <div className="absolute right-0 top-full mt-2 w-52 sm:w-56 bg-white rounded-xl sm:rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 max-h-[80vh] flex flex-col">
+                <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-100 shrink-0">
+                  <img src={currentUser.avatar} alt={currentUser.name} className="w-8 sm:w-9 h-8 sm:h-9 rounded-lg object-cover shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-bold text-slate-800 truncate">{currentUser.name}</p>
+                    <p className="text-[9px] sm:text-[10px] text-slate-500 truncate">{currentUser.email}</p>
                   </div>
                 </div>
                 {/* Simulador visível no mobile via dropdown */}
                 {availableUsers.length > 0 && (
-                <div className="sm:hidden px-4 py-3 border-b border-slate-100">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-purple-500" /> Simular Perfil
+                <div className="sm:hidden px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-100">
+                  <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-purple-500 shrink-0" /> Simular Perfil
                   </p>
                   <select
                     value={currentUser.id}
@@ -243,9 +244,9 @@ export default function Header({
                 )}
                 <button
                   onClick={() => { onGoToPublicSite(); setProfileOpen(false); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-slate-600 hover:bg-slate-50 transition"
+                  className="w-full flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 text-xs text-slate-600 hover:bg-slate-50 transition shrink-0"
                 >
-                  <Globe className="w-4 h-4 text-slate-400" />
+                  <Globe className="w-4 h-4 text-slate-400 shrink-0" />
                   Ver Site Público
                 </button>
               </div>

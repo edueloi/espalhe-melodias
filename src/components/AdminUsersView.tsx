@@ -3,7 +3,7 @@ import {
   UserCheck, UserPlus2, Key, Search, Crown,
   Stethoscope, Users, Clock, CheckCircle2, AlertCircle,
   Shield, Sparkles, RefreshCw, ChevronDown, Plus, XCircle,
-  PhoneCall, Briefcase, MessageSquare, User as UserIcon,
+  PhoneCall, Briefcase, MessageSquare, User as UserIcon, Trash2,
 } from 'lucide-react';
 import { usersApi, memberRequestsApi, type User, type MemberRequest } from '../lib/api';
 
@@ -22,8 +22,8 @@ import { FilterLineSearch } from './ui/FilterLine';
 
 const ROLE_META: Record<UserRole, { label: string; icon: React.ElementType; badge: 'danger'|'info'|'success' }> = {
   'super-admin': { label: 'Super Admin', icon: Crown,       badge: 'danger'  },
-  'professional':{ label: 'Psicólogo',  icon: Stethoscope, badge: 'info'    },
-  'member':      { label: 'Membro',     icon: Users,       badge: 'success' },
+  'professional':{ label: 'Editor',      icon: Stethoscope, badge: 'info'    },
+  'member':      { label: 'Membro',      icon: Users,       badge: 'success' },
 };
 
 function RoleBadge({ role }: { role: UserRole }) {
@@ -405,6 +405,8 @@ function UsuariosView() {
   const [roleFilter, setRoleFilter] = useState<'all'|UserRole>('all');
   const [error, setError]     = useState<string|null>(null);
   const [changingRole, setChangingRole] = useState<string|null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<User|null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // modal novo usuário
   const [modalAberto, setModalAberto] = useState(false);
@@ -468,6 +470,21 @@ function UsuariosView() {
 
   useEffect(() => { load(); }, [search, roleFilter]);
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await usersApi.delete(deleteTarget.id);
+      setUsers(prev => prev.filter(u => u.id !== deleteTarget.id));
+      toast.success(`Usuário "${deleteTarget.name}" removido com sucesso.`);
+      setDeleteTarget(null);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao remover usuário.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleChangeRole = async (id: string, role: UserRole) => {
     setChangingRole(id);
     try {
@@ -512,9 +529,9 @@ function UsuariosView() {
           </div>
           <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-brand-sand/60">
             {[
-              { label: 'Admins',    value: stats.admins,  color: 'text-[#581a2e]' },
-              { label: 'Psicólogos',value: stats.pros,    color: 'text-cyan-700'  },
-              { label: 'Membros',   value: stats.members, color: 'text-emerald-700'},
+              { label: 'Admins',   value: stats.admins,  color: 'text-[#581a2e]' },
+              { label: 'Editores', value: stats.pros,    color: 'text-cyan-700'  },
+              { label: 'Membros',  value: stats.members, color: 'text-emerald-700'},
             ].map(s => (
               <div key={s.label} className="text-center">
                 <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
@@ -544,7 +561,7 @@ function UsuariosView() {
                 className={`px-3 py-2 rounded-xl text-xs font-semibold border transition whitespace-nowrap ${
                   roleFilter === r ? 'bg-brand-navy text-white border-transparent' : 'bg-white text-slate-600 border-brand-sand hover:bg-brand-sand/30'
                 }`}>
-                {r === 'all' ? 'Todos' : r === 'super-admin' ? 'Admins' : r === 'professional' ? 'Psicólogos' : 'Membros'}
+                {r === 'all' ? 'Todos' : r === 'super-admin' ? 'Admins' : r === 'professional' ? 'Editores' : 'Membros'}
               </button>
             ))}
           </div>
@@ -557,9 +574,10 @@ function UsuariosView() {
               <thead>
                 <tr className="bg-slate-50/80 border-b border-brand-sand/60">
                   <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Usuário</th>
-                  <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cargo</th>
+                  <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Especialidade</th>
                   <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Alterar Nível</th>
                   <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Status</th>
+                  <th className="px-5 py-3 w-10" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-sand/40">
@@ -585,7 +603,12 @@ function UsuariosView() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5"><RoleBadge role={u.role} /></td>
+                    <td className="px-5 py-3.5">
+                      {u.specialty
+                        ? <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border bg-brand-clay/5 text-brand-clay border-brand-clay/20"><Briefcase className="w-3 h-3" />{u.specialty}</span>
+                        : <RoleBadge role={u.role} />
+                      }
+                    </td>
                     <td className="px-5 py-3.5">
                       {u.id === me?.id ? (
                         <span className="text-[10px] text-slate-400 italic">Sessão atual</span>
@@ -597,7 +620,7 @@ function UsuariosView() {
                             onChange={e => handleChangeRole(u.id, e.target.value as UserRole)}
                             className="text-xs bg-white border border-brand-sand text-brand-navy py-1.5 pl-3 pr-7 rounded-lg font-medium focus:outline-none focus:ring-1 focus:ring-brand-clay transition appearance-none cursor-pointer hover:border-brand-clay">
                             <option value="member">Membro</option>
-                            <option value="professional">Psicólogo</option>
+                            <option value="professional">Editor</option>
                             <option value="super-admin">Super Admin</option>
                           </select>
                           <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
@@ -615,6 +638,17 @@ function UsuariosView() {
                           : <><Clock className="w-3 h-3" />Pendente</>
                         }
                       </span>
+                    </td>
+                    <td className="px-3 py-3.5">
+                      {u.role !== 'super-admin' && u.id !== me?.id && (
+                        <button
+                          onClick={() => setDeleteTarget(u)}
+                          className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                          title="Remover usuário"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -639,14 +673,21 @@ function UsuariosView() {
                 </div>
                 <div className="flex items-center justify-between">
                   <RoleBadge role={u.role} />
-                  {u.id !== me?.id ? (
-                    <select value={u.role} onChange={e => handleChangeRole(u.id, e.target.value as UserRole)}
-                      className="text-xs bg-white border border-brand-sand text-brand-navy py-1.5 px-3 rounded-lg font-medium focus:outline-none focus:ring-1 focus:ring-brand-clay">
-                      <option value="member">Membro</option>
-                      <option value="professional">Psicólogo</option>
-                      <option value="super-admin">Super Admin</option>
-                    </select>
-                  ) : <span className="text-[10px] text-slate-400 italic">Você</span>}
+                  <div className="flex items-center gap-2">
+                    {u.id !== me?.id ? (
+                      <select value={u.role} onChange={e => handleChangeRole(u.id, e.target.value as UserRole)}
+                        className="text-xs bg-white border border-brand-sand text-brand-navy py-1.5 px-3 rounded-lg font-medium focus:outline-none focus:ring-1 focus:ring-brand-clay">
+                        <option value="member">Membro</option>
+                        <option value="professional">Editor</option>
+                        <option value="super-admin">Super Admin</option>
+                      </select>
+                    ) : <span className="text-[10px] text-slate-400 italic">Você</span>}
+                    {u.role !== 'super-admin' && u.id !== me?.id && (
+                      <button onClick={() => setDeleteTarget(u)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -665,6 +706,20 @@ function UsuariosView() {
           )}
         </ContentCard>
       </div>
+
+      {/* ── Modal: Confirmar Exclusão ─────────────────────────────────────── */}
+      {deleteTarget && (
+        <ConfirmModal
+          isOpen={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleDelete}
+          title="Remover usuário"
+          message={`Tem certeza que deseja remover "${deleteTarget.name}"? Esta ação não pode ser desfeita e o usuário perderá todo acesso à plataforma.`}
+          confirmLabel="Remover"
+          variant="danger"
+          loading={deleting}
+        />
+      )}
 
       {/* ── Modal: Novo Usuário ────────────────────────────────────────────── */}
       <Modal

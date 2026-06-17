@@ -1,6 +1,7 @@
 import React from "react";
 import { cn } from "@/src/lib/utils";
 import { Loader2 } from "lucide-react";
+import { ICON_SIZES } from "@/src/theme";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "outline" | "ghost" | "danger" | "success";
@@ -43,13 +44,13 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     const sizes: Record<string, string> = {
-      xs: "h-7 min-w-[74px] px-2.5 text-[11px] rounded-[20px]",
-      sm: "h-8 min-w-[82px] px-3 text-[12px] rounded-[20px]",
-      md: "h-9 min-w-[90px] px-4 text-[13px] rounded-[20px]",
-      lg: "h-10 min-w-[110px] px-5 text-[14px] rounded-[20px]",
+      xs: "h-7 sm:h-8 min-w-[74px] px-2.5 text-[11px] sm:text-xs rounded-lg",
+      sm: "h-8 sm:h-9 min-w-[82px] px-3 sm:px-3.5 text-xs sm:text-sm rounded-lg",
+      md: "h-9 sm:h-10 min-w-[90px] px-3.5 sm:px-4 text-sm rounded-lg sm:rounded-xl",
+      lg: "h-10 sm:h-11 min-w-[110px] px-4 sm:px-5 text-sm sm:text-base rounded-xl",
     };
 
-    const spinnerSize = size === "lg" ? 16 : size === "md" ? 15 : 13;
+    const spinnerSize = size === "lg" ? 18 : size === "md" ? 16 : 14;
 
     return (
       <button

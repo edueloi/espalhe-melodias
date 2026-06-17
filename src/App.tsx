@@ -20,6 +20,7 @@ import InviteRegisterView from './components/InviteRegisterView';
 import EventPublicView from './components/EventPublicView';
 import ProfessionalPublicPage from './components/ProfessionalPublicPage';
 import { ToastProvider } from './components/ui';
+import { LayoutProvider } from './components/layouts';
 
 type AppView = 'public' | 'login' | 'member-area' | 'invite' | 'event-public' | 'prof-public';
 
@@ -346,7 +347,9 @@ export default function App() {
   return (
     <ToastProvider>
       <AuthProvider>
-        <AppInner />
+        <LayoutProvider>
+          <AppInner />
+        </LayoutProvider>
       </AuthProvider>
     </ToastProvider>
   );
