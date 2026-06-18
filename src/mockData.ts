@@ -337,25 +337,283 @@ export const INITIAL_BLOGS: BlogPost[] = [
   {
     id: 'blog-1',
     title: 'A diferença crucial entre Tristeza e Depressão Clínica',
+    slug: 'tristeza-vs-depressao-clinica',
     excerpt: 'Ficar triste é uma resposta saudável a acontecimentos ruins. A depressão profunda é outra condição física. Entenda os sinais em si e nos outros.',
     content: 'Muitas vezes, a palavra depressão é usada de maneira inadequada para expressar um descontentamento passageiro ou a tristeza decorrente de uma perda (como o término de um relacionamento ou a perda de um familiar). No entanto, de acordo com o Manual Diagnóstico DSM-5, a depressão clínica envolve sintomas físicos prolongados: falta de apetite, letargia profunda ou insônia persistente, perda de interesse em hobbies antigos e ideias de menos valia sem interrupção por mais de 14 dias de forma severa.',
     category: 'Informação',
-    imageUrl: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?q=80&w=500&auto=format&fit=crop',
-    authorName: 'Dra. Eliana Mendes',
-    authorAvatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=200&auto=format&fit=crop',
-    date: '2026-05-25',
-    readTime: '4 min'
+    image_url: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?q=80&w=500&auto=format&fit=crop',
+    author_name: 'Dra. Eliana Mendes',
+    author_id: 'usr-2',
+    author_avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=200&auto=format&fit=crop',
+    featured: true,
+    published: true,
+    likes: 24,
+    views: 145,
+    created_at: '2026-05-25T10:00:00Z',
+    updated_at: '2026-05-25T10:00:00Z'
   },
   {
     id: 'blog-2',
     title: 'Desintoxicação Dopaminérgica: Como resetar seu foco diário',
+    slug: 'desintoxicacao-dopaminergica-foco',
     excerpt: 'Vivendo em um mundo de notificações instantâneas e rolagem infinita. Veja o método prático de resetar seus receptores de recompensa cerebral.',
     content: 'Em nossa rotina atual, o uso ininterrupto dos smartphones libera microdosagem artificial constante de dopamina no cérebro a cada deslize. O efeito rebote é um tédio profundo diante de tarefas cruciais do trabalho ou de estudos que demandam foco longo. A desintoxicação ajuda a restaurar a gratificação em tarefas que operam em ritmo orgânico (como ler um livro físico ou fazer caminhadas silenciosas).',
     category: 'Estilo de Vida',
-    imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=500&auto=format&fit=crop',
-    authorName: 'Dr. Marcos Toledo',
-    authorAvatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=200&auto=format&fit=crop',
-    date: '2026-05-28',
-    readTime: '6 min'
+    image_url: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=500&auto=format&fit=crop',
+    author_name: 'Dr. Marcos Toledo',
+    author_id: 'usr-4',
+    author_avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=200&auto=format&fit=crop',
+    featured: true,
+    published: true,
+    likes: 18,
+    views: 92,
+    created_at: '2026-05-28T14:30:00Z',
+    updated_at: '2026-05-28T14:30:00Z'
+  },
+  {
+    id: 'blog-3',
+    title: 'Burnout: Sinais de Alerta que Ignoramos Até Tarde Demais',
+    slug: 'burnout-sinais-alerta',
+    excerpt: 'O esgotamento profissional não chega de repente. Existem sinais silenciosos que, se ignorados, levam a crises severas. Saiba como identificá-los.',
+    content: 'Burnout é muito mais que cansaço. É um estado de exaustão emocional, despersonalização e redução da realização pessoal. Muitos profissionais ignoram os primeiros sinais: irritabilidade crescente, detalhes pequenos causando frustração, dificuldade de concentração, insônia e queda da imunidade. Quando reconhecido cedo, é possível intervir com mudanças estruturais no trabalho e apoio terapêutico.',
+    category: 'Saúde Mental no Trabalho',
+    image_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a9?q=80&w=500&auto=format&fit=crop',
+    author_name: 'Dr. Marcos Toledo',
+    author_id: 'usr-4',
+    author_avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=200&auto=format&fit=crop',
+    featured: false,
+    published: true,
+    likes: 12,
+    views: 78,
+    created_at: '2026-06-02T09:15:00Z',
+    updated_at: '2026-06-02T09:15:00Z'
+  },
+  {
+    id: 'blog-4',
+    title: 'Terapia de Casal: Quando Procurar e o que Esperar',
+    slug: 'terapia-casal-como-funciona',
+    excerpt: 'Relacionamentos passam por crises. A terapia de casal não é sinal de fracasso, mas de investimento na relação. Entenda como funciona e os benefícios.',
+    content: 'Muitos casais esperam até a beira do divórcio para procurar terapia. Na verdade, a terapia de casal é mais eficaz quando iniciada nos primeiros sinais de distância emocional. O processo ajuda a melhorar comunicação, estabelecer limites saudáveis e reconstruir a intimidade. Com ferramentas certas, casais redescobrem a conexão que os uniu.',
+    category: 'Relacionamentos',
+    image_url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=500&auto=format&fit=crop',
+    author_name: 'Dra. Eliana Mendes',
+    author_id: 'usr-2',
+    author_avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=200&auto=format&fit=crop',
+    featured: false,
+    published: true,
+    likes: 31,
+    views: 156,
+    created_at: '2026-06-05T11:45:00Z',
+    updated_at: '2026-06-05T11:45:00Z'
+  },
+  {
+    id: 'blog-5',
+    title: 'Mindfulness para Crianças: Ferramentas Práticas e Lúdicas',
+    slug: 'mindfulness-criancas-pratico',
+    excerpt: 'Ensinar crianças a meditar é mais fácil que parece. Veja técnicas lúdicas e acessíveis que desenvolvem atenção plena desde cedo.',
+    content: 'Crianças vivem em ritmo acelerado entre escola, atividades extras e telas. Mindfulness oferece pausa necessária. Técnicas simples como "escuta do som" (fechar olhos e identificar 5 sons), "respiração da flor" (inspirar contando 4, reter 4, expirar 4) e "varredura corporal lúdica" ajudam a regular emoções e desenvolver autoconhecimento. Pais podem praticar junto, criando momentos de conexão.',
+    category: 'Crianças e Adolescentes',
+    image_url: 'https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?q=80&w=500&auto=format&fit=crop',
+    author_name: 'Karen Silveira',
+    author_id: 'usr-1',
+    author_avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop',
+    featured: false,
+    published: true,
+    likes: 45,
+    views: 203,
+    created_at: '2026-06-08T16:20:00Z',
+    updated_at: '2026-06-08T16:20:00Z'
+  },
+  {
+    id: 'blog-6',
+    title: 'Ansiedade Social: Da Fobia à Autoconfiança em Ambientes',
+    slug: 'ansiedade-social-fobia-social',
+    excerpt: 'Fobia social limita carreiras e relacionamentos. Descubra técnicas cognitivas comportamentais que transformam o medo em confiança.',
+    content: 'Ansiedade social vai além de timidez. É o medo paralisante de julgamento alheio em ambientes sociais. Os sintomas incluem taquicardia, tremores, sudorese e bloqueio mental. Técnicas TCC como exposição gradual (começar em ambientes pequenos e progredir), reestruturação cognitiva (questionar pensamentos catastróficos) e treinamento de assertividade transformam a relação com interações sociais ao longo do tempo.',
+    category: 'Transtornos de Ansiedade',
+    image_url: 'https://images.unsplash.com/photo-1552881760-6cffdc8787e0?q=80&w=500&auto=format&fit=crop',
+    author_name: 'Dra. Eliana Mendes',
+    author_id: 'usr-2',
+    author_avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=200&auto=format&fit=crop',
+    featured: true,
+    published: true,
+    likes: 38,
+    views: 187,
+    created_at: '2026-06-10T13:00:00Z',
+    updated_at: '2026-06-10T13:00:00Z'
+  }
+];
+
+// ─── Newsletter Subscriptions ──────────────────────────────────────────────
+
+export const INITIAL_NEWSLETTERS: Array<{ email: string; subscribed_at: string }> = [
+  { email: 'joao.silva@gmail.com', subscribed_at: '2026-05-15T10:30:00Z' },
+  { email: 'ana.costa@outlook.com', subscribed_at: '2026-05-20T14:45:00Z' },
+  { email: 'carlos.oliveira@yahoo.com', subscribed_at: '2026-05-25T09:15:00Z' }
+];
+
+// ─── Contact Messages ────────────────────────────────────────────────────
+
+export const INITIAL_CONTACT_MESSAGES: Array<{
+  name: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  message: string;
+  created_at: string;
+}> = [
+  {
+    name: 'Patricia Mendes',
+    email: 'patricia.m@gmail.com',
+    phone: '(11) 98765-4321',
+    subject: 'Dúvida sobre Filiação',
+    message: 'Gostaria de saber como funciona a filiação e se há desconto para profissionais iniciantes. Sou psicóloga formada há 2 meses.',
+    created_at: '2026-06-10T15:30:00Z'
+  },
+  {
+    name: 'Ricardo Costa',
+    email: 'ricardo.costa@empresa.com',
+    phone: '(21) 97654-3210',
+    subject: 'Parcerias Corporativas',
+    message: 'Somos uma empresa de tecnologia em RJ interessada em programas de bem-estar mental para nossos 150 funcionários. Podemos conversar sobre possibilidades?',
+    created_at: '2026-06-08T11:00:00Z'
+  },
+  {
+    name: 'Fernanda Alves',
+    email: 'fe.alves@hotmail.com',
+    subject: 'Feedback do 1º Encontro',
+    message: 'Adorei o encontro de maio! Conhecer vocês presencialmente foi transformador. Quando será o próximo? Gostaria de levar uma amiga.',
+    created_at: '2026-06-05T09:45:00Z'
+  }
+];
+
+// ─── Instagram Posts (Mock) ────────────────────────────────────────────────
+
+export const INITIAL_INSTAGRAM_POSTS = [
+  {
+    id: 'ig-1',
+    image_url: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=500&auto=format&fit=crop',
+    caption: '1º Encontro Espalhe Melodias foi incrível! 22 profissionais da saúde mental reunidos em Tatuí criando conexões reais e significativas. 🎵✨',
+    likes_count: 234,
+    comments_count: 18,
+    instagram_url: 'https://instagram.com/espalhemelodiasoficial',
+    published_at: '2026-06-01T15:30:00Z'
+  },
+  {
+    id: 'ig-2',
+    image_url: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=500&auto=format&fit=crop',
+    caption: 'A dinâmica de conexão foi o momento mais especial. Risos, abraços e histórias que tocaram corações. Comunidade que acolhe é comunidade que cura! 💚',
+    likes_count: 187,
+    comments_count: 24,
+    instagram_url: 'https://instagram.com/espalhemelodiasoficial',
+    published_at: '2026-06-02T10:15:00Z'
+  },
+  {
+    id: 'ig-3',
+    image_url: 'https://images.unsplash.com/photo-1600880292089-90a7e086ee0c?q=80&w=500&auto=format&fit=crop',
+    caption: 'Workshop de Mindfulness com a equipe: Aprendendo técnicas simples e poderosas para reduzir stress e aumentar presença no dia a dia. 🧘‍♀️🌟',
+    likes_count: 156,
+    comments_count: 12,
+    instagram_url: 'https://instagram.com/espalhemelodiasoficial',
+    published_at: '2026-06-03T14:00:00Z'
+  },
+  {
+    id: 'ig-4',
+    image_url: 'https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?q=80&w=500&auto=format&fit=crop',
+    caption: 'Novo artigo no blog: "Desintoxicação Dopaminérgica – Como resetar seu foco diário". Link na bio! 📖✨ #SaúdeMental #Produtividade',
+    likes_count: 142,
+    comments_count: 31,
+    instagram_url: 'https://instagram.com/espalhemelodiasoficial',
+    published_at: '2026-06-04T11:30:00Z'
+  },
+  {
+    id: 'ig-5',
+    image_url: 'https://images.unsplash.com/photo-1528605248644-14dd04022da1?q=80&w=500&auto=format&fit=crop',
+    caption: 'Grupos de Apoio Mútuo todas as quintas-feiras! Temas: Ansiedade Social, Burnout, Relacionamentos. Espaço seguro para compartilhar e se conectar. 🤝💜',
+    likes_count: 198,
+    comments_count: 27,
+    instagram_url: 'https://instagram.com/espalhemelodiasoficial',
+    published_at: '2026-06-06T16:45:00Z'
+  },
+  {
+    id: 'ig-6',
+    image_url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=500&auto=format&fit=crop',
+    caption: 'Conexões que transformam! 🎵 Ser parte da Espalhe Melodias significa ser ouvido, validado e apoiado por uma comunidade que realmente se importa. #ComunidadeMelodia',
+    likes_count: 267,
+    comments_count: 42,
+    instagram_url: 'https://instagram.com/espalhemelodiasoficial',
+    published_at: '2026-06-08T13:20:00Z'
+  },
+  {
+    id: 'ig-7',
+    image_url: 'https://images.unsplash.com/photo-1552883750-104fdf6edbe0?q=80&w=500&auto=format&fit=crop',
+    caption: 'Lembrete importante: Cuidar da saúde mental é um ato de amor próprio! Se você está lutando, não está sozinho. Procure ajuda profissional. 💚✨',
+    likes_count: 312,
+    comments_count: 58,
+    instagram_url: 'https://instagram.com/espalhemelodiasoficial',
+    published_at: '2026-06-09T10:00:00Z'
+  },
+  {
+    id: 'ig-8',
+    image_url: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=500&auto=format&fit=crop',
+    caption: 'Próximo encontro marcado para agosto em SP! 🎵 Mais conexões reais, mais histórias transformadoras, mais melodias de esperança. Vocês topam?',
+    likes_count: 189,
+    comments_count: 35,
+    instagram_url: 'https://instagram.com/espalhemelodiasoficial',
+    published_at: '2026-06-10T15:10:00Z'
+  },
+  {
+    id: 'ig-9',
+    image_url: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=500&auto=format&fit=crop',
+    caption: 'Testimonial da semana: "Espalhe Melodias mudou minha vida. Encontrei um espaço de acolhimento que nunca tive. Aqui, minhas dores fazem sentido." 💚',
+    likes_count: 276,
+    comments_count: 44,
+    instagram_url: 'https://instagram.com/espalhemelodiasoficial',
+    published_at: '2026-06-11T12:30:00Z'
+  }
+];
+
+// ─── Stories/Highlights ───────────────────────────────────────────────────
+
+export const INITIAL_STORIES = [
+  {
+    id: 'story-1',
+    title: 'Encontros',
+    image_url: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=300&auto=format&fit=crop',
+    order: 1,
+    category: 'evento',
+    link: '#eventos'
+  },
+  {
+    id: 'story-2',
+    title: 'Galeria',
+    image_url: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=300&auto=format&fit=crop',
+    order: 2,
+    category: 'galeria',
+    link: '#galeria'
+  },
+  {
+    id: 'story-3',
+    title: 'Workshops',
+    image_url: 'https://images.unsplash.com/photo-1600880292089-90a7e086ee0c?q=80&w=300&auto=format&fit=crop',
+    order: 3,
+    category: 'workshop',
+    link: '#eventos'
+  },
+  {
+    id: 'story-4',
+    title: 'Blog',
+    image_url: 'https://images.unsplash.com/photo-1552881760-6cffdc8787e0?q=80&w=300&auto=format&fit=crop',
+    order: 4,
+    category: 'blog',
+    link: '#blog'
+  },
+  {
+    id: 'story-5',
+    title: 'Comunidade',
+    image_url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=300&auto=format&fit=crop',
+    order: 5,
+    category: 'comunidade',
+    link: '#sobre'
   }
 ];

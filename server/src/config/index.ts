@@ -43,4 +43,11 @@ export const config = {
     email:    process.env.DEFAULT_ADMIN_EMAIL    ?? 'karen.adm@melodias.com.br',
     password: process.env.DEFAULT_ADMIN_PASSWORD ?? 'melodias2026',
   },
+
+  instagram: {
+    businessAccountId: process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID ?? '',
+    accessToken: process.env.INSTAGRAM_ACCESS_TOKEN ?? '',
+    cacheTTL: parseInt(process.env.INSTAGRAM_CACHE_TTL ?? '3600', 10),
+    apiVersion: process.env.INSTAGRAM_API_VERSION ?? 'v18.0',
+  },
 };

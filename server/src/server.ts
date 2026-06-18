@@ -23,6 +23,8 @@ import inviteLinksRoutes      from './routes/inviteLinks';
 import memberRequestsRoutes   from './routes/memberRequests';
 import profPublicRoutes        from './routes/profPublic';
 import uploadRoutes            from './routes/upload';
+import publicWebsiteRoutes     from './routes/publicWebsite';
+import instagramRoutes         from './routes/instagram';
 
 const app = express();
 
@@ -85,6 +87,12 @@ app.use('/api/blogs',         blogsRoutes);
 app.use('/api/invite-links',  inviteLinksRoutes);
 app.use('/api/member-requests', memberRequestsRoutes);
 app.use('/api/upload',         uploadRoutes);
+
+// ─── Public Website Routes ────────────────────────────────────────────────────
+app.use('/api', publicWebsiteRoutes);
+
+// ─── Instagram Integration Routes ─────────────────────────────────────────────
+app.use('/api/instagram', instagramRoutes);
 
 // ─── Rota pública do profissional (SEO, sem autenticação) ─────────────────────
 // Deve ficar ANTES do notFound para interceptar /profissional/:id

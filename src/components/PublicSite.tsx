@@ -34,13 +34,18 @@ import {
   TrendingUp,
   Smile,
   Gift,
+  AlertCircle,
 } from 'lucide-react';
 import { BlogPost, HealthEvent } from '../types';
-import { memberRequestsApi } from '../lib/api';
+import { memberRequestsApi, newsletterApi, contactApi } from '../lib/api';
+import { usePublicSiteData } from '../hooks/usePublicSiteData';
+import { InstagramStories } from './InstagramStories';
+import { GoogleMap } from './ui/GoogleMap';
+import { useToast } from './ui';
 
 interface PublicSiteProps {
-  blogs: BlogPost[];
-  events: HealthEvent[];
+  blogs?: BlogPost[];
+  events?: HealthEvent[];
   onGoToLogin: () => void;
 }
 
@@ -187,15 +192,40 @@ interface RequestForm {
   observation: string;
 }
 
-export default function PublicSite({ blogs, events, onGoToLogin }: PublicSiteProps) {
+export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoToLogin }: PublicSiteProps) {
+  // ── Hook para dados dinâmicos do site público ───────────────────────────────
+  const publicSiteData = usePublicSiteData();
+  const { showToast } = useToast();
+
+  // ── Usar dados dinâmicos com fallback para props ────────────────────────────
+  const blogs = blogsProp && blogsProp.length > 0 ? blogsProp : publicSiteData.blogs;
+  const events = eventsProp && eventsProp.length > 0 ? eventsProp : publicSiteData.upcomingEvents;
+  const pastEvents = publicSiteData.pastEvents;
+  const instagramPosts = publicSiteData.instagramPosts;
+  const stories: any[] = publicSiteData.stories;
+
   const [activeSection, setActiveSection] = useState<'home' | 'blog' | 'gallery' | 'events' | 'about'>('home');
   const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [igCarouselIndex, setIgCarouselIndex] = useState(0);
+
+  // ── Newsletter form states ───────────────────────────────────────────────────
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterLoading, setNewsletterLoading] = useState(false);
   const [newsletterSuccess, setNewsletterSuccess] = useState(false);
+  const [newsletterError, setNewsletterError] = useState<string | null>(null);
+
+  // ── Contact form states ──────────────────────────────────────────────────────
+  const [contactForm, setContactForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    subject: '',
+    message: '',
+  });
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
 
   // ── Formulário de solicitação de membros ──────────────────────────────────
   const [requestForm, setRequestForm] = useState<RequestForm>({
@@ -250,17 +280,93 @@ export default function PublicSite({ blogs, events, onGoToLogin }: PublicSitePro
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // ── Validação de e-mail ─────────────────────────────────────────────────────
+  const validateEmail = (email: string): boolean => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
+
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newsletterEmail.trim()) return;
+    const email = newsletterEmail.trim();
+
+    if (!email) {
+      setNewsletterError('Por favor, insira seu e-mail.');
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      setNewsletterError('Por favor, insira um e-mail válido.');
+      return;
+    }
+
     setNewsletterLoading(true);
+    setNewsletterError(null);
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await newsletterApi.subscribe(email);
       setNewsletterSuccess(true);
+      showToast('E-mail cadastrado com sucesso! Você receberá atualizações nossas.', 'success');
       setNewsletterEmail('');
       setTimeout(() => setNewsletterSuccess(false), 4000);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao cadastrar e-mail. Tente novamente.';
+      setNewsletterError(message);
+      showToast(message, 'error');
     } finally {
       setNewsletterLoading(false);
+    }
+  };
+
+  // ── Contact form handler ─────────────────────────────────────────────────────
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validations
+    if (!contactForm.name.trim()) {
+      setContactError('Por favor, insira seu nome.');
+      return;
+    }
+    if (!validateEmail(contactForm.email)) {
+      setContactError('Por favor, insira um e-mail válido.');
+      return;
+    }
+    if (!contactForm.subject.trim()) {
+      setContactError('Por favor, insira um assunto.');
+      return;
+    }
+    if (contactForm.message.trim().length < 10) {
+      setContactError('A mensagem deve ter no mínimo 10 caracteres.');
+      return;
+    }
+
+    setContactLoading(true);
+    setContactError(null);
+
+    try {
+      await contactApi.send({
+        name: contactForm.name.trim(),
+        email: contactForm.email.trim(),
+        phone: contactForm.phone.trim() || undefined,
+        subject: contactForm.subject.trim(),
+        message: contactForm.message.trim(),
+      });
+
+      showToast('Mensagem enviada com sucesso! Responderemos em breve.', 'success');
+
+      setContactForm({
+        name: '',
+        email: '',
+        phone: '',
+        subject: '',
+        message: '',
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao enviar mensagem. Tente novamente.';
+      setContactError(message);
+      showToast(message, 'error');
+    } finally {
+      setContactLoading(false);
     }
   };
 
@@ -574,59 +680,58 @@ export default function PublicSite({ blogs, events, onGoToLogin }: PublicSitePro
               </a>
             </div>
 
-            {/* Stories Carousel */}
+            {/* Stories Carousel - Dinâmico */}
             <div className="mb-12">
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Stories Recentes</p>
-              <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                {STORIES_PREVIEW.map((story, i) => (
-                  <a
-                    key={story.id}
-                    href="https://instagram.com/espalhemelodias"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group relative overflow-hidden rounded-2xl aspect-square border-2 border-brand-clay/30 hover:border-brand-clay hover:shadow-lg transition"
-                  >
-                    <img src={story.image} alt={story.title} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3">
-                      <span className="text-white text-xs font-bold">{story.title}</span>
-                    </div>
-                    <div className="absolute top-2 left-2 w-2.5 h-2.5 rounded-full bg-gradient-to-r from-pink-500 to-brand-clay" />
-                  </a>
-                ))}
-              </div>
+              <InstagramStories
+                stories={stories}
+                loading={publicSiteData.storiesLoading}
+              />
             </div>
 
-            {/* Instagram Posts Grid */}
-            <div className="grid md:grid-cols-3 gap-6">
-              {INSTAGRAM_POSTS.map((post, idx) => (
-                <a
-                  key={post.id}
-                  href="https://instagram.com/espalhemelodias"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition duration-300 border border-slate-100"
-                >
-                  <div className="relative overflow-hidden bg-slate-100 aspect-square">
-                    <img src={post.image} alt={post.caption} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition duration-300 flex flex-col items-center justify-center">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-1 text-white">
-                          <Heart className="w-5 h-5 fill-current" />
-                          <span className="font-bold">{post.likes}</span>
-                        </div>
-                        <div className="flex items-center space-x-1 text-white">
-                          <MessageSquare className="w-5 h-5" />
-                          <span className="font-bold">{post.comments}</span>
+            {/* Instagram Posts Grid - Dinâmico */}
+            {publicSiteData.instagramLoading ? (
+              <div className="grid md:grid-cols-3 gap-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="bg-slate-200 dark:bg-slate-700 aspect-square rounded-2xl animate-pulse" />
+                ))}
+              </div>
+            ) : instagramPosts.length > 0 ? (
+              <div className="grid md:grid-cols-3 gap-6">
+                {instagramPosts.map((post) => (
+                  <a
+                    key={post.id}
+                    href={post.instagram_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition duration-300 border border-slate-100"
+                  >
+                    <div className="relative overflow-hidden bg-slate-100 aspect-square">
+                      <img src={post.image_url} alt={post.caption} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition duration-300 flex flex-col items-center justify-center">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-1 text-white">
+                            <Heart className="w-5 h-5 fill-current" />
+                            <span className="font-bold">{post.likes_count}</span>
+                          </div>
+                          <div className="flex items-center space-x-1 text-white">
+                            <MessageSquare className="w-5 h-5" />
+                            <span className="font-bold">{post.comments_count}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="p-4 bg-white">
-                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">{post.caption}</p>
-                  </div>
-                </a>
-              ))}
-            </div>
+                    <div className="p-4 bg-white">
+                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">{post.caption}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-slate-500">Nenhum post encontrado. Siga-nos no Instagram!</p>
+              </div>
+            )}
           </section>
 
           {/* Testimonials Section */}
@@ -639,12 +744,12 @@ export default function PublicSite({ blogs, events, onGoToLogin }: PublicSitePro
               </div>
 
               <div className="grid md:grid-cols-3 gap-6">
-                {TESTIMONIALS.map(testimonial => (
+                {publicSiteData.testimonials.map(testimonial => (
                   <div key={testimonial.id} className="bg-white rounded-2xl p-6 shadow-sm border border-brand-sand hover:shadow-lg hover:-translate-y-1 transition-all">
                     <div className="flex items-center space-x-3 mb-4">
-                      <img src={testimonial.avatar} alt={testimonial.author} className="w-12 h-12 rounded-full object-cover" />
+                      <img src={testimonial.avatar} alt={testimonial.authorName} className="w-12 h-12 rounded-full object-cover" />
                       <div>
-                        <p className="font-semibold text-brand-navy text-sm">{testimonial.author}</p>
+                        <p className="font-semibold text-brand-navy text-sm">{testimonial.authorName}</p>
                         <p className="text-xs text-brand-clay font-semibold">{testimonial.role}</p>
                       </div>
                     </div>
@@ -790,32 +895,40 @@ export default function PublicSite({ blogs, events, onGoToLogin }: PublicSitePro
                   <span className="text-white font-semibold">E-mail cadastrado com sucesso!</span>
                 </div>
               ) : (
-                <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="email"
-                    placeholder="Seu melhor e-mail"
-                    value={newsletterEmail}
-                    onChange={e => setNewsletterEmail(e.target.value)}
-                    className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/60 transition"
-                  />
-                  <button
-                    type="submit"
-                    disabled={newsletterLoading || !newsletterEmail.trim()}
-                    className="px-6 py-3 bg-white text-brand-clay font-bold rounded-xl hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 whitespace-nowrap"
-                  >
-                    {newsletterLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Inscrevendo...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        Inscrever
-                      </>
-                    )}
-                  </button>
-                </form>
+                <>
+                  <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-3 mb-3">
+                    <input
+                      type="email"
+                      placeholder="Seu melhor e-mail"
+                      value={newsletterEmail}
+                      onChange={e => setNewsletterEmail(e.target.value)}
+                      className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/60 transition"
+                    />
+                    <button
+                      type="submit"
+                      disabled={newsletterLoading || !newsletterEmail.trim()}
+                      className="px-6 py-3 bg-white text-brand-clay font-bold rounded-xl hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 whitespace-nowrap"
+                    >
+                      {newsletterLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Inscrevendo...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          Inscrever
+                        </>
+                      )}
+                    </button>
+                  </form>
+                  {newsletterError && (
+                    <div className="flex items-center justify-center gap-2 text-red-100 bg-red-500/30 border border-red-400/50 rounded-lg px-4 py-2 text-sm">
+                      <AlertCircle className="w-4 h-4" />
+                      {newsletterError}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </section>
@@ -1354,6 +1467,124 @@ export default function PublicSite({ blogs, events, onGoToLogin }: PublicSitePro
           </div>
         </div>
       )}
+
+      {/* Contact Form Section */}
+      <section className="py-20 bg-slate-50">
+        <div className="max-w-2xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="font-serif text-3xl font-bold text-brand-navy mb-3">Entre em Contato</h2>
+            <p className="text-slate-600">Envie suas dúvidas, sugestões ou propostas de parceria. Responderemos em breve!</p>
+          </div>
+
+          <form onSubmit={handleContactSubmit} className="bg-white rounded-2xl border border-slate-200 p-8 shadow-lg">
+            {/* Name */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Nome Completo
+              </label>
+              <input
+                type="text"
+                value={contactForm.name}
+                onChange={e => setContactForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Seu nome"
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-clay/50 transition"
+              />
+            </div>
+
+            {/* Email */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                E-mail
+              </label>
+              <input
+                type="email"
+                value={contactForm.email}
+                onChange={e => setContactForm(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="seu.email@exemplo.com"
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-clay/50 transition"
+              />
+            </div>
+
+            {/* Phone */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Telefone / WhatsApp (Opcional)
+              </label>
+              <input
+                type="tel"
+                value={contactForm.phone}
+                onChange={e => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="(11) 99999-9999"
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-clay/50 transition"
+              />
+            </div>
+
+            {/* Subject */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Assunto
+              </label>
+              <select
+                value={contactForm.subject}
+                onChange={e => setContactForm(prev => ({ ...prev, subject: e.target.value }))}
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-clay/50 transition"
+              >
+                <option value="">Selecione um assunto</option>
+                <option value="Dúvida sobre Membros">Dúvida sobre Membros</option>
+                <option value="Sugestão de Conteúdo">Sugestão de Conteúdo</option>
+                <option value="Parcerias">Parcerias Corporativas</option>
+                <option value="Feedback">Feedback do Evento</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+
+            {/* Message */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Mensagem
+              </label>
+              <textarea
+                value={contactForm.message}
+                onChange={e => setContactForm(prev => ({ ...prev, message: e.target.value }))}
+                placeholder="Conte-nos mais sobre seu interesse..."
+                rows={5}
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-clay/50 transition resize-none"
+              />
+            </div>
+
+            {/* Error Message */}
+            {contactError && (
+              <div className="mb-6 flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-800">{contactError}</p>
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={contactLoading}
+              className="w-full px-6 py-3 bg-gradient-to-r from-brand-clay to-brand-clay-dark text-white font-bold rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+            >
+              {contactLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  Enviar Mensagem
+                </>
+              )}
+            </button>
+
+            <p className="text-xs text-slate-500 mt-4 text-center">
+              Responderemos sua mensagem em até 48 horas.
+            </p>
+          </form>
+        </div>
+      </section>
 
       {/* Conecte-se Section (before footer) */}
       <section className="py-16 bg-brand-navy">

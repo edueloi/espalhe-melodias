@@ -702,3 +702,178 @@ export const uploadApi = {
   },
   deleteAvatar: () => del<void>('/upload/avatar'),
 };
+
+// ─── Newsletter ────────────────────────────────────────────────────────────
+
+export interface NewsletterSubscription {
+  id: string;
+  email: string;
+  subscribed_at: string;
+  unsubscribed_at?: string;
+  is_active: boolean;
+}
+
+export const newsletterApi = {
+  subscribe: (email: string) =>
+    post<{ id: string; message: string }>('/newsletters/subscribe', { email }),
+  unsubscribe: (email: string) =>
+    post<void>('/newsletters/unsubscribe', { email }),
+  count: () =>
+    get<{ total: number; active: number }>('/newsletters/stats'),
+};
+
+// ─── Contact Form ─────────────────────────────────────────────────────────
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  message: string;
+  created_at: string;
+  status: 'new' | 'read' | 'responded';
+}
+
+export const contactApi = {
+  send: (data: Omit<ContactMessage, 'id' | 'created_at' | 'status'>) =>
+    post<{ id: string; message: string }>('/contact', data),
+  list: (params?: { page?: number; limit?: number }) =>
+    getPaged<ContactMessage>('/contact', params),
+};
+
+// ─── Blog Posts - Expansão ────────────────────────────────────────────────
+
+export interface BlogPostAPI {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  author_id: string;
+  author_name: string;
+  author_avatar?: string;
+  category: string;
+  featured?: boolean;
+  published: boolean;
+  image_url?: string;
+  likes: number;
+  views: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Convert API format to local format for compatibility
+export interface BlogPost {
+  id: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  category: string;
+  imageUrl: string;
+  authorName: string;
+  authorAvatar: string;
+  date: string;
+  readTime: string;
+  featured?: boolean;
+  published?: boolean;
+}
+
+export const blogsApi = {
+  list: (params?: { published?: boolean; page?: number; limit?: number }) =>
+    getPaged<BlogPost>('/blogs', params),
+  get: (id: string) =>
+    get<BlogPost>(`/blogs/${id}`),
+  create: (data: Omit<BlogPost, 'id' | 'created_at' | 'updated_at' | 'likes' | 'views'>) =>
+    post<BlogPost>('/blogs', data),
+  update: (id: string, data: Partial<BlogPost>) =>
+    put<BlogPost>(`/blogs/${id}`, data),
+  delete: (id: string) =>
+    del<void>(`/blogs/${id}`),
+  like: (id: string) =>
+    post<{ likes: number }>(`/blogs/${id}/like`, {}),
+};
+
+// ─── Events - Expansão ────────────────────────────────────────────────────
+
+export interface EventLocation {
+  city: string;
+  state: string;
+  address: string;
+  google_maps_url?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface HealthEvent {
+  id: string;
+  title: string;
+  description: string;
+  type: 'workshop' | 'palestra' | 'encontro' | 'grupo-apoio' | 'outro';
+  start_date: string;
+  end_date: string;
+  location: EventLocation;
+  max_participants?: number;
+  enrolled_count: number;
+  image_url?: string;
+  organizer_id: string;
+  organizer_name: string;
+  status: 'upcoming' | 'ongoing' | 'finished';
+  created_at: string;
+}
+
+export const eventsApi = {
+  list: (params?: { status?: string; page?: number; limit?: number }) =>
+    getPaged<HealthEvent>('/events', params),
+  upcoming: () =>
+    get<HealthEvent[]>('/events?status=upcoming'),
+  past: () =>
+    get<HealthEvent[]>('/events?status=finished'),
+  get: (id: string) =>
+    get<HealthEvent>(`/events/${id}`),
+  create: (data: Omit<HealthEvent, 'id' | 'created_at' | 'status' | 'enrolled_count'>) =>
+    post<HealthEvent>('/events', data),
+  update: (id: string, data: Partial<HealthEvent>) =>
+    put<HealthEvent>(`/events/${id}`, data),
+  delete: (id: string) =>
+    del<void>(`/events/${id}`),
+  subscribe: (eventId: string) =>
+    post<{ enrolled: boolean; enrolled_count: number }>(`/events/${eventId}/subscribe`, {}),
+  unsubscribe: (eventId: string) =>
+    post<{ enrolled: boolean; enrolled_count: number }>(`/events/${eventId}/unsubscribe`, {}),
+};
+
+// ─── Instagram Integration ────────────────────────────────────────────────
+
+export interface InstagramPost {
+  id: string;
+  image_url: string;
+  caption: string;
+  likes_count: number;
+  comments_count: number;
+  instagram_url: string;
+  published_at: string;
+}
+
+export const instagramApi = {
+  feed: (params?: { limit?: number }) =>
+    get<InstagramPost[]>('/instagram/posts'),
+  stats: () =>
+    get<{ followers: number; posts: number; engagement_rate: number }>('/instagram/stats'),
+};
+
+// ─── Stories/Highlights ───────────────────────────────────────────────────
+
+export interface StoryHighlight {
+  id: string;
+  title: string;
+  image_url: string;
+  order: number;
+  link?: string;
+  category?: string;
+}
+
+export const storiesApi = {
+  list: () =>
+    get<StoryHighlight[]>('/stories/highlights'),
+};

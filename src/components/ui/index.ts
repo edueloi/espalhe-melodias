@@ -45,3 +45,7 @@ export { PaymentModal } from './PaymentModal';
 
 // ── Utilitários de edição ──────────────────────────────────────────────────
 export { TokenTextarea } from './TokenTextarea';
+
+// ── Mapas e Mídia ──────────────────────────────────────────────────────────
+export { GoogleMap } from './GoogleMap';
+export type { GoogleMapProps } from './GoogleMap';
