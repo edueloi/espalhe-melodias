@@ -3,14 +3,12 @@
  * Gerencia cache, fetch de dados, tratamento de erros
  */
 
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { config } from '../config';
 import {
   InstagramMediaItem,
   InstagramStats,
   InstagramFeedResponse,
-  InstagramStatsResponse,
-  InstagramErrorResponse,
 } from '../models/instagram';
 
 class InstagramService {
@@ -70,7 +68,7 @@ class InstagramService {
       return feedData;
     } catch (error) {
       console.error('[Instagram] Error fetching feed:', error);
-      return this.handleError(error, 'Failed to fetch Instagram feed');
+      return { success: false, data: { posts: [], stats: {} as InstagramStats, fetchedAt: new Date().toISOString() }, error: 'Failed to fetch Instagram feed', code: 'FEED_ERROR' } as unknown as InstagramFeedResponse;
     }
   }
 
@@ -120,7 +118,7 @@ class InstagramService {
     } catch (error) {
       console.error('[Instagram] Error fetching stories:', error);
       // Stories podem não estar disponível, retorna erro gracioso
-      return this.handleError(error, 'Instagram stories not available');
+      return { success: false, data: { posts: [], stats: {} as InstagramStats, fetchedAt: new Date().toISOString() }, error: 'Instagram stories not available', code: 'STORIES_ERROR' } as unknown as InstagramFeedResponse;
     }
   }
 
@@ -199,40 +197,6 @@ class InstagramService {
     return status;
   }
 
-  /**
-   * Trata erros de forma consistente
-   */
-  private handleError(error: unknown, defaultMessage: string): InstagramErrorResponse {
-    if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError<any>;
-      const status = axiosError.response?.status;
-      const data = axiosError.response?.data;
-
-      console.error(`[Instagram] API Error [${status}]:`, data);
-
-      let errorMessage = defaultMessage;
-      let errorCode = 'INSTAGRAM_API_ERROR';
-
-      if (data?.error) {
-        errorMessage = data.error.message || defaultMessage;
-        errorCode = data.error.code || errorCode;
-      }
-
-      return {
-        success: false,
-        error: errorMessage,
-        code: errorCode,
-        message: `HTTP ${status}: ${errorMessage}`,
-      };
-    }
-
-    return {
-      success: false,
-      error: defaultMessage,
-      code: 'UNKNOWN_ERROR',
-      message: error instanceof Error ? error.message : String(error),
-    };
-  }
 }
 
 export const instagramService = new InstagramService();

@@ -2,9 +2,8 @@
  * Rotas públicas do site (sem autenticação)
  */
 import { Router } from 'express';
-import * as publicWebsiteCtrl from '@/controllers/publicWebsiteController';
-import { validatePermission } from '@/middleware/permissions';
-import { authenticate } from '@/middleware/auth';
+import * as publicWebsiteCtrl from '../controllers/publicWebsiteController';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
@@ -28,7 +27,6 @@ router.post('/contact', publicWebsiteCtrl.createContactMessage);
 router.get(
   '/contact/messages',
   authenticate,
-  validatePermission('admin:access'),
   publicWebsiteCtrl.getContactMessages
 );
 
@@ -36,7 +34,6 @@ router.get(
 router.patch(
   '/contact/:messageId',
   authenticate,
-  validatePermission('admin:access'),
   publicWebsiteCtrl.updateContactMessage
 );
 
@@ -56,7 +53,6 @@ router.delete(
 router.get(
   '/events/:eventId/inscriptions',
   authenticate,
-  validatePermission('admin:access'),
   publicWebsiteCtrl.getEventInscriptions
 );
 

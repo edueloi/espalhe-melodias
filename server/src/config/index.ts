@@ -50,4 +50,21 @@ export const config = {
     cacheTTL: parseInt(process.env.INSTAGRAM_CACHE_TTL ?? '3600', 10),
     apiVersion: process.env.INSTAGRAM_API_VERSION ?? 'v18.0',
   },
+
+  email: {
+    provider: process.env.EMAIL_PROVIDER ?? 'local', // 'local' | 'sendgrid' | 'mailchimp'
+    from: process.env.EMAIL_FROM ?? 'noreply@espalhe-melodias.com',
+    fromName: process.env.EMAIL_FROM_NAME ?? 'Espalhe Melodias',
+    sendgrid: {
+      apiKey: process.env.SENDGRID_API_KEY ?? '',
+    },
+    mailchimp: {
+      apiKey: process.env.MAILCHIMP_API_KEY ?? '',
+      listId: process.env.MAILCHIMP_LIST_ID ?? '',
+    },
+  },
+
+  contact: {
+    adminEmails: process.env.CONTACT_ADMIN_EMAILS ?? process.env.DEFAULT_ADMIN_EMAIL,
+  },
 };

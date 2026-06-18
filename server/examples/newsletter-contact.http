@@ -1,0 +1,261 @@
+### Newsletter & Contact Forms — Exemplos HTTP
+
+# Configure estas variáveis
+@baseUrl = http://localhost:3001
+@adminToken = Bearer seu_jwt_token_aqui
+
+# ═══════════════════════════════════════════════════════════════════════════
+# NEWSLETTER — Public Endpoints
+# ═══════════════════════════════════════════════════════════════════════════
+
+### Subscribe to Newsletter
+POST {{baseUrl}}/api/newsletter/subscribe
+Content-Type: application/json
+
+{
+  "email": "joao@example.com",
+  "metadata": {
+    "name": "João Silva",
+    "source": "homepage",
+    "interests": ["eventos", "materiais"]
+  }
+}
+
+### Subscribe - Duplicate (deve falhar)
+POST {{baseUrl}}/api/newsletter/subscribe
+Content-Type: application/json
+
+{
+  "email": "joao@example.com"
+}
+
+### Unsubscribe from Newsletter
+POST {{baseUrl}}/api/newsletter/unsubscribe
+Content-Type: application/json
+
+{
+  "email": "joao@example.com"
+}
+
+### Check Newsletter Status
+GET {{baseUrl}}/api/newsletter/status/joao@example.com
+
+### Check Status - Email Não Inscrito
+GET {{baseUrl}}/api/newsletter/status/nao-inscrito@example.com
+
+# ═══════════════════════════════════════════════════════════════════════════
+# NEWSLETTER — Admin Endpoints
+# ═══════════════════════════════════════════════════════════════════════════
+
+### List All Subscribers (Admin)
+GET {{baseUrl}}/api/newsletter/subscribers?page=1&limit=50
+Authorization: {{adminToken}}
+
+### List Subscribed Only (Admin)
+GET {{baseUrl}}/api/newsletter/subscribers?page=1&limit=50&status=subscribed
+Authorization: {{adminToken}}
+
+### List Unsubscribed (Admin)
+GET {{baseUrl}}/api/newsletter/subscribers?page=1&limit=50&status=unsubscribed
+Authorization: {{adminToken}}
+
+### Export Subscribers to CSV (Admin)
+GET {{baseUrl}}/api/newsletter/export
+Authorization: {{adminToken}}
+
+### Export Only Subscribed (Admin)
+GET {{baseUrl}}/api/newsletter/export?status=subscribed
+Authorization: {{adminToken}}
+
+### Send Newsletter to All Subscribers (Admin)
+POST {{baseUrl}}/api/newsletter/send
+Content-Type: application/json
+Authorization: {{adminToken}}
+
+{
+  "subject": "🎵 Novos eventos na comunidade - Junho 2026",
+  "htmlContent": "<h2>Olá Community!</h2><p>Este mês temos eventos incríveis para você:</p><ul><li>Workshop de Harmonização</li><li>Roda de Conversa com Profissionais</li></ul><p>Acesse a plataforma para mais detalhes.</p>",
+  "textContent": "Olá Community!\n\nEste mês temos eventos incríveis:\n- Workshop de Harmonização\n- Roda de Conversa com Profissionais\n\nAcesse a plataforma para mais detalhes."
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CONTACT FORMS — Public Endpoints
+# ═══════════════════════════════════════════════════════════════════════════
+
+### Submit Contact Message
+POST {{baseUrl}}/api/contact/messages
+Content-Type: application/json
+
+{
+  "name": "Maria Santos",
+  "email": "maria@example.com",
+  "phone": "(11) 98765-4321",
+  "subject": "Dúvida sobre membership profissional",
+  "message": "Olá! Gostaria de saber mais sobre como funciona a membership profissional. Qual é o custo mensal? Posso cancelar a qualquer momento? Quais benefícios incluem?"
+}
+
+### Submit Contact - Minimal
+POST {{baseUrl}}/api/contact/messages
+Content-Type: application/json
+
+{
+  "name": "Pedro",
+  "email": "pedro@example.com",
+  "subject": "Feedback sobre a plataforma",
+  "message": "A plataforma está excelente! Gostaria de sugerir um novo recurso."
+}
+
+### Submit Contact - With Phone
+POST {{baseUrl}}/api/contact/messages
+Content-Type: application/json
+
+{
+  "name": "Ana Costa",
+  "email": "ana@example.com",
+  "phone": "11987654321",
+  "subject": "Agendamento de sessão",
+  "message": "Gostaria de agendar uma sessão de 50 minutos com um dos profissionais da plataforma. Qual é o procedimento?"
+}
+
+### Get Contact Message (Public - anyone with ID can view)
+GET {{baseUrl}}/api/contact/messages/UUID_DA_MENSAGEM
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CONTACT FORMS — Admin Endpoints
+# ═══════════════════════════════════════════════════════════════════════════
+
+### List All Messages (Admin)
+GET {{baseUrl}}/api/contact/admin/messages?page=1&limit=50
+Authorization: {{adminToken}}
+
+### List New Messages Only (Admin)
+GET {{baseUrl}}/api/contact/admin/messages?page=1&limit=50&status=new
+Authorization: {{adminToken}}
+
+### List Responded Messages (Admin)
+GET {{baseUrl}}/api/contact/admin/messages?page=1&limit=50&status=responded
+Authorization: {{adminToken}}
+
+### Search Messages (Admin)
+GET {{baseUrl}}/api/contact/admin/messages?page=1&limit=50&search=membership
+Authorization: {{adminToken}}
+
+### Update Message Status to Responded (Admin)
+PUT {{baseUrl}}/api/contact/admin/messages/UUID_DA_MENSAGEM/status
+Content-Type: application/json
+Authorization: {{adminToken}}
+
+{
+  "status": "responded"
+}
+
+### Update Message Status to Resolved (Admin)
+PUT {{baseUrl}}/api/contact/admin/messages/UUID_DA_MENSAGEM/status
+Content-Type: application/json
+Authorization: {{adminToken}}
+
+{
+  "status": "resolved"
+}
+
+### Mark as Spam (Admin)
+PUT {{baseUrl}}/api/contact/admin/messages/UUID_DA_MENSAGEM/status
+Content-Type: application/json
+Authorization: {{adminToken}}
+
+{
+  "status": "spam"
+}
+
+### Respond to Contact Message (Admin)
+POST {{baseUrl}}/api/contact/admin/messages/UUID_DA_MENSAGEM/reply
+Content-Type: application/json
+Authorization: {{adminToken}}
+
+{
+  "adminReply": "Olá Maria!\n\nObrigado por entrar em contato. Vou responder suas dúvidas:\n\n1. Custo: R$ 99/mês com todas as funcionalidades\n2. Cancelamento: Você pode cancelar a qualquer momento sem multas\n3. Benefícios: Acesso a todos os eventos, materiais, fórum e mais\n\nSe precisar de mais informações, estou à disposição!\n\nAbraços,\nEquipe Espalhe Melodias"
+}
+
+### Export Messages to CSV (Admin)
+GET {{baseUrl}}/api/contact/admin/export
+Authorization: {{adminToken}}
+
+### Export Only New Messages (Admin)
+GET {{baseUrl}}/api/contact/admin/export?status=new
+Authorization: {{adminToken}}
+
+### Get Message Stats (Admin)
+GET {{baseUrl}}/api/contact/admin/stats
+Authorization: {{adminToken}}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# VALIDAÇÃO DE ERROS
+# ═══════════════════════════════════════════════════════════════════════════
+
+### Invalid Email Format
+POST {{baseUrl}}/api/newsletter/subscribe
+Content-Type: application/json
+
+{
+  "email": "not-an-email"
+}
+
+### Contact Message Too Short
+POST {{baseUrl}}/api/contact/messages
+Content-Type: application/json
+
+{
+  "name": "João",
+  "email": "joao@example.com",
+  "subject": "Oi",
+  "message": "Msg curta"
+}
+
+### Contact Message Too Long (5000+ chars)
+POST {{baseUrl}}/api/contact/messages
+Content-Type: application/json
+
+{
+  "name": "João",
+  "email": "joao@example.com",
+  "subject": "Teste",
+  "message": "Lorem ipsum... (mais de 5000 caracteres)"
+}
+
+### Spam Detection - Multiple URLs
+POST {{baseUrl}}/api/contact/messages
+Content-Type: application/json
+
+{
+  "name": "Spammer",
+  "email": "spam@example.com",
+  "subject": "Ganhe dinheiro rápido",
+  "message": "Visite https://site1.com e https://site2.com e https://site3.com e https://site4.com para mais informações sobre como ganhar bitcoin!"
+}
+
+### Invalid Phone Format
+POST {{baseUrl}}/api/contact/messages
+Content-Type: application/json
+
+{
+  "name": "João",
+  "email": "joao@example.com",
+  "phone": "123",
+  "subject": "Dúvida",
+  "message": "Gostaria de mais informações sobre seus serviços e como posso participar."
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# RATE LIMITING (Testar depois de enviar 1 subscribe + 3 contacts no mesmo IP)
+# ═══════════════════════════════════════════════════════════════════════════
+
+### Rate Limited - 4º Contact Message (será rejeitado)
+POST {{baseUrl}}/api/contact/messages
+Content-Type: application/json
+
+{
+  "name": "Teste",
+  "email": "teste@example.com",
+  "subject": "Teste",
+  "message": "Esta é a quarta mensagem no mesmo dia, deve ser rejeitada"
+}

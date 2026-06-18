@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
   BlogPost,
-  BlogPostAPI,
   HealthEvent,
   InstagramPost,
   StoryHighlight,
@@ -34,21 +33,46 @@ function convertBlogPost(api: any): BlogPost {
     imageUrl: api.image_url || 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?q=80&w=500&auto=format&fit=crop',
     authorName: api.author_name,
     authorAvatar: api.author_avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop',
-    date: api.created_at || new Date().toISOString(),
-    readTime: `${readTimeEstimate} min`,
+    date: api.created_at || api.post_date || new Date().toISOString(),
+    readTime: api.read_time || `${readTimeEstimate} min`,
     featured: api.featured,
     published: api.published,
   };
 }
 
-// Testimonials (reuse from PublicSite.tsx)
+// Helper to convert API events to local format
+function convertHealthEvent(api: any): HealthEvent {
+  // If already in local format, return as-is
+  if (api.instructorName && api.date && api.time) {
+    return api;
+  }
+  // Convert from API format
+  const eventDate = api.event_date || api.start_date;
+  const eventTime = api.event_time || '';
+  return {
+    id: api.id,
+    title: api.title,
+    instructorName: api.instructor_name || api.organizer_name || 'Espalhe Melodias',
+    instructorAvatar: api.instructor_avatar || api.organizer_avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop',
+    date: eventDate,
+    time: eventTime,
+    description: api.description,
+    category: api.category || api.type || 'Evento',
+    status: api.status,
+    participantsCount: api.participants_count || api.enrolled_count || 0,
+    isEnrolled: api.isEnrolled || false,
+    recordingUrl: api.recording_url,
+  };
+}
+
+// Testimonials (static)
 export interface Testimonial {
   id: string;
   authorName: string;
   role: string;
   avatar: string;
   text: string;
-  date: string;
+  date?: string;
 }
 
 export interface ActivityItem {
@@ -101,26 +125,26 @@ export interface PublicSiteData {
 const FALLBACK_TESTIMONIALS: Testimonial[] = [
   {
     id: 'test-1',
-    authorName: 'Mariana Duarte',
+    authorName: 'Dra. Carolina Silva',
     role: 'Psicóloga Clínica',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=200&auto=format&fit=crop',
-    text: 'Encontrar a Espalhe Melodias foi um divisor de águas na minha carreira. Um espaço onde pude me conectar com profissionais que entendem as nuances da saúde mental. Recomendo para todo psicólogo que busca comunidade genuína.',
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=400&auto=format&fit=crop',
+    text: 'O Espalhe Melodias abriu portas para conexões genuínas com outros profissionais. Cada encontro nos fortalece e amplia nossas possibilidades.',
     date: '2026-06-08'
   },
   {
     id: 'test-2',
-    authorName: 'Felipe Gomes',
-    role: 'Psicólogo e Pesquisador',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
-    text: 'A qualidade das discussões no fórum é impressionante. Profissionais dispostos a compartilhar conhecimento, estudos e experiências. Isso elevou significativamente meu trabalho clínico.',
+    authorName: 'Dr. Felipe Oliveira',
+    role: 'Psiquiatra',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop',
+    text: 'Raramente encontro um espaço tão acolhedor e profissional. A qualidade das conversas é excepcional.',
     date: '2026-06-06'
   },
   {
     id: 'test-3',
-    authorName: 'Camila Neves',
-    role: 'Orientadora Educacional',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop',
-    text: 'Os encontros presenciais foram transformadores. Depois de meses de isolamento profissional, encontrar pessoas que falam a mesma língua foi libertador. Espalhe Melodias é esperança concreta.',
+    authorName: 'Terapeuta Ana Costa',
+    role: 'Terapeuta Ocupacional',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=400&auto=format&fit=crop',
+    text: 'Multidisciplinaridade real! As perspectivas diferentes enriquecem minha prática profissional todos os dias.',
     date: '2026-06-03'
   }
 ];
@@ -166,7 +190,7 @@ export function usePublicSiteData(): PublicSiteData {
       try {
         setBlogsLoading(true);
         const blogsResult = await blogsApi.list({ published: true });
-        // If response is a PagedResult, get the data array
+        // Handle both array and PagedResult formats
         const blogsList = Array.isArray(blogsResult)
           ? blogsResult
           : (blogsResult as any).data || INITIAL_BLOGS;
@@ -192,15 +216,17 @@ export function usePublicSiteData(): PublicSiteData {
         const eventsList = Array.isArray(eventsResult)
           ? eventsResult
           : (eventsResult as any).data || [];
-        setEvents(eventsList);
+        // Convert to local format
+        const convertedEvents = eventsList.map(convertHealthEvent);
+        setEvents(convertedEvents);
 
         // Separate upcoming and past events
         const now = new Date();
-        const upcoming = eventsList.filter(
-          (e) => new Date(e.start_date) > now && e.status === 'upcoming'
+        const upcoming = convertedEvents.filter(
+          (e) => new Date(e.date) > now && e.status === 'upcoming'
         );
-        const past = eventsList.filter(
-          (e) => new Date(e.start_date) <= now || e.status === 'finished'
+        const past = convertedEvents.filter(
+          (e) => new Date(e.date) <= now || e.status === 'past'
         );
         setUpcomingEvents(upcoming);
         setPastEvents(past);
@@ -272,16 +298,16 @@ export function usePublicSiteData(): PublicSiteData {
       id: `blog-${b.id}`,
       type: 'new_blog' as const,
       title: b.title,
-      description: `Novo artigo por ${b.author_name}`,
-      timestamp: b.created_at,
+      description: `Novo artigo por ${b.authorName}`,
+      timestamp: b.date,
       relatedId: b.id,
     })) || []),
     ...(upcomingEvents.slice(0, 1).map((e) => ({
       id: `event-${e.id}`,
       type: 'event_happening' as const,
       title: e.title,
-      description: `Próximo: ${new Date(e.start_date).toLocaleDateString('pt-BR')}`,
-      timestamp: e.created_at,
+      description: `Próximo: ${new Date(e.date).toLocaleDateString('pt-BR')}`,
+      timestamp: e.date,
       relatedId: e.id,
     })) || []),
   ]
