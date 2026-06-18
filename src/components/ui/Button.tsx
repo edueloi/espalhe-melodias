@@ -44,10 +44,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     const sizes: Record<string, string> = {
-      xs: "h-7 sm:h-8 min-w-[74px] px-2.5 text-[11px] sm:text-xs rounded-lg",
-      sm: "h-8 sm:h-9 min-w-[82px] px-3 sm:px-3.5 text-xs sm:text-sm rounded-lg",
-      md: "h-9 sm:h-10 min-w-[90px] px-3.5 sm:px-4 text-sm rounded-lg sm:rounded-xl",
-      lg: "h-10 sm:h-11 min-w-[110px] px-4 sm:px-5 text-sm sm:text-base rounded-xl",
+      xs: "h-6 sm:h-7 px-2 text-[10px] sm:text-xs rounded-md",
+      sm: "h-7 sm:h-8 px-2.5 sm:px-3 text-xs rounded-md",
+      md: "h-8 sm:h-9 px-3 sm:px-3.5 text-xs sm:text-sm rounded-lg",
+      lg: "h-9 sm:h-10 px-3.5 sm:px-4 text-sm rounded-lg",
     };
 
     const spinnerSize = size === "lg" ? 18 : size === "md" ? 16 : 14;
@@ -57,8 +57,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          "relative inline-flex max-w-full items-center justify-center gap-1.5 whitespace-nowrap border-2",
-          "font-semibold leading-none select-none transition-colors duration-150 cursor-pointer",
+          "relative inline-flex max-w-full items-center justify-center gap-1 whitespace-nowrap border",
+          "font-medium leading-none select-none transition-colors duration-150 cursor-pointer",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/50 focus-visible:ring-offset-1",
           "disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed",
           "[&_svg]:shrink-0 [&_svg]:pointer-events-none",

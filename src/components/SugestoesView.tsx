@@ -81,95 +81,102 @@ export default function SugestoesView({ isAdmin = false }: SugestoesViewProps) {
   const totalLikes = suggestions.reduce((sum, s) => sum + s.likes, 0);
 
   return (
-    <PageWrapper id="sugestoes-view">
-      <div className="space-y-5 sm:space-y-6 animate-fadeIn max-w-4xl mx-auto">
+    <PageWrapper id="sugestoes-view" mobileBottomPad>
+      <div className="space-y-6 sm:space-y-8 animate-fadeIn">
 
-        {/* ── HEADER ── */}
-        <ContentCard padding="md" id="sugestoes-header">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 bg-amber-50 rounded-xl shrink-0">
-                <Lightbulb className="w-5 h-5 text-amber-500" />
+        {/* ── HERO HEADER ── */}
+        <div className="relative bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-2xl sm:rounded-3xl overflow-hidden border border-amber-200/60 shadow-md">
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-amber-300/10 blur-3xl" />
+            <div className="absolute bottom-0 left-1/4 w-32 h-32 rounded-full bg-amber-400/10 blur-2xl" />
+            <div className="absolute top-3 right-6 text-5xl font-script text-amber-300/30 select-none">♩</div>
+          </div>
+          <div className="relative z-10 p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-amber-500/15 rounded-xl shrink-0 mt-0.5">
+                <Lightbulb className="w-6 h-6 text-amber-600" />
               </div>
               <div>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Comunidade Ativa</span>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-300/40 rounded-full text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  Comunidade Ativa
                 </div>
-                <h2 className="text-lg sm:text-xl font-serif font-bold text-brand-navy">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-brand-navy mb-1">
                   {isAdmin ? 'Sugestões dos Associados' : 'Caixa de Sugestões'}
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5 max-w-lg">
+                </h1>
+                <p className="text-sm sm:text-base text-slate-600 max-w-lg leading-relaxed">
                   {isAdmin
                     ? 'Acompanhe e gerencie as ideias enviadas pelos membros da comunidade.'
                     : 'Compartilhe ideias para fortalecer nossa comunidade. Cada sugestão contribui para a sinfonia coletiva.'}
                 </p>
               </div>
             </div>
-            <button onClick={load} className="p-2 text-slate-400 hover:text-brand-clay hover:bg-brand-sand/40 rounded-lg transition shrink-0" title="Atualizar">
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <button onClick={load} className="p-2.5 text-amber-600 hover:text-amber-700 hover:bg-amber-100/50 rounded-lg transition shrink-0" title="Atualizar">
+              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-brand-sand/60">
+          {/* Stats Grid */}
+          <div className="relative z-10 grid grid-cols-3 gap-3 sm:gap-4 px-6 sm:px-8 py-5 sm:py-6 border-t border-amber-200/40">
             {[
-              { label: 'Total',    value: total },
-              { label: 'Minhas',   value: myCount },
-              { label: 'Curtidas', value: totalLikes },
+              { label: 'TOTAL', value: total },
+              { label: 'MINHAS', value: myCount },
+              { label: 'CURTIDAS', value: totalLikes },
             ].map(s => (
               <div key={s.label} className="text-center">
-                <p className="text-2xl font-black text-brand-navy">{s.value}</p>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">{s.label}</p>
+                <p className="text-3xl sm:text-4xl font-black text-amber-600">{s.value}</p>
+                <p className="text-[10px] sm:text-xs font-bold text-amber-700/70 uppercase tracking-wider mt-1">{s.label}</p>
               </div>
             ))}
           </div>
-        </ContentCard>
+        </div>
 
         {error && (
-          <div className="flex items-center gap-2.5 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            {error}
-            <button onClick={load} className="ml-auto text-xs font-bold underline">Tentar novamente</button>
+          <div className="flex items-center gap-2.5 p-4 sm:p-5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <span className="flex-1">{error}</span>
+            <button onClick={load} className="text-xs font-bold underline whitespace-nowrap ml-2">Tentar novamente</button>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
 
-          {/* ── FORM (apenas para membros não-admin ou todos) ── */}
+          {/* ── FORM (apenas para membros não-admin) ── */}
           {!isAdmin && (
-            <ContentCard padding="md" id="sugestoes-form-card" className="lg:col-span-1">
+            <ContentCard padding="lg" id="sugestoes-form-card" className="lg:col-span-1 bg-white border border-brand-sand/60">
               <SectionTitle title="Nova Sugestão" icon={Send} divider />
-              <form id="sugestoes-form" onSubmit={handleSubmit} className="space-y-4 mt-4">
+              <form id="sugestoes-form" onSubmit={handleSubmit} className="space-y-5 mt-5">
                 <textarea
                   id="sugestao-textarea"
                   value={text}
                   onChange={e => setText(e.target.value)}
-                  placeholder="Descreva sua ideia..."
-                  rows={4}
-                  className="w-full text-xs text-brand-navy bg-brand-cream border border-brand-sand px-3 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400 transition resize-none"
+                  placeholder="Descreva sua ideia aqui..."
+                  rows={5}
+                  className="w-full text-sm text-brand-navy bg-white border border-brand-sand rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400 transition resize-none px-4 py-3"
                 />
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Inspirações:</p>
-                  {SUGGESTION_TIPS.map(tip => (
-                    <button key={tip} type="button"
-                      onClick={() => setText(tip)}
-                      className="w-full text-left text-[11px] text-brand-clay hover:text-brand-clay-dark py-1.5 px-2.5 rounded-lg hover:bg-brand-clay/5 border border-transparent hover:border-brand-clay/10 transition flex items-center gap-1.5">
-                      <Sparkles className="w-3 h-3 shrink-0" />{tip}
-                    </button>
-                  ))}
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Inspirações:</p>
+                  <div className="space-y-2">
+                    {SUGGESTION_TIPS.map(tip => (
+                      <button key={tip} type="button"
+                        onClick={() => setText(tip)}
+                        className="w-full text-left text-sm text-brand-clay hover:text-brand-clay-dark py-2.5 px-3 rounded-lg hover:bg-brand-clay/5 border border-brand-sand/40 hover:border-brand-clay/30 transition flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 shrink-0" />{tip}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <button id="btn-submit-suggestion" type="submit" disabled={sending}
-                  className="w-full py-3 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md shadow-amber-500/20 transition flex items-center justify-center gap-2">
-                  {sending ? <><RefreshCw className="w-4 h-4 animate-spin" /> Enviando...</> : <><Send className="w-4 h-4" /> Enviar Sugestão</>}
+                  className="w-full py-3 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md shadow-amber-500/20 transition flex items-center justify-center gap-2">
+                  {sending ? <><RefreshCw className="w-4 h-4 animate-spin" /> Enviando...</> : <><Send className="w-4 h-4" /> Enviar</>}
                 </button>
               </form>
               {sent && (
-                <div className="mt-3 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 animate-fadeIn">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start gap-3 animate-fadeIn">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs font-bold text-emerald-800">Enviada com sucesso!</p>
-                    <p className="text-[11px] text-emerald-600 mt-0.5">Sua ideia está visível para a comunidade.</p>
+                    <p className="text-sm font-bold text-emerald-800">Enviada com sucesso!</p>
+                    <p className="text-xs text-emerald-600 mt-1">Sua ideia está visível para a comunidade.</p>
                   </div>
                 </div>
               )}
@@ -177,14 +184,16 @@ export default function SugestoesView({ isAdmin = false }: SugestoesViewProps) {
           )}
 
           {/* ── LIST ── */}
-          <div className={`space-y-4 ${!isAdmin ? 'lg:col-span-2' : 'lg:col-span-3'}`} id="sugestoes-list-section">
+          <div className={`space-y-4 sm:space-y-5 ${!isAdmin ? 'lg:col-span-2' : 'lg:col-span-3'}`} id="sugestoes-list-section">
             {/* Filter */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5 flex-wrap">
               {(['todas', 'minhas'] as const).map(f => (
                 <button key={f} id={`filter-sugestoes-${f}`}
                   onClick={() => setFilter(f)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold border transition ${
-                    filter === f ? 'bg-brand-navy text-white border-transparent' : 'bg-white text-slate-600 border-brand-sand hover:bg-brand-sand/30'
+                  className={`px-5 py-2.5 rounded-lg text-sm font-bold border transition ${
+                    filter === f
+                      ? 'bg-brand-navy text-white border-transparent'
+                      : 'bg-white text-slate-700 border-brand-sand/60 hover:bg-brand-sand/20'
                   }`}>
                   {f === 'todas' ? `Todas (${total})` : `Minhas (${myCount})`}
                 </button>
@@ -192,53 +201,51 @@ export default function SugestoesView({ isAdmin = false }: SugestoesViewProps) {
             </div>
 
             {loading ? (
-              <div className="flex items-center justify-center py-12 text-slate-400 text-sm gap-2">
-                <RefreshCw className="w-4 h-4 animate-spin" />
+              <div className="flex items-center justify-center py-12 text-slate-400 text-base gap-3">
+                <RefreshCw className="w-5 h-5 animate-spin" />
                 Carregando sugestões...
               </div>
             ) : displayed.length === 0 ? (
-              <ContentCard padding="lg">
-                <div className="text-center py-8">
-                  <Lightbulb className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                  <p className="text-sm font-semibold text-slate-400">
-                    {filter === 'minhas' ? 'Você ainda não enviou sugestões.' : 'Nenhuma sugestão ainda.'}
-                  </p>
-                </div>
+              <ContentCard padding="lg" className="text-center py-12 bg-brand-sand/10 border border-brand-sand/40">
+                <Lightbulb className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                <p className="text-base font-semibold text-slate-500">
+                  {filter === 'minhas' ? 'Você ainda não enviou sugestões.' : 'Nenhuma sugestão ainda.'}
+                </p>
               </ContentCard>
             ) : (
-              <div id="sugestoes-list" className="space-y-3">
+              <div id="sugestoes-list" className="space-y-4">
                 {[...displayed].reverse().map((sug, i) => {
                   const isOwn   = sug.author_name === user?.name;
                   const hasLiked = liked.has(sug.id);
                   const meta    = STATUS_META[sug.status] ?? STATUS_META['open'];
                   return (
                     <div key={sug.id} id={`suggestion-card-${sug.id}`}
-                      className={`bg-white border rounded-2xl p-4 sm:p-5 transition hover:shadow-md ${
-                        isOwn ? 'border-amber-200 bg-amber-50/30' : 'border-brand-sand/60'
+                      className={`bg-white border rounded-lg p-5 sm:p-6 transition hover:shadow-md hover:border-amber-200/50 ${
+                        isOwn ? 'border-amber-200 bg-amber-50/40' : 'border-brand-sand/60'
                       }`}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3 flex-1 min-w-0">
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black shrink-0 mt-0.5 ${
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-4 flex-1 min-w-0">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shrink-0 mt-1 ${
                             i === 0 ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-500'
                           }`}>
                             {displayed.length - i}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">{sug.content}</p>
+                            <p className="text-sm sm:text-base text-slate-800 leading-relaxed">{sug.content}</p>
                             {sug.admin_note && (
-                              <p className="mt-2 text-[11px] text-brand-moss bg-brand-moss/5 border border-brand-moss/20 rounded-lg px-2.5 py-1.5 italic">
+                              <p className="mt-3 text-xs sm:text-sm text-brand-moss bg-brand-moss/5 border border-brand-moss/20 rounded-lg px-3 py-2 italic">
                                 <strong>Nota da equipe:</strong> {sug.admin_note}
                               </p>
                             )}
-                            <div className="flex flex-wrap items-center gap-2 mt-2.5">
-                              <span className="flex items-center gap-1 text-[11px] text-slate-400">
-                                <User className="w-3 h-3" />
-                                <span className="font-semibold text-slate-600">{sug.author_name}</span>
+                            <div className="flex flex-wrap items-center gap-2 mt-4">
+                              <span className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-500">
+                                <User className="w-4 h-4 shrink-0" />
+                                <span className="font-semibold text-slate-700">{sug.author_name}</span>
                               </span>
-                              {isOwn && <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full border border-amber-200">Você</span>}
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${meta.color}`}>{meta.label}</span>
-                              <span className="flex items-center gap-1 text-[11px] text-slate-400">
-                                <Clock className="w-3 h-3" />
+                              {isOwn && <span className="text-xs bg-amber-100 text-amber-700 font-bold px-2.5 py-0.5 rounded-full border border-amber-200">Você</span>}
+                              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${meta.color}`}>{meta.label}</span>
+                              <span className="flex items-center gap-1 text-xs sm:text-sm text-slate-500 ml-auto sm:ml-0">
+                                <Clock className="w-4 h-4 shrink-0" />
                                 {new Date(sug.created_at).toLocaleDateString('pt-BR')}
                               </span>
                             </div>
@@ -249,13 +256,13 @@ export default function SugestoesView({ isAdmin = false }: SugestoesViewProps) {
                           id={`btn-like-sug-${sug.id}`}
                           onClick={() => handleLike(sug.id)}
                           disabled={hasLiked}
-                          className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border transition shrink-0 ${
+                          className={`flex flex-col items-center gap-1 px-3.5 py-2.5 rounded-lg border transition shrink-0 ${
                             hasLiked
                               ? 'bg-amber-50 border-amber-200 text-amber-600 cursor-default'
-                              : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-600'
+                              : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-600'
                           }`}>
                           <ThumbsUp className={`w-4 h-4 ${hasLiked ? 'fill-amber-500 stroke-amber-500' : ''}`} />
-                          <span className="text-[10px] font-bold">{sug.likes}</span>
+                          <span className="text-xs font-bold">{sug.likes}</span>
                         </button>
                       </div>
                     </div>
@@ -266,16 +273,16 @@ export default function SugestoesView({ isAdmin = false }: SugestoesViewProps) {
           </div>
         </div>
 
-        {/* ── FOOTER ── */}
-        <div id="sugestoes-callout" className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 to-brand-cream border border-amber-100 p-5 sm:p-6">
-          <div className="absolute top-2 right-6 text-5xl font-script text-amber-300/40 select-none">♩</div>
-          <div className="flex items-start gap-3 relative z-10">
-            <div className="p-2 bg-amber-100 rounded-xl shrink-0">
-              <Heart className="w-4 h-4 text-amber-600" />
+        {/* ── FOOTER / CALLOUT ── */}
+        <div id="sugestoes-callout" className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/40 border border-amber-200/60 p-6 sm:p-8 shadow-sm">
+          <div className="absolute top-3 right-8 text-6xl font-script text-amber-300/30 select-none">♩</div>
+          <div className="flex items-start gap-4 sm:gap-5 relative z-10">
+            <div className="p-3 bg-amber-100/70 rounded-lg shrink-0 mt-0.5">
+              <Heart className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-sm font-bold text-brand-navy">Sua voz fortalece nossa conexão!</p>
-              <p className="text-xs text-slate-500 mt-0.5 leading-relaxed max-w-lg">
+              <p className="text-base sm:text-lg font-bold text-brand-navy">Sua voz fortalece nossa conexão!</p>
+              <p className="text-sm text-slate-600 mt-2 leading-relaxed max-w-2xl">
                 Cada ideia compartilhada é uma nota que contribui para a sinfonia coletiva do Espalhe Melodias.
               </p>
             </div>
