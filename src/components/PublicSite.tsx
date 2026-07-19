@@ -22,7 +22,6 @@ import {
   Target,
   Instagram,
   Mail,
-  Phone,
   Globe,
   Sparkles,
   Play,
@@ -253,6 +252,15 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
     return regex.test(email);
   };
 
+  // ── Máscara de telefone (11) 99999-9999 ──────────────────────────────────────
+  const formatPhone = (value: string): string => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 2) return digits.length ? `(${digits}` : '';
+    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  };
+
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const email = newsletterEmail.trim();
@@ -458,17 +466,6 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
                     >
                       <Instagram className="w-4 h-4" strokeWidth={1.75} />
                       <span>Instagram</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="https://wa.me/5515991234567"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2.5 text-sm text-slate-400 hover:text-brand-clay-light transition"
-                    >
-                      <Phone className="w-4 h-4" strokeWidth={1.75} />
-                      <span>WhatsApp</span>
                     </a>
                   </li>
                   <li>
@@ -1108,8 +1105,9 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
                           <input
                             type="tel"
                             value={requestForm.phone}
-                            onChange={e => setF('phone', e.target.value)}
+                            onChange={e => setF('phone', formatPhone(e.target.value))}
                             placeholder="(00) 00000-0000"
+                            maxLength={15}
                             className="w-full text-sm bg-white/10 border border-white/20 text-brand-cream placeholder-slate-500 px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/60 transition"
                           />
                         </div>
@@ -1651,8 +1649,9 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
                 <input
                   type="tel"
                   value={contactForm.phone}
-                  onChange={e => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
+                  onChange={e => setContactForm(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
                   placeholder="(11) 99999-9999"
+                  maxLength={15}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-clay/50 focus:border-brand-clay/50 transition"
                 />
               </div>
@@ -1731,7 +1730,7 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
             <p className="text-slate-300 max-w-xl mx-auto text-base leading-relaxed">Nos siga nas redes sociais, envie uma mensagem ou entre em contato por e-mail</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
             {/* Instagram */}
             <a
               href="https://instagram.com/espalhemelodias"
@@ -1745,22 +1744,6 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
               <div className="min-w-0">
                 <h3 className="font-semibold text-white text-sm mb-0.5">Instagram</h3>
                 <p className="text-slate-400 text-sm truncate">@espalhemelodias</p>
-              </div>
-            </a>
-
-            {/* WhatsApp */}
-            <a
-              href="https://wa.me/5515991234567"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex items-center gap-4 bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
-            >
-              <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center shrink-0 group-hover:bg-brand-moss/20 transition">
-                <Phone className="w-5 h-5 text-brand-clay-light" strokeWidth={1.5} />
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-semibold text-white text-sm mb-0.5">WhatsApp</h3>
-                <p className="text-slate-400 text-sm truncate">(15) 99123-4567</p>
               </div>
             </a>
 
@@ -1830,17 +1813,6 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
                   >
                     <Instagram className="w-4 h-4" strokeWidth={1.75} />
                     <span>Instagram</span>
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="https://wa.me/5515991234567"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2.5 text-sm text-slate-400 hover:text-brand-clay-light transition"
-                  >
-                    <Phone className="w-4 h-4" strokeWidth={1.75} />
-                    <span>WhatsApp</span>
                   </a>
                 </li>
                 <li>
