@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Lock, Mail, User, Phone, ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Stethoscope, ChevronDown } from 'lucide-react';
-import { inviteLinksApi, usersApi, authApi, tokenStore, API_ORIGIN } from '../lib/api';
+import { inviteLinksApi, emailInvitesApi, usersApi, authApi, tokenStore, API_ORIGIN } from '../lib/api';
 import { ApiError } from '../lib/api';
 
 const ESPECIALIDADES = [
@@ -27,7 +27,8 @@ function formatWhatsapp(raw: string): string {
 
 export default function InviteRegisterView({ token, onSuccess }: Props) {
   const [step, setStep] = useState<'loading' | 'invalid' | 'form' | 'saving' | 'done'>('loading');
-  const [linkInfo, setLinkInfo] = useState<{ label: string; role: string; expiresAt: string } | null>(null);
+  const [inviteKind, setInviteKind] = useState<'link' | 'email'>('link');
+  const [linkInfo, setLinkInfo] = useState<{ label?: string; role: string; expiresAt: string } | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
   const [name, setName]                   = useState('');
@@ -41,20 +42,31 @@ export default function InviteRegisterView({ token, onSuccess }: Props) {
   const [fieldError, setFieldError]       = useState('');
 
   useEffect(() => {
-    // Valida o token consultando o backend
+    // Tenta primeiro como link genérico compartilhável; se não encontrar, tenta como convite nominal por e-mail
     fetch(`${API_ORIGIN}/api/invite-links/info/${token}`)
       .then(r => r.json())
       .then(body => {
         if (body.success && body.data) {
+          setInviteKind('link');
           setLinkInfo(body.data);
           setStep('form');
-        } else {
-          setErrorMsg(body.message ?? 'Link inválido ou expirado.');
-          setStep('invalid');
+          return;
         }
+        return emailInvitesApi.getInfo(token)
+          .then(data => {
+            setInviteKind('email');
+            setLinkInfo({ role: data.role, expiresAt: data.expiresAt });
+            setName(data.invitedName);
+            setEmail(data.invitedEmail);
+            setStep('form');
+          })
+          .catch(() => {
+            setErrorMsg(body.message ?? 'Link inválido ou expirado.');
+            setStep('invalid');
+          });
       })
       .catch(() => {
-        setErrorMsg('Não foi possível verificar o link. Tente novamente.');
+        setErrorMsg('Não foi possível verificar o convite. Tente novamente.');
         setStep('invalid');
       });
   }, [token]);
@@ -88,9 +100,10 @@ export default function InviteRegisterView({ token, onSuccess }: Props) {
       tokenStore.set(loginRes.accessToken);
       if (loginRes.refreshToken) tokenStore.setRefresh(loginRes.refreshToken);
 
-      // 3. Registra o uso do link (ignora erro — usuário já foi criado)
+      // 3. Registra o uso do convite (ignora erro — usuário já foi criado)
       try {
-        await inviteLinksApi.use(token);
+        if (inviteKind === 'email') await emailInvitesApi.use(token);
+        else await inviteLinksApi.use(token);
       } catch { /* silencioso */ }
 
       setStep('done');
@@ -222,7 +235,9 @@ export default function InviteRegisterView({ token, onSuccess }: Props) {
 
           <h1 className="font-serif text-2xl sm:text-3xl font-bold text-brand-navy mb-1">Criar sua conta</h1>
           <p className="text-slate-500 text-sm">
-            {linkInfo?.label ? `Você foi convidado(a) via "${linkInfo.label}"` : 'Preencha os dados para acessar a plataforma.'}
+            {inviteKind === 'email'
+              ? 'Você recebeu um convite pessoal para se juntar à nossa comunidade.'
+              : linkInfo?.label ? `Você foi convidado(a) via "${linkInfo.label}"` : 'Preencha os dados para acessar a plataforma.'}
           </p>
         </div>
 
@@ -238,7 +253,8 @@ export default function InviteRegisterView({ token, onSuccess }: Props) {
                 <input
                   type="text" value={name} onChange={e => setName(e.target.value)}
                   placeholder="Seu nome completo" required
-                  className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-brand-clay/30 focus:border-brand-clay transition placeholder:text-slate-300"
+                  readOnly={inviteKind === 'email'}
+                  className={`w-full pl-10 pr-4 py-3 border border-zinc-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-brand-clay/30 focus:border-brand-clay transition placeholder:text-slate-300 ${inviteKind === 'email' ? 'bg-zinc-100 cursor-not-allowed' : 'bg-zinc-50'}`}
                 />
               </div>
             </div>
@@ -251,7 +267,8 @@ export default function InviteRegisterView({ token, onSuccess }: Props) {
                 <input
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="seu@email.com.br" required
-                  className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-brand-clay/30 focus:border-brand-clay transition placeholder:text-slate-300"
+                  readOnly={inviteKind === 'email'}
+                  className={`w-full pl-10 pr-4 py-3 border border-zinc-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-brand-clay/30 focus:border-brand-clay transition placeholder:text-slate-300 ${inviteKind === 'email' ? 'bg-zinc-100 cursor-not-allowed' : 'bg-zinc-50'}`}
                 />
               </div>
             </div>

@@ -11,16 +11,29 @@ export function resolveUploadUrl(path: string | undefined | null): string {
 }
 
 // ─── Token storage ────────────────────────────────────────────────────────────
+// "Lembrar-me" marcado → localStorage (sobrevive ao fechar o navegador).
+// Desmarcado → sessionStorage (sessão termina ao fechar a aba/navegador).
+
+const REMEMBER_KEY = 'melodias_remember';
+
+function activeStorage(): Storage {
+  return localStorage.getItem(REMEMBER_KEY) === 'false' ? sessionStorage : localStorage;
+}
 
 export const tokenStore = {
-  get:           () => localStorage.getItem('melodias_access_token'),
-  set:           (t: string) => localStorage.setItem('melodias_access_token', t),
-  getRefresh:    () => localStorage.getItem('melodias_refresh_token'),
-  setRefresh:    (t: string) => localStorage.setItem('melodias_refresh_token', t),
+  get:           () => localStorage.getItem('melodias_access_token') ?? sessionStorage.getItem('melodias_access_token'),
+  set:           (t: string) => activeStorage().setItem('melodias_access_token', t),
+  getRefresh:    () => localStorage.getItem('melodias_refresh_token') ?? sessionStorage.getItem('melodias_refresh_token'),
+  setRefresh:    (t: string) => activeStorage().setItem('melodias_refresh_token', t),
+  setRememberMe: (remember: boolean) => localStorage.setItem(REMEMBER_KEY, String(remember)),
+  setUser:       (user: unknown) => activeStorage().setItem('melodias_user', JSON.stringify(user)),
   clear:         () => {
-    localStorage.removeItem('melodias_access_token');
-    localStorage.removeItem('melodias_refresh_token');
-    localStorage.removeItem('melodias_user');
+    for (const storage of [localStorage, sessionStorage]) {
+      storage.removeItem('melodias_access_token');
+      storage.removeItem('melodias_refresh_token');
+      storage.removeItem('melodias_user');
+    }
+    localStorage.removeItem(REMEMBER_KEY);
   },
 };
 
@@ -177,6 +190,10 @@ export const authApi = {
   me: () => get<AuthUser>('/auth/me'),
   changePassword: (currentPassword: string, newPassword: string) =>
     post<void>('/auth/change-password', { currentPassword, newPassword }),
+  forgotPassword: (email: string) =>
+    post<void>('/auth/forgot-password', { email }),
+  resetPassword: (token: string, newPassword: string) =>
+    post<void>('/auth/reset-password', { token, newPassword }),
 };
 
 // ─── Users ────────────────────────────────────────────────────────────────────
@@ -725,6 +742,32 @@ export const inviteLinksApi = {
   delete: (id: string) => del<void>(`/invite-links/${id}`),
   getUses: (id: string) => get<InviteLinkUse[]>(`/invite-links/${id}/uses`),
   use: (token: string) => post<{ userId: string }>(`/invite-links/use/${token}`, {}),
+};
+
+// ─── Email Invites (convite nominal por e-mail) ────────────────────────────────
+
+export interface EmailInvite {
+  id: string;
+  token: string;
+  invited_name: string;
+  invited_email: string;
+  role: 'super-admin' | 'professional' | 'member';
+  status: 'pending' | 'used' | 'expired' | 'revoked';
+  expires_at: string;
+  used_at?: string | null;
+  created_by_name: string;
+  created_at: string;
+}
+
+export const emailInvitesApi = {
+  list: () => get<EmailInvite[]>('/email-invites'),
+  create: (data: { invitedName: string; invitedEmail: string; role: string; validityDays: number }) =>
+    post<EmailInvite>('/email-invites', data),
+  revoke: (id: string) => patch<void>(`/email-invites/${id}/revoke`, {}),
+  resend: (id: string) => post<void>(`/email-invites/${id}/resend`, {}),
+  getInfo: (token: string) =>
+    get<{ invitedName: string; invitedEmail: string; role: string; expiresAt: string }>(`/email-invites/info/${token}`),
+  use: (token: string) => post<{ userId: string }>(`/email-invites/use/${token}`, {}),
 };
 
 // ─── Blogs ────────────────────────────────────────────────────────────────────

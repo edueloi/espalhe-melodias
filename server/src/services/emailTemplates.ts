@@ -271,6 +271,138 @@ export class EmailTemplates {
     };
   }
 
+  /**
+   * Redefinição de senha
+   */
+  static resetPassword(name: string, resetLink: string) {
+    return {
+      subject: '🔐 Redefinir sua senha — Espalhe Melodias',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0; padding:0; background-color:#f5efe6; font-family: Georgia, 'Times New Roman', serif;">
+          <div style="max-width: 560px; margin: 0 auto; padding: 40px 20px;">
+            <div style="background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 24px rgba(107,66,38,0.08);">
+
+              <div style="background: linear-gradient(135deg, #1e293b, #0f172a); padding: 32px 32px 28px; text-align: center;">
+                <p style="color:#e8c9a8; font-family: 'Brush Script MT', cursive; font-size: 26px; margin:0 0 4px;">Espalhe Melodias</p>
+                <p style="color:#94a3b8; font-family: Arial, sans-serif; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; margin:0;">Conexões em Saúde Mental</p>
+              </div>
+
+              <div style="padding: 36px 32px;">
+                <h1 style="color:#3d2b1f; font-size: 22px; margin: 0 0 16px;">Vamos redefinir sua senha 🔐</h1>
+
+                <p style="color:#5c4a3d; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.7; margin: 0 0 8px;">
+                  Olá, ${this.escapeHtml(name)}!
+                </p>
+                <p style="color:#5c4a3d; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.7; margin: 0 0 28px;">
+                  Recebemos uma solicitação para redefinir a senha da sua conta. Clique no botão abaixo para escolher uma nova senha — este link é válido por <strong>1 hora</strong>.
+                </p>
+
+                <div style="text-align:center; margin-bottom: 28px;">
+                  <a href="${resetLink}" style="background: linear-gradient(135deg, #b5571a, #8f451a); color: #ffffff; font-family: Arial, sans-serif; font-weight: bold; font-size: 14px; padding: 14px 32px; text-decoration: none; border-radius: 12px; display: inline-block;">
+                    Redefinir minha senha
+                  </a>
+                </div>
+
+                <p style="color:#9a8a7c; font-family: Arial, sans-serif; font-size: 12px; line-height: 1.6; margin: 0 0 4px;">
+                  Se você não solicitou essa alteração, pode ignorar este e-mail com tranquilidade — sua senha continuará a mesma.
+                </p>
+                <p style="color:#c2b8ad; font-family: Arial, sans-serif; font-size: 11px; line-height: 1.6; margin: 16px 0 0; word-break: break-all;">
+                  Ou copie e cole este link no navegador: ${resetLink}
+                </p>
+              </div>
+
+              <div style="background-color:#f5efe6; padding: 20px 32px; text-align:center;">
+                <p style="color:#b0a08f; font-family: Arial, sans-serif; font-size: 11px; margin:0;">
+                  © 2026 Espalhe Melodias — Conexões em Saúde Mental
+                </p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `Olá, ${name}!\n\nRecebemos uma solicitação para redefinir sua senha. Acesse o link abaixo (válido por 1 hora):\n${resetLink}\n\nSe você não solicitou essa alteração, ignore este e-mail.\n\nEspalhe Melodias`,
+    };
+  }
+
+  /**
+   * Convite nominal para se juntar à comunidade
+   */
+  static inviteEmail(invitedName: string, inviterName: string, roleLabel: string, inviteLink: string, validityDays: number) {
+    const firstName = invitedName.trim().split(' ')[0];
+    return {
+      subject: `💌 ${firstName}, você foi convidado(a) para o Espalhe Melodias!`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0; padding:0; background-color:#f5efe6; font-family: Georgia, 'Times New Roman', serif;">
+          <div style="max-width: 560px; margin: 0 auto; padding: 40px 20px;">
+            <div style="background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 8px 32px rgba(107,66,38,0.10);">
+
+              <div style="background: linear-gradient(135deg, #b5571a 0%, #8f451a 60%, #6b3512 100%); padding: 44px 32px 36px; text-align: center; position: relative;">
+                <p style="color:#f5efe6; font-size: 34px; margin: 0 0 6px; letter-spacing: 2px;">♩ ♪ ♫</p>
+                <p style="color:#ffffff; font-family: 'Brush Script MT', cursive; font-size: 32px; margin:0 0 6px;">Espalhe Melodias</p>
+                <p style="color:#f0d9c4; font-family: Arial, sans-serif; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; margin:0;">Conexões em Saúde Mental</p>
+              </div>
+
+              <div style="padding: 40px 32px 8px; text-align: center;">
+                <p style="color:#b5571a; font-family: 'Brush Script MT', cursive; font-size: 28px; margin: 0 0 12px;">Que alegria te convidar!</p>
+                <h1 style="color:#3d2b1f; font-size: 21px; margin: 0 0 20px; line-height:1.4;">
+                  Olá, ${this.escapeHtml(firstName)}! 🎶
+                </h1>
+                <p style="color:#5c4a3d; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.8; margin: 0 0 20px; text-align:left;">
+                  <strong>${this.escapeHtml(inviterName)}</strong> preparou um convite especial para você fazer parte da nossa comunidade — um espaço acolhedor de profissionais que acreditam no poder das conexões para fortalecer o cuidado em saúde mental.
+                </p>
+                <p style="color:#5c4a3d; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.8; margin: 0 0 28px; text-align:left;">
+                  Você foi convidado(a) como <strong style="color:#b5571a;">${this.escapeHtml(roleLabel)}</strong>. Estamos na torcida para te ter com a gente! 💛
+                </p>
+
+                <div style="text-align:center; margin-bottom: 8px;">
+                  <a href="${inviteLink}" style="background: linear-gradient(135deg, #b5571a, #8f451a); color: #ffffff; font-family: Arial, sans-serif; font-weight: bold; font-size: 14px; padding: 15px 36px; text-decoration: none; border-radius: 14px; display: inline-block; box-shadow: 0 4px 14px rgba(181,87,26,0.35);">
+                    ✨ Aceitar convite e me cadastrar
+                  </a>
+                </div>
+                <p style="color:#9a8a7c; font-family: Arial, sans-serif; font-size: 12px; margin: 16px 0 32px;">
+                  Este convite é válido por ${validityDays} dia${validityDays > 1 ? 's' : ''}.
+                </p>
+
+                <div style="border-top: 1px dashed #e8dcc8; padding-top: 24px; margin-top: 8px;">
+                  <p style="color:#b5571a; font-family: 'Brush Script MT', cursive; font-size: 20px; margin: 0 0 6px;">
+                    Cada conexão é uma nota que,
+                  </p>
+                  <p style="color:#9a8a7c; font-family: Arial, sans-serif; font-size: 12px; font-style: italic; margin: 0;">
+                    junta com outras, cria uma linda melodia. ♡
+                  </p>
+                </div>
+              </div>
+
+              <div style="background-color:#f5efe6; padding: 20px 32px; text-align:center;">
+                <p style="color:#b0a08f; font-family: Arial, sans-serif; font-size: 11px; margin:0 0 4px;">
+                  Se você não esperava este convite, pode ignorar este e-mail com tranquilidade.
+                </p>
+                <p style="color:#b0a08f; font-family: Arial, sans-serif; font-size: 11px; margin:0;">
+                  © 2026 Espalhe Melodias — Conexões em Saúde Mental
+                </p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `Olá, ${firstName}!\n\n${inviterName} convidou você para fazer parte da comunidade Espalhe Melodias como ${roleLabel}.\n\nAceite seu convite (válido por ${validityDays} dia(s)):\n${inviteLink}\n\nCada conexão é uma nota que, junta com outras, cria uma linda melodia. ♡\n\nEspalhe Melodias — Conexões em Saúde Mental`,
+    };
+  }
+
   private static escapeHtml(text: string): string {
     const map: Record<string, string> = {
       '&': '&amp;',

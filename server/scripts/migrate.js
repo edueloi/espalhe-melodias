@@ -422,6 +422,28 @@ CREATE TABLE IF NOT EXISTS invite_link_uses (
   CONSTRAINT fk_ilu_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ── Email Invites (convite nominal, enviado por e-mail para uma pessoa) ───────
+CREATE TABLE IF NOT EXISTS email_invites (
+  id              CHAR(36)     NOT NULL PRIMARY KEY,
+  token           VARCHAR(64)  NOT NULL UNIQUE,
+  invited_name    VARCHAR(150) NOT NULL,
+  invited_email   VARCHAR(200) NOT NULL,
+  role            ENUM('super-admin','professional','member') NOT NULL DEFAULT 'member',
+  status          ENUM('pending','used','expired','revoked') NOT NULL DEFAULT 'pending',
+  expires_at      DATETIME     NOT NULL,
+  used_at         DATETIME,
+  used_by_id      CHAR(36),
+  created_by_id   CHAR(36)     NOT NULL,
+  created_by_name VARCHAR(150) NOT NULL,
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  INDEX idx_email_invite_token  (token),
+  INDEX idx_email_invite_email  (invited_email),
+  INDEX idx_email_invite_status (status),
+  CONSTRAINT fk_email_invite_creator FOREIGN KEY (created_by_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ── Refresh Tokens ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS refresh_tokens (
   id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -462,6 +484,8 @@ async function migrate() {
       // users
       { table: 'users', column: 'whatsapp', def: 'VARCHAR(20)' },
       { table: 'users', column: 'gender',   def: "ENUM('masculino','feminino','nao_declarado')" },
+      { table: 'users', column: 'reset_token',         def: 'VARCHAR(255)' },
+      { table: 'users', column: 'reset_token_expires', def: 'DATETIME' },
       // health_events
       { table: 'health_events', column: 'location',      def: 'VARCHAR(300)' },
       { table: 'health_events', column: 'map_link',      def: 'TEXT' },

@@ -52,9 +52,16 @@ export const config = {
   },
 
   email: {
-    provider: process.env.EMAIL_PROVIDER ?? 'local', // 'local' | 'sendgrid' | 'mailchimp'
-    from: process.env.EMAIL_FROM ?? 'noreply@espalhe-melodias.com',
+    provider: process.env.EMAIL_PROVIDER ?? 'smtp', // 'smtp' | 'local' | 'sendgrid' | 'mailchimp'
+    from: process.env.EMAIL_FROM ?? 'contato@espalhemelodias.com.br',
     fromName: process.env.EMAIL_FROM_NAME ?? 'Espalhe Melodias',
+    smtp: {
+      host: process.env.SMTP_HOST ?? 'smtp.hostinger.com',
+      port: parseInt(process.env.SMTP_PORT ?? '465', 10),
+      secure: (process.env.SMTP_SECURE ?? 'true') === 'true',
+      user: process.env.SMTP_USER ?? '',
+      password: process.env.SMTP_PASSWORD ?? '',
+    },
     sendgrid: {
       apiKey: process.env.SENDGRID_API_KEY ?? '',
     },
@@ -67,4 +74,6 @@ export const config = {
   contact: {
     adminEmails: process.env.CONTACT_ADMIN_EMAILS ?? process.env.DEFAULT_ADMIN_EMAIL,
   },
+
+  appUrl: process.env.APP_URL ?? 'http://localhost:3000',
 };

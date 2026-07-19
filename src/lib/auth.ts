@@ -4,7 +4,7 @@ import { authApi, tokenStore, type AuthUser } from './api';
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -13,7 +13,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => {
-    const stored = localStorage.getItem('melodias_user');
+    const stored = localStorage.getItem('melodias_user') ?? sessionStorage.getItem('melodias_user');
     try { return stored ? (JSON.parse(stored) as AuthUser) : null; }
     catch { return null; }
   });
@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const me = await authApi.me();
       setUser(me);
-      localStorage.setItem('melodias_user', JSON.stringify(me));
+      tokenStore.setUser(me);
     } catch {
       tokenStore.clear();
       setUser(null);
@@ -42,11 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('melodias:logout', handler);
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, rememberMe = true) => {
+    tokenStore.setRememberMe(rememberMe);
     const data = await authApi.login(email, password);
     tokenStore.set(data.accessToken);
     tokenStore.setRefresh(data.refreshToken);
-    localStorage.setItem('melodias_user', JSON.stringify(data.user));
+    tokenStore.setUser(data.user);
     setUser(data.user);
   }, []);
 

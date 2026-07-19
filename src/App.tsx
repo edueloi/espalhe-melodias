@@ -19,12 +19,13 @@ import ProjectsView from './components/ProjectsView';
 import LoginView from './components/LoginView';
 import PublicSite from './components/PublicSite';
 import InviteRegisterView from './components/InviteRegisterView';
+import ResetPasswordView from './components/ResetPasswordView';
 import EventPublicView from './components/EventPublicView';
 import ProfessionalPublicPage from './components/ProfessionalPublicPage';
 import { ToastProvider } from './components/ui';
 import { LayoutProvider } from './components/layouts';
 
-type AppView = 'public' | 'login' | 'member-area' | 'invite' | 'event-public' | 'prof-public';
+type AppView = 'public' | 'login' | 'member-area' | 'invite' | 'event-public' | 'prof-public' | 'reset-password';
 type PublicSection = 'home' | 'about' | 'blog' | 'gallery' | 'events' | 'contact';
 
 // Mapa seção pública → segmento de URL
@@ -68,10 +69,14 @@ function getPath() {
   return window.location.pathname;
 }
 
-function detectView(): { view: AppView; tab: string; publicSection: PublicSection; inviteToken: string; eventPublicId: string; profPublicId: string; forumTopicId: string } {
+function detectView(): { view: AppView; tab: string; publicSection: PublicSection; inviteToken: string; eventPublicId: string; profPublicId: string; forumTopicId: string; resetToken: string } {
   const path = getPath();
-  const empty = { inviteToken: '', eventPublicId: '', profPublicId: '', forumTopicId: '' };
+  const empty = { inviteToken: '', eventPublicId: '', profPublicId: '', forumTopicId: '', resetToken: '' };
   if (path === '/login') return { view: 'login', tab: 'projetos-melodias', publicSection: 'home', ...empty };
+  if (path === '/redefinir-senha') {
+    const resetToken = new URLSearchParams(window.location.search).get('token') ?? '';
+    return { view: 'reset-password', tab: 'projetos-melodias', publicSection: 'home', ...empty, resetToken };
+  }
   if (path.startsWith('/convite/')) {
     return { view: 'invite', tab: 'projetos-melodias', publicSection: 'home', ...empty, inviteToken: path.replace('/convite/', '') };
   }
@@ -114,6 +119,7 @@ function AppInner() {
   const [eventPublicId,  setEventPublicId]  = useState<string>(initial.eventPublicId);
   const [profPublicId,   setProfPublicId]   = useState<string>(initial.profPublicId);
   const [forumTopicId,   setForumTopicId]   = useState<string>(initial.forumTopicId);
+  const [resetToken,     setResetToken]     = useState<string>(initial.resetToken);
   const [searchTerm,   setSearchTerm]   = useState('');
   const [sidebarOpen,  setSidebarOpen]  = useState(false);
   const [autoOpenProfile, setAutoOpenProfile] = useState(false);
@@ -166,6 +172,7 @@ function AppInner() {
       setEventPublicId(detected.eventPublicId);
       setProfPublicId(detected.profPublicId);
       setForumTopicId(detected.forumTopicId);
+      setResetToken(detected.resetToken);
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
@@ -197,6 +204,20 @@ function AppInner() {
     setCurrentTabRaw('projetos-melodias');
     window.history.replaceState(null, '', '/');
   };
+
+  // ── REDEFINIR SENHA ────────────────────────────────────────────────────────────
+
+  if (appView === 'reset-password') {
+    return (
+      <ResetPasswordView
+        token={resetToken}
+        onGoToLogin={() => {
+          setAppView('login');
+          window.history.replaceState(null, '', '/login');
+        }}
+      />
+    );
+  }
 
   // ── EVENTO PÚBLICO ───────────────────────────────────────────────────────────
 

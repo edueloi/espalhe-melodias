@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Link2, Plus, Copy, RefreshCw, Trash2, RotateCcw,
   Users, Clock, CheckCircle2, XCircle, Eye, AlertCircle,
-  Shield, ChevronDown,
+  Shield, ChevronDown, Mail, Send, Ban, HandHeart,
 } from 'lucide-react';
-import { inviteLinksApi, type InviteLink } from '../lib/api';
+import { inviteLinksApi, emailInvitesApi, type InviteLink, type EmailInvite } from '../lib/api';
 import {
   PageWrapper, SectionTitle, ContentCard, StatGrid, StatCard, FormRow,
   Button, IconButton, Modal, ModalFooter, ConfirmModal,
@@ -133,10 +133,111 @@ function VerInscricoesModal({ link, onClose }: VerInscricoesModalProps) {
   );
 }
 
+// ── Modal: Convidar por E-mail ────────────────────────────────────────────────
+
+const EMAIL_INVITE_STATUS_LABEL: Record<string, { label: string; color: 'success' | 'warning' | 'danger' | 'default' }> = {
+  pending: { label: 'Aguardando', color: 'warning' },
+  used:    { label: 'Aceito', color: 'success' },
+  expired: { label: 'Expirado', color: 'default' },
+  revoked: { label: 'Revogado', color: 'danger' },
+};
+
+interface ConvidarPorEmailModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSent: () => void;
+}
+
+function ConvidarPorEmailModal({ isOpen, onClose, onSent }: ConvidarPorEmailModalProps) {
+  const toast = useToast();
+  const [enviando, setEnviando] = useState(false);
+  const [form, setForm] = useState({ invitedName: '', invitedEmail: '', role: 'member', validity: '7' });
+
+  const handleEnviar = async () => {
+    if (!form.invitedName.trim() || !form.invitedEmail.trim()) {
+      toast.error('Preencha o nome e o e-mail da pessoa convidada.');
+      return;
+    }
+    setEnviando(true);
+    try {
+      await emailInvitesApi.create({
+        invitedName: form.invitedName.trim(),
+        invitedEmail: form.invitedEmail.trim(),
+        role: form.role,
+        validityDays: parseInt(form.validity),
+      });
+      toast.success('Convite enviado por e-mail! 💌');
+      setForm({ invitedName: '', invitedEmail: '', role: 'member', validity: '7' });
+      onSent();
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao enviar convite.');
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Convidar por E-mail"
+      size="md"
+      footer={
+        <ModalFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button loading={enviando} onClick={handleEnviar} iconLeft={<Send size={14} />}>
+            Enviar Convite
+          </Button>
+        </ModalFooter>
+      }
+    >
+      <div className="space-y-4">
+        <ContentCard padding="sm">
+          <div className="flex items-start gap-2 text-xs text-brand-clay">
+            <HandHeart size={13} className="shrink-0 mt-0.5" />
+            <span>Enviaremos um e-mail carinhoso e personalizado para essa pessoa, com um link exclusivo para ela se cadastrar.</span>
+          </div>
+        </ContentCard>
+
+        <Input
+          label="Nome da pessoa convidada"
+          placeholder="Ex: Maria Silva"
+          value={form.invitedName}
+          onChange={e => setForm(f => ({ ...f, invitedName: e.target.value }))}
+        />
+        <Input
+          label="E-mail da pessoa convidada"
+          type="email"
+          placeholder="maria@exemplo.com"
+          value={form.invitedEmail}
+          onChange={e => setForm(f => ({ ...f, invitedEmail: e.target.value }))}
+        />
+
+        <FormRow cols={2}>
+          <Select
+            label="Validade do convite"
+            options={VALIDITY_OPTIONS}
+            value={form.validity}
+            onChange={e => setForm(f => ({ ...f, validity: e.target.value }))}
+          />
+          <Select
+            label="Nível de acesso"
+            options={ACCESS_OPTIONS}
+            value={form.role}
+            onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+          />
+        </FormRow>
+      </div>
+    </Modal>
+  );
+}
+
 // ── View Principal ────────────────────────────────────────────────────────────
 
 export default function InviteLinksView() {
   const toast = useToast();
+  const [tab, setTab] = useState<'links' | 'email'>('links');
   const [links, setLinks] = useState<InviteLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
@@ -153,6 +254,44 @@ export default function InviteLinksView() {
   // modal confirmar delete/desativar
   const [confirmarDeletar, setConfirmarDeletar] = useState<string | null>(null);
   const [deletando, setDeletando] = useState(false);
+
+  // convites por e-mail
+  const [emailInvites, setEmailInvites] = useState<EmailInvite[]>([]);
+  const [loadingEmailInvites, setLoadingEmailInvites] = useState(true);
+  const [modalConvidarEmail, setModalConvidarEmail] = useState(false);
+  const [confirmarRevogar, setConfirmarRevogar] = useState<string | null>(null);
+
+  const loadEmailInvites = () => {
+    setLoadingEmailInvites(true);
+    emailInvitesApi.list()
+      .then(setEmailInvites)
+      .catch(() => toast.error('Erro ao carregar convites por e-mail.'))
+      .finally(() => setLoadingEmailInvites(false));
+  };
+
+  useEffect(() => { loadEmailInvites(); }, []);
+
+  const handleReenviar = async (id: string) => {
+    try {
+      await emailInvitesApi.resend(id);
+      toast.success('Convite reenviado!');
+      loadEmailInvites();
+    } catch {
+      toast.error('Erro ao reenviar convite.');
+    }
+  };
+
+  const handleRevogar = async () => {
+    if (!confirmarRevogar) return;
+    try {
+      await emailInvitesApi.revoke(confirmarRevogar);
+      toast.success('Convite revogado.');
+      setConfirmarRevogar(null);
+      loadEmailInvites();
+    } catch {
+      toast.error('Erro ao revogar convite.');
+    }
+  };
 
   const load = () => {
     setLoading(true);
@@ -323,20 +462,165 @@ export default function InviteLinksView() {
     },
   ];
 
+  const emailStats = useMemo(() => ({
+    total: emailInvites.length,
+    pendentes: emailInvites.filter(i => i.status === 'pending').length,
+    aceitos: emailInvites.filter(i => i.status === 'used').length,
+  }), [emailInvites]);
+
   return (
     <PageWrapper>
       <SectionTitle
-        title="Links de Convite"
-        description="Gere e gerencie links para cadastro externo de novos membros"
+        title="Convites"
+        description="Convide novos membros por link compartilhável ou por e-mail personalizado"
         icon={Link2}
         action={
-          <Button iconLeft={<Plus size={14} />} onClick={() => setModalGerar(true)}>
-            Gerar Novo Link
-          </Button>
+          tab === 'links' ? (
+            <Button iconLeft={<Plus size={14} />} onClick={() => setModalGerar(true)}>
+              Gerar Novo Link
+            </Button>
+          ) : (
+            <Button iconLeft={<Mail size={14} />} onClick={() => setModalConvidarEmail(true)}>
+              Convidar por E-mail
+            </Button>
+          )
         }
         divider
       />
 
+      {/* Abas */}
+      <div className="flex gap-1 bg-white border border-zinc-200 rounded-xl p-1 w-fit mb-5">
+        {[
+          { key: 'links' as const, label: 'Links Genéricos', icon: Link2 },
+          { key: 'email' as const, label: 'Convite por E-mail', icon: Mail },
+        ].map(t => {
+          const Icon = t.icon;
+          const active = tab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition ${
+                active ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'
+              }`}
+            >
+              <Icon size={13} />{t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === 'email' ? (
+        <>
+          {/* Stats */}
+          <StatGrid cols={3} className="mb-5">
+            <StatCard title="Total de convites" value={emailStats.total} icon={Mail} delay={0} />
+            <StatCard title="Aguardando resposta" value={emailStats.pendentes} icon={Clock} color="warning" delay={0.05} />
+            <StatCard title="Convites aceitos" value={emailStats.aceitos} icon={CheckCircle2} color="success" delay={0.1} />
+          </StatGrid>
+
+          {loadingEmailInvites ? (
+            <div className="flex items-center justify-center py-12 gap-2 text-slate-400 text-sm">
+              <RefreshCw size={14} className="animate-spin" />Carregando...
+            </div>
+          ) : emailInvites.length === 0 ? (
+            <EmptyState
+              title="Nenhum convite enviado ainda"
+              description="Convide uma pessoa específica por e-mail — ela receberá um convite personalizado com um link exclusivo."
+              icon={Mail}
+              action={<Button size="sm" iconLeft={<Mail size={13} />} onClick={() => setModalConvidarEmail(true)}>Convidar por E-mail</Button>}
+            />
+          ) : (
+            <GridTable
+              data={emailInvites}
+              keyExtractor={i => i.id}
+              columns={[
+                {
+                  header: 'Convidado(a)',
+                  render: row => (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-bold text-zinc-900">{row.invited_name}</span>
+                      <span className="text-xs text-zinc-400">{row.invited_email}</span>
+                    </div>
+                  ),
+                },
+                {
+                  header: 'Status',
+                  render: row => {
+                    const s = EMAIL_INVITE_STATUS_LABEL[row.status] ?? { label: row.status, color: 'default' as const };
+                    return <Badge color={s.color} dot>{s.label}</Badge>;
+                  },
+                },
+                {
+                  header: 'Acesso',
+                  render: row => <Badge color={ROLE_COLORS[row.role] ?? 'default'}>{ROLE_LABELS[row.role] ?? row.role}</Badge>,
+                  hideOnMobile: true,
+                },
+                {
+                  header: 'Expira em',
+                  render: row => <span className="text-xs text-zinc-500">{new Date(row.expires_at).toLocaleDateString('pt-BR')}</span>,
+                  hideOnMobile: true,
+                },
+                {
+                  header: '',
+                  render: row => (
+                    <div className="flex items-center gap-1.5 justify-end">
+                      {row.status === 'pending' && (
+                        <>
+                          <IconButton variant="ghost" size="sm" onClick={() => handleReenviar(row.id)} title="Reenviar convite">
+                            <Send size={14} />
+                          </IconButton>
+                          <IconButton variant="danger" size="sm" onClick={() => setConfirmarRevogar(row.id)} title="Revogar convite">
+                            <Ban size={14} />
+                          </IconButton>
+                        </>
+                      )}
+                    </div>
+                  ),
+                  className: 'text-right',
+                },
+              ]}
+              renderMobileItem={i => (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-zinc-900 truncate">{i.invited_name}</p>
+                    <p className="text-xs text-zinc-400 truncate">{i.invited_email}</p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <Badge color={EMAIL_INVITE_STATUS_LABEL[i.status]?.color ?? 'default'} size="sm" dot>
+                        {EMAIL_INVITE_STATUS_LABEL[i.status]?.label ?? i.status}
+                      </Badge>
+                      <Badge color={ROLE_COLORS[i.role] ?? 'default'} size="sm">{ROLE_LABELS[i.role] ?? i.role}</Badge>
+                    </div>
+                  </div>
+                  {i.status === 'pending' && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <IconButton variant="ghost" size="sm" onClick={() => handleReenviar(i.id)}><Send size={13} /></IconButton>
+                      <IconButton variant="danger" size="sm" onClick={() => setConfirmarRevogar(i.id)}><Ban size={13} /></IconButton>
+                    </div>
+                  )}
+                </div>
+              )}
+            />
+          )}
+
+          <ConvidarPorEmailModal
+            isOpen={modalConvidarEmail}
+            onClose={() => setModalConvidarEmail(false)}
+            onSent={loadEmailInvites}
+          />
+
+          <ConfirmModal
+            isOpen={!!confirmarRevogar}
+            onClose={() => setConfirmarRevogar(null)}
+            onConfirm={handleRevogar}
+            title="Revogar convite"
+            message="A pessoa convidada não poderá mais usar este link para se cadastrar."
+            variant="danger"
+            confirmLabel="Revogar"
+          />
+        </>
+      ) : (
+      <>
       {/* Stats */}
       <StatGrid cols={3} className="mb-5">
         <StatCard title="Total de links" value={stats.total} icon={Link2} delay={0} />
@@ -516,6 +800,8 @@ export default function InviteLinksView() {
         confirmLabel="Remover"
         loading={deletando}
       />
+      </>
+      )}
     </PageWrapper>
   );
 }

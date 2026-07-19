@@ -124,6 +124,15 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [igCarouselIndex, setIgCarouselIndex] = useState(0);
 
+  // Trava o scroll da página enquanto o menu mobile/tablet está aberto
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      const original = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = original; };
+    }
+  }, [mobileMenuOpen]);
+
   // ── Newsletter form states ───────────────────────────────────────────────────
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterLoading, setNewsletterLoading] = useState(false);
@@ -537,7 +546,7 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
           </button>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex items-center space-x-1">
+          <div className="hidden lg:flex items-center space-x-1">
             {navLinks.map(link => (
               <button
                 key={link.id}
@@ -555,7 +564,7 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
 
           <div className="flex items-center space-x-3">
             {/* Social icons - Desktop */}
-            <div className="hidden sm:flex items-center">
+            <div className="hidden lg:flex items-center">
               <a
                 href="https://instagram.com/espalhemelodias"
                 target="_blank"
@@ -569,14 +578,14 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
 
             <button
               onClick={onGoToLogin}
-              className="hidden md:flex items-center space-x-2 bg-gradient-to-r from-brand-clay to-brand-clay-dark text-white px-4 py-2 rounded-xl text-sm font-bold hover:shadow-lg transition shadow-md shadow-brand-clay/20"
+              className="hidden lg:flex items-center space-x-2 bg-gradient-to-r from-brand-clay to-brand-clay-dark text-white px-4 py-2 rounded-xl text-sm font-bold hover:shadow-lg transition shadow-md shadow-brand-clay/20"
             >
               <LogIn className="w-4 h-4" />
               <span>Área de Membros</span>
             </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-slate-600 hover:text-brand-clay"
+              className="lg:hidden p-2 text-slate-600 hover:text-brand-clay"
               aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
               aria-expanded={mobileMenuOpen}
             >

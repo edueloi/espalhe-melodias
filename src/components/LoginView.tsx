@@ -1,8 +1,77 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail, ArrowRight, Globe, Users, Heart, Sprout, AlertCircle } from 'lucide-react';
-import { ApiError } from '../lib/api';
+import { Eye, EyeOff, Lock, Mail, ArrowRight, Globe, Users, Heart, Sprout, AlertCircle, CheckCircle2, X, Loader2 } from 'lucide-react';
+import { ApiError, authApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import logoEspalheMelodias from '../images/logo-espalhe-melodias.png';
+
+function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setLoading(true);
+    setError('');
+    try {
+      await authApi.forgotPassword(email.trim());
+      setSent(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro de conexão. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-7" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-serif text-lg font-bold text-brand-navy">Esqueci minha senha</h3>
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-brand-clay rounded-lg transition"><X className="w-4 h-4" /></button>
+        </div>
+
+        {sent ? (
+          <div className="text-center py-4">
+            <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Se o e-mail informado estiver cadastrado, você receberá em instantes as instruções para redefinir sua senha.
+            </p>
+            <button onClick={onClose} className="mt-5 w-full py-2.5 bg-brand-clay hover:bg-brand-clay-dark text-white text-sm font-bold rounded-xl transition">
+              Fechar
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Informe o e-mail da sua conta. Enviaremos um link para você criar uma nova senha.
+            </p>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="email" value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="seu@email.com.br" required autoFocus
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-clay/40 focus:border-brand-clay transition"
+              />
+            </div>
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
+            <button type="submit" disabled={loading}
+              className="w-full py-3 bg-brand-clay hover:bg-brand-clay-dark disabled:opacity-60 text-white text-sm font-bold rounded-xl transition flex items-center justify-center gap-2">
+              {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Enviando...</> : 'Enviar link de recuperação'}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface LoginViewProps {
   onLoginSuccess: () => void;
@@ -14,15 +83,17 @@ export default function LoginView({ onLoginSuccess, onGoToPublicSite }: LoginVie
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
 
   const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(email.trim(), password, rememberMe);
       onLoginSuccess();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro de conexão com o servidor.');
@@ -114,6 +185,20 @@ export default function LoginView({ onLoginSuccess, onGoToPublicSite }: LoginVie
               </div>
             </div>
 
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
+                <input
+                  type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded accent-brand-clay"
+                />
+                Lembrar-me
+              </label>
+              <button type="button" onClick={() => setShowForgotModal(true)}
+                className="text-sm font-semibold text-brand-clay hover:underline">
+                Esqueci minha senha
+              </button>
+            </div>
+
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -139,6 +224,8 @@ export default function LoginView({ onLoginSuccess, onGoToPublicSite }: LoginVie
           </div>
         </div>
       </div>
+
+      {showForgotModal && <ForgotPasswordModal onClose={() => setShowForgotModal(false)} />}
     </div>
   );
 }

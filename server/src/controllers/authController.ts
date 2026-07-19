@@ -8,6 +8,8 @@ import { AppError } from '../middleware/errorHandler';
 import { newId, nowISO, sanitizeUser } from '../utils/helpers';
 import { ROLE_PERMISSIONS, DEFAULT_PREFERENCES } from '../types/domain';
 import type { AuthRequest } from '../middleware/auth';
+import { sendEmail } from '../services/emailService';
+import { EmailTemplates } from '../services/emailTemplates';
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 
@@ -217,4 +219,69 @@ export async function changePassword(req: AuthRequest, res: Response): Promise<v
   await execute('DELETE FROM refresh_tokens WHERE user_id = ?', [req.user.userId]);
 
   res.json({ success: true, message: 'Senha alterada com sucesso.' });
+}
+
+// ─── Forgot Password ────────────────────────────────────────────────────────────
+
+export async function forgotPassword(req: Request, res: Response): Promise<void> {
+  const { email } = req.body as { email: string };
+  if (!email?.trim()) throw new AppError('Informe seu e-mail.', 400);
+
+  const user = await queryOne<{ id: string; name: string; email: string }>(
+    'SELECT id, name, email FROM users WHERE email = ?',
+    [email.trim().toLowerCase()],
+  );
+
+  // Sempre responde com sucesso, mesmo se o e-mail não existir (evita enumeração de usuários)
+  if (!user) {
+    res.json({ success: true, message: 'Se o e-mail existir em nossa base, você receberá as instruções de recuperação.' });
+    return;
+  }
+
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+
+  await execute(
+    'UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
+    [tokenHash, expiresAt.toISOString().slice(0, 19).replace('T', ' '), user.id],
+  );
+
+  const resetLink = `${config.appUrl}/redefinir-senha?token=${rawToken}`;
+
+  try {
+    const template = EmailTemplates.resetPassword(user.name, resetLink);
+    await sendEmail({ to: user.email, subject: template.subject, html: template.html, text: template.text });
+  } catch (err) {
+    console.error('[auth] Falha ao enviar e-mail de reset de senha:', err);
+  }
+
+  res.json({ success: true, message: 'Se o e-mail existir em nossa base, você receberá as instruções de recuperação.' });
+}
+
+// ─── Reset Password ─────────────────────────────────────────────────────────────
+
+export async function resetPassword(req: Request, res: Response): Promise<void> {
+  const { token, newPassword } = req.body as { token: string; newPassword: string };
+  if (!token || !newPassword) throw new AppError('Token e nova senha são obrigatórios.', 400);
+  if (newPassword.length < 6) throw new AppError('A senha deve ter no mínimo 6 caracteres.', 400);
+
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+  const user = await queryOne<{ id: string }>(
+    'SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > NOW()',
+    [tokenHash],
+  );
+  if (!user) throw new AppError('Link de redefinição inválido ou expirado. Solicite um novo.', 400);
+
+  const hash = await bcrypt.hash(newPassword, 12);
+  await execute(
+    'UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL, updated_at = ? WHERE id = ?',
+    [hash, nowISO(), user.id],
+  );
+
+  // Revoga todos os refresh tokens ativos (força novo login em todos os dispositivos)
+  await execute('DELETE FROM refresh_tokens WHERE user_id = ?', [user.id]);
+
+  res.json({ success: true, message: 'Senha redefinida com sucesso. Faça login com sua nova senha.' });
 }

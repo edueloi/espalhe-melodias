@@ -34,4 +34,12 @@ router.post('/logout',  asyncHandler(ctrl.logout));
 router.get( '/me',             authenticate, asyncHandler(ctrl.me));
 router.post('/change-password', authenticate, asyncHandler(ctrl.changePassword));
 
+router.post(
+  '/forgot-password',
+  [body('email').isEmail().withMessage('E-mail inválido.').toLowerCase()],
+  validate,
+  asyncHandler(ctrl.forgotPassword),
+);
+router.post('/reset-password', asyncHandler(ctrl.resetPassword));
+
 export default router;
