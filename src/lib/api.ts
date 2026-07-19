@@ -1,6 +1,6 @@
 // Cliente HTTP centralizado para a API Espalhe Melodias
 
-const API_ORIGIN = 'http://localhost:3001';
+export const API_ORIGIN = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
 const BASE_URL = `${API_ORIGIN}/api`;
 
 /** Resolve um caminho relativo de upload (ex: /uploads/gallery/x.jpg) para URL absoluta do backend. */

@@ -5,6 +5,7 @@ import {
   CheckCircle2, XCircle, Minus, Plus as PlusIcon, ExternalLink,
 } from 'lucide-react';
 import logoEspalheMelodias from '../images/logo-espalhe-melodias.png';
+import { API_ORIGIN } from '../lib/api';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -154,7 +155,7 @@ export default function EventPublicView({ eventId }: Props) {
 
   const load = () => {
     setLoading(true);
-    fetch(`http://localhost:3001/api/events/public/${eventId}`)
+    fetch(`${API_ORIGIN}/api/events/public/${eventId}`)
       .then(r => r.json())
       .then(body => {
         if (body.success) setEvent(body.data);
@@ -173,7 +174,7 @@ export default function EventPublicView({ eventId }: Props) {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`http://localhost:3001/api/events/public/${eventId}/rsvp`, {
+      const res = await fetch(`${API_ORIGIN}/api/events/public/${eventId}/rsvp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

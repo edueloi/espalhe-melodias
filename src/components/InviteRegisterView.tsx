@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Lock, Mail, User, Phone, ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Stethoscope, ChevronDown } from 'lucide-react';
-import { inviteLinksApi, usersApi, authApi, tokenStore } from '../lib/api';
+import { inviteLinksApi, usersApi, authApi, tokenStore, API_ORIGIN } from '../lib/api';
 import { ApiError } from '../lib/api';
 
 const ESPECIALIDADES = [
@@ -42,7 +42,7 @@ export default function InviteRegisterView({ token, onSuccess }: Props) {
 
   useEffect(() => {
     // Valida o token consultando o backend
-    fetch(`http://localhost:3001/api/invite-links/info/${token}`)
+    fetch(`${API_ORIGIN}/api/invite-links/info/${token}`)
       .then(r => r.json())
       .then(body => {
         if (body.success && body.data) {

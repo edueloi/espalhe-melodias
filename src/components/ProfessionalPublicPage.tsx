@@ -15,7 +15,7 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
-import { type Professional, type ProfTheme } from '../lib/api';
+import { type Professional, type ProfTheme, API_ORIGIN } from '../lib/api';
 import ThemeMinimal from './prof-themes/ThemeMinimal';
 import ThemeCard    from './prof-themes/ThemeCard';
 import ThemeDark    from './prof-themes/ThemeDark';
@@ -116,7 +116,7 @@ export default function ProfessionalPublicPage({ userId }: Props) {
   useEffect(() => {
     let mounted = true;
     setLoading(true); setError('');
-    fetch(`http://localhost:3001/profissional/api/${encodeURIComponent(userId)}`)
+    fetch(`${API_ORIGIN}/profissional/api/${encodeURIComponent(userId)}`)
       .then(r => r.json())
       .then((body: { success: boolean; data?: Professional; message?: string }) => {
         if (!mounted) return;

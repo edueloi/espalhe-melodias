@@ -6,7 +6,7 @@ import {
   MapPin, Pencil, X, BarChart2, MessageCircle,
   UserX, TrendingUp, Search,
 } from 'lucide-react';
-import { eventsApi, type HealthEvent, type EventItemList, tokenStore } from '../lib/api';
+import { eventsApi, type HealthEvent, type EventItemList, tokenStore, API_ORIGIN } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import {
   Button, IconButton,
@@ -865,7 +865,7 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
     try {
       const token = tokenStore.get();
       const res = await fetch(
-        `http://localhost:3001/api/events/${event.id}/rsvps/${rsvp.id}`,
+        `${API_ORIGIN}/api/events/${event.id}/rsvps/${rsvp.id}`,
         {
           method: 'PATCH',
           headers: {
@@ -890,7 +890,7 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
     try {
       const token = tokenStore.get();
       const res = await fetch(
-        `http://localhost:3001/api/events/${event.id}/rsvps/${rsvpId}`,
+        `${API_ORIGIN}/api/events/${event.id}/rsvps/${rsvpId}`,
         {
           method: 'DELETE',
           headers: token ? { Authorization: `Bearer ${token}` } : {},

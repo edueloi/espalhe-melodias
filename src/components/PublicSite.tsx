@@ -1329,16 +1329,25 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
           </div>
 
           {/* Apoio */}
-          <div className="text-center mt-14">
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-5">Apoio</p>
+          <div className="mt-14">
+            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-5 text-center">Apoio</p>
             <a
               href="https://psiflux.com.br/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-3 bg-white border border-brand-sand rounded-2xl px-6 py-4 shadow-sm hover:shadow-md transition-shadow"
+              className="group flex flex-col sm:flex-row items-center gap-6 bg-white border border-brand-sand rounded-3xl p-7 sm:p-8 max-w-2xl mx-auto shadow-sm hover:shadow-lg transition-shadow"
             >
-              <img src={logoPsiflux} alt="PsiFlux" className="h-8 w-auto" />
-              <span className="text-sm text-slate-500">Sistema de gestão para psicólogos</span>
+              <img src={logoPsiflux} alt="PsiFlux" className="h-14 w-14 rounded-2xl object-contain shrink-0" />
+              <div className="text-center sm:text-left">
+                <p className="font-serif text-lg font-bold text-brand-navy group-hover:text-brand-clay transition">PsiFlux</p>
+                <p className="text-sm text-slate-500 leading-relaxed mt-1">
+                  O sistema criado com psicólogos, para psicólogos. Agenda, prontuário, teleconsulta, financeiro e IA — tudo em uma plataforma pensada para a rotina clínica.
+                </p>
+                <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-clay mt-3">
+                  Conhecer o PsiFlux
+                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </span>
+              </div>
             </a>
           </div>
           </div>
