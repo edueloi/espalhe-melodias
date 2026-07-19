@@ -19,6 +19,7 @@ interface HeaderProps {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   onGoToPublicSite: () => void;
+  onGoToProfile?: () => void;
   onResetData?: () => void;
   onToggleSidebar?: () => void;
 }
@@ -39,6 +40,18 @@ function getRoleBadge(role: UserRole) {
   }
 }
 
+function HeaderAvatar({ src, name, className }: { src?: string; name: string; className: string }) {
+  if (src) {
+    return <img src={src} alt={name} className={className} />;
+  }
+  const initials = name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  return (
+    <div className={`${className} bg-[#581a2e]/10 flex items-center justify-center`}>
+      <span className="text-[10px] font-bold text-[#581a2e]">{initials}</span>
+    </div>
+  );
+}
+
 export default function Header({
   currentUser,
   availableUsers,
@@ -46,6 +59,7 @@ export default function Header({
   searchTerm,
   setSearchTerm,
   onGoToPublicSite,
+  onGoToProfile,
   onResetData,
   onToggleSidebar,
 }: HeaderProps) {
@@ -202,9 +216,9 @@ export default function Header({
               onClick={() => setProfileOpen(v => !v)}
               className="flex items-center gap-2 pl-1 sm:pl-1.5 pr-2 sm:pr-2.5 py-1 rounded-lg sm:rounded-xl hover:bg-slate-100 transition group shrink-0"
             >
-              <img
+              <HeaderAvatar
                 src={currentUser.avatar}
-                alt={currentUser.name}
+                name={currentUser.name}
                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg object-cover ring-1 ring-slate-200 group-hover:ring-[#581a2e]/40 transition shrink-0"
               />
               <div className="hidden md:flex flex-col items-start leading-tight">
@@ -216,13 +230,17 @@ export default function Header({
 
             {profileOpen && (
               <div className="absolute right-0 top-full mt-2 w-52 sm:w-56 bg-white rounded-xl sm:rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 max-h-[80vh] flex flex-col">
-                <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-100 shrink-0">
-                  <img src={currentUser.avatar} alt={currentUser.name} className="w-8 sm:w-9 h-8 sm:h-9 rounded-lg object-cover shrink-0" />
+                <button
+                  onClick={() => { onGoToProfile?.(); setProfileOpen(false); }}
+                  disabled={!onGoToProfile}
+                  className="w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-100 shrink-0 text-left hover:bg-slate-50 transition disabled:hover:bg-transparent disabled:cursor-default"
+                >
+                  <HeaderAvatar src={currentUser.avatar} name={currentUser.name} className="w-8 sm:w-9 h-8 sm:h-9 rounded-lg object-cover shrink-0" />
                   <div className="min-w-0">
                     <p className="text-xs sm:text-sm font-bold text-slate-800 truncate">{currentUser.name}</p>
                     <p className="text-[9px] sm:text-[10px] text-slate-500 truncate">{currentUser.email}</p>
                   </div>
-                </div>
+                </button>
                 {/* Simulador visível no mobile via dropdown */}
                 {availableUsers.length > 0 && (
                 <div className="sm:hidden px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-100">

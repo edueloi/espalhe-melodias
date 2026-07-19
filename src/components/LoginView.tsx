@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail, ArrowRight, Globe } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowRight, Globe, Users, Heart, Sprout, AlertCircle } from 'lucide-react';
 import { ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import logoEspalheMelodias from '../images/logo-espalhe-melodias.png';
 
 interface LoginViewProps {
   onLoginSuccess: () => void;
@@ -16,22 +17,18 @@ export default function LoginView({ onLoginSuccess, onGoToPublicSite }: LoginVie
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const doLogin = async (e: string, p: string) => {
+  const handleSubmit = async (ev: React.FormEvent) => {
+    ev.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await login(e.trim(), p);
+      await login(email.trim(), password);
       onLoginSuccess();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro de conexão com o servidor.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSubmit = (ev: React.FormEvent) => {
-    ev.preventDefault();
-    void doLogin(email, password);
   };
 
   return (
@@ -47,9 +44,7 @@ export default function LoginView({ onLoginSuccess, onGoToPublicSite }: LoginVie
         <div className="absolute inset-0 bg-gradient-to-br from-brand-navy-dark via-brand-navy to-[#1a2d20] opacity-90" />
         <div className="relative z-10 text-center">
           <div className="flex items-center justify-center space-x-4 mb-10">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-clay to-brand-moss flex items-center justify-center shadow-2xl">
-              <span className="text-3xl text-white font-serif font-black italic">♩Ψ</span>
-            </div>
+            <img src={logoEspalheMelodias} alt="Espalhe Melodias" className="w-16 h-16 rounded-2xl object-cover shadow-2xl" />
             <div>
               <div className="font-serif text-3xl font-black text-brand-cream tracking-wide leading-none">Espalhe</div>
               <div className="font-script text-4xl text-brand-clay-light leading-none -mt-1">Melodias</div>
@@ -64,9 +59,9 @@ export default function LoginView({ onLoginSuccess, onGoToPublicSite }: LoginVie
             Uma comunidade de profissionais que acreditam no poder das conexões para fortalecer o cuidado em saúde mental.
           </p>
           <div className="grid grid-cols-3 gap-4">
-            {[{ icon: '🤝', label: 'Conexões Reais' }, { icon: '💚', label: 'Apoio Mútuo' }, { icon: '🌱', label: 'Crescimento' }].map(item => (
-              <div key={item.label} className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                <div className="text-2xl mb-1">{item.icon}</div>
+            {[{ icon: Users, label: 'Conexões Reais' }, { icon: Heart, label: 'Apoio Mútuo' }, { icon: Sprout, label: 'Crescimento' }].map(item => (
+              <div key={item.label} className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+                <item.icon className="w-6 h-6 text-brand-clay-light mx-auto mb-2" strokeWidth={1.75} />
                 <div className="text-[11px] text-slate-400 font-semibold">{item.label}</div>
               </div>
             ))}
@@ -78,9 +73,7 @@ export default function LoginView({ onLoginSuccess, onGoToPublicSite }: LoginVie
       <div className="flex-1 flex flex-col items-center justify-center p-8 lg:p-16">
         <div className="w-full max-w-md">
           <div className="flex lg:hidden items-center justify-center space-x-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-clay to-brand-moss flex items-center justify-center shadow-lg">
-              <span className="text-xl text-white font-serif font-black italic">♩Ψ</span>
-            </div>
+            <img src={logoEspalheMelodias} alt="Espalhe Melodias" className="w-12 h-12 rounded-xl object-cover shadow-lg" />
             <div>
               <div className="font-serif text-xl font-black text-brand-navy tracking-wide leading-none">Espalhe</div>
               <div className="font-script text-2xl text-brand-clay leading-none -mt-1">Melodias</div>
@@ -122,8 +115,9 @@ export default function LoginView({ onLoginSuccess, onGoToPublicSite }: LoginVie
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl flex items-start space-x-2">
-                <span>⚠️</span><span>{error}</span>
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
               </div>
             )}
 
@@ -134,26 +128,6 @@ export default function LoginView({ onLoginSuccess, onGoToPublicSite }: LoginVie
               )}
             </button>
           </form>
-
-          {/* Demo quick access */}
-          <div className="flex items-center my-6">
-            <div className="flex-1 h-px bg-slate-200" />
-            <span className="px-3 text-xs text-slate-400 font-semibold">ou acesso rápido de demonstração</span>
-            <div className="flex-1 h-px bg-slate-200" />
-          </div>
-
-          <div className="grid grid-cols-1 gap-2">
-            {[
-              { e: 'dra.eliana@melodias.com.br', p: 'eliana2026',  label: 'Dra. Eliana Costa', role: 'Psicóloga', color: 'bg-cyan-50 text-cyan-800 border-cyan-200 hover:bg-cyan-100' },
-              { e: 'gabriel.souza@gmail.com',    p: 'gabriel2026', label: 'Gabriel Souza',      role: 'Membro',   color: 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100' },
-            ].map(item => (
-              <button key={item.e} onClick={() => void doLogin(item.e, item.p)} disabled={loading}
-                className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl border text-sm font-semibold transition disabled:opacity-50 ${item.color}`}>
-                <span>{item.label}</span>
-                <span className="text-xs font-normal opacity-70">{item.role}</span>
-              </button>
-            ))}
-          </div>
 
           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
             <button onClick={onGoToPublicSite}

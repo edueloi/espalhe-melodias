@@ -2,9 +2,13 @@
 
 ## O que é este projeto
 
-Plataforma de comunidade/membros para o projeto Espalhe Melodias.  
-Stack: React + TypeScript + Vite + Tailwind CSS.  
-Sem backend real — estado persistido em `localStorage`.
+Plataforma de comunidade/membros para o projeto Espalhe Melodias.
+
+Front-end: React + TypeScript + Vite + Tailwind CSS.
+Back-end: Node.js + Express + TypeScript, na pasta `server/`, com autenticação JWT (access + refresh token).
+Banco de dados: MySQL (via `mysql2`), banco `espalhe_melodias`.
+
+Estado de auth (tokens) fica em `localStorage`; todo o resto dos dados vem da API (`src/lib/api.ts`), não mais de `mockData.ts`/`localStorage`.
 
 ## Estrutura
 
@@ -16,13 +20,35 @@ src/
     *View.tsx                ← uma View por "página"
     Sidebar.tsx              ← menu lateral, registra abas
     Header.tsx               ← barra superior
+  lib/api.ts                 ← cliente HTTP centralizado (fala com o backend em server/)
   types.ts                   ← tipos TypeScript do domínio
-  mockData.ts                ← dados iniciais
+  mockData.ts                ← dados iniciais/seed (legado, não é mais a fonte de dados em runtime)
+
+server/
+  src/
+    routes/                  ← rotas Express por domínio (auth, users, forum, materials, events, blogs, ...)
+    controllers/             ← lógica de cada rota
+    middleware/               ← auth (JWT), permissions, validate, rate limiters
+    models/                  ← acesso a dados (store.ts, publicWebsite.ts, instagram.ts)
+    config/db.ts             ← pool de conexão MySQL (mysql2)
+    scripts/                 ← migrate.ts, seed.ts
 
 skill/
   new-page/CLAUDE.md         ← guia de como criar/atualizar páginas
   use-component/use-component.md  ← documentação de todos os componentes UI
 ```
+
+## Rodar localmente
+
+```
+cd server
+npm install
+node scripts/migrate.js   # cria as tabelas
+npm run seed               # dados iniciais
+npm run dev                 # API em http://localhost:3001
+```
+
+Frontend roda em paralelo (Vite, porta padrão 5173/3000) e consome a API via `src/lib/api.ts`.
 
 ## Regras fundamentais
 

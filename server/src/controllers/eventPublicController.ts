@@ -166,6 +166,58 @@ export async function deleteRsvp(req: AuthRequest, res: Response): Promise<void>
   res.json({ success: true });
 }
 
+// ─── CRUD de itens de um evento específico (admin do evento) ──────────────────
+
+export async function addEventItem(req: AuthRequest, res: Response): Promise<void> {
+  if (!req.user) throw new AppError('Não autenticado.', 401);
+  const { id: eventId } = req.params;
+  const { name } = req.body as { name: string };
+  if (!name?.trim()) throw new AppError('Nome do item é obrigatório.', 400);
+
+  const event = await queryOne<{ instructor_id: string }>(
+    'SELECT instructor_id FROM health_events WHERE id = ?', [eventId],
+  );
+  if (!event) throw new AppError('Evento não encontrado.', 404);
+  if (event.instructor_id !== req.user.userId && req.user.role !== 'super-admin') {
+    throw new AppError('Acesso negado.', 403);
+  }
+
+  const id = newId();
+  await execute(
+    'INSERT INTO event_items (id, event_id, name, created_at) VALUES (?,?,?,?)',
+    [id, eventId, name.trim(), nowISO()],
+  );
+
+  // Garante que o evento fica marcado como tendo divisão de itens
+  await execute('UPDATE health_events SET item_division = 1 WHERE id = ?', [eventId]);
+
+  res.status(201).json({ success: true, data: { id, name: name.trim() } });
+}
+
+export async function deleteEventItem(req: AuthRequest, res: Response): Promise<void> {
+  if (!req.user) throw new AppError('Não autenticado.', 401);
+  const { id: eventId, itemId } = req.params;
+
+  const event = await queryOne<{ instructor_id: string }>(
+    'SELECT instructor_id FROM health_events WHERE id = ?', [eventId],
+  );
+  if (!event) throw new AppError('Evento não encontrado.', 404);
+  if (event.instructor_id !== req.user.userId && req.user.role !== 'super-admin') {
+    throw new AppError('Acesso negado.', 403);
+  }
+
+  const item = await queryOne<{ id: string }>(
+    'SELECT id FROM event_items WHERE id = ? AND event_id = ?', [itemId, eventId],
+  );
+  if (!item) throw new AppError('Item não encontrado.', 404);
+
+  // Libera RSVPs que tinham escolhido esse item, antes de excluí-lo
+  await execute('UPDATE event_rsvps SET item_id = NULL WHERE item_id = ?', [itemId]);
+  await execute('DELETE FROM event_items WHERE id = ?', [itemId]);
+
+  res.json({ success: true, message: 'Item removido.' });
+}
+
 // ─── CRUD de listas pré-definidas (autenticado) ───────────────────────────────
 
 export async function listItemLists(req: AuthRequest, res: Response): Promise<void> {

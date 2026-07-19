@@ -281,7 +281,11 @@ function AvatarFallback({ name, size = 'md' }: { name: string; size?: 'sm' | 'md
   );
 }
 
-export default function DirectoryView() {
+interface DirectoryViewProps {
+  autoOpenOwnProfile?: boolean;
+}
+
+export default function DirectoryView({ autoOpenOwnProfile }: DirectoryViewProps = {}) {
   const { user } = useAuth();
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -357,6 +361,14 @@ export default function DirectoryView() {
   };
 
   useEffect(() => { load(); }, [search, specialty]);
+
+  // Vindo do menu de perfil do Header: abre direto a edição do próprio perfil
+  useEffect(() => {
+    if (!autoOpenOwnProfile || loading) return;
+    const own = professionals.find(p => p.user_id === user?.id);
+    if (own) openEdit(own);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenOwnProfile, loading]);
 
   const isOwn = (prof: Professional) => prof.user_id === user?.id;
   const isPro = user?.role === 'professional' || user?.role === 'super-admin';

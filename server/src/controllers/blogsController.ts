@@ -13,10 +13,14 @@ export async function listBlogs(req: AuthRequest, res: Response): Promise<void> 
   const params: unknown[] = [];
 
   if (req.user && ['super-admin', 'professional'].includes(req.user.role) && published === 'all') {
-    conditions.length = 0; // mostra todos incluindo rascunhos
+    conditions.length = 0;
   }
 
-  if (category) { conditions.push('category = ?'); params.push(category); }
+  if (category) {
+    conditions.push('category = ?');
+    params.push(category);
+  }
+
   if (search) {
     conditions.push('(title LIKE ? OR excerpt LIKE ?)');
     params.push(`%${search}%`, `%${search}%`);
@@ -24,7 +28,8 @@ export async function listBlogs(req: AuthRequest, res: Response): Promise<void> 
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const [countRow] = await query<{ total: number }>(
-    `SELECT COUNT(*) AS total FROM blog_posts ${where}`, params,
+    `SELECT COUNT(*) AS total FROM blog_posts ${where}`,
+    params,
   );
 
   const rows = await query<Record<string, unknown>>(
@@ -33,15 +38,23 @@ export async function listBlogs(req: AuthRequest, res: Response): Promise<void> 
     [...params, limit, offset],
   );
 
-  res.json({ success: true, data: rows, meta: buildMeta(countRow?.total ?? 0, { page, limit, offset }) });
+  res.json({
+    success: true,
+    data: rows,
+    meta: buildMeta(countRow?.total ?? 0, { page, limit, offset }),
+  });
 }
 
 export async function getBlog(req: AuthRequest, res: Response): Promise<void> {
   const row = await queryOne<Record<string, unknown>>(
-    'SELECT * FROM blog_posts WHERE id = ?', [req.params.id],
+    'SELECT * FROM blog_posts WHERE id = ?',
+    [req.params.id],
   );
+
   if (!row) throw new AppError('Artigo não encontrado.', 404);
-  if (!row.published && req.user?.role === 'member') {
+
+  const isPublished = Boolean(Number(row.published ?? 0));
+  if (!isPublished && (!req.user || req.user.role === 'member')) {
     throw new AppError('Artigo não disponível.', 404);
   }
 
@@ -55,12 +68,18 @@ export async function createBlog(req: AuthRequest, res: Response): Promise<void>
   if (!req.user) throw new AppError('Não autenticado.', 401);
 
   const { title, excerpt, content, category, imageUrl, readTime, published = true } = req.body as {
-    title: string; excerpt: string; content: string; category: string;
-    imageUrl?: string; readTime?: string; published?: boolean;
+    title: string;
+    excerpt: string;
+    content: string;
+    category: string;
+    imageUrl?: string;
+    readTime?: string;
+    published?: boolean;
   };
 
   const user = await queryOne<{ name: string; avatar: string | null }>(
-    'SELECT name, avatar FROM users WHERE id = ?', [req.user.userId],
+    'SELECT name, avatar FROM users WHERE id = ?',
+    [req.user.userId],
   );
 
   const id = newId();
@@ -72,9 +91,19 @@ export async function createBlog(req: AuthRequest, res: Response): Promise<void>
       read_time, liked_by, published, post_date, updated_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,'[]',?,?,?)`,
     [
-      id, title, excerpt, content, category, imageUrl ?? null,
-      req.user.userId, user?.name ?? '', user?.avatar ?? null,
-      readTime ?? '5 min', published ? 1 : 0, now, now,
+      id,
+      title,
+      excerpt,
+      content,
+      category,
+      imageUrl ?? null,
+      req.user.userId,
+      user?.name ?? '',
+      user?.avatar ?? null,
+      readTime ?? '5 min',
+      published ? 1 : 0,
+      now,
+      now,
     ],
   );
 
@@ -86,7 +115,8 @@ export async function updateBlog(req: AuthRequest, res: Response): Promise<void>
   const { id } = req.params;
 
   const post = await queryOne<{ author_id: string }>(
-    'SELECT author_id FROM blog_posts WHERE id = ?', [id],
+    'SELECT author_id FROM blog_posts WHERE id = ?',
+    [id],
   );
   if (!post) throw new AppError('Artigo não encontrado.', 404);
 
@@ -109,10 +139,15 @@ export async function updateBlog(req: AuthRequest, res: Response): Promise<void>
        updated_at = ?
      WHERE id = ?`,
     [
-      title ?? null, excerpt ?? null, content ?? null, category ?? null,
-      imageUrl ?? null, readTime ?? null,
+      title ?? null,
+      excerpt ?? null,
+      content ?? null,
+      category ?? null,
+      imageUrl ?? null,
+      readTime ?? null,
       published !== undefined ? (published ? 1 : 0) : null,
-      nowISO(), id,
+      nowISO(),
+      id,
     ],
   );
 
@@ -124,7 +159,8 @@ export async function deleteBlog(req: AuthRequest, res: Response): Promise<void>
   const { id } = req.params;
 
   const post = await queryOne<{ author_id: string }>(
-    'SELECT author_id FROM blog_posts WHERE id = ?', [id],
+    'SELECT author_id FROM blog_posts WHERE id = ?',
+    [id],
   );
   if (!post) throw new AppError('Artigo não encontrado.', 404);
 
@@ -141,14 +177,17 @@ export async function likeBlog(req: AuthRequest, res: Response): Promise<void> {
   const { id } = req.params;
 
   const post = await queryOne<{ liked_by: unknown }>(
-    'SELECT liked_by FROM blog_posts WHERE id = ?', [id],
+    'SELECT liked_by FROM blog_posts WHERE id = ?',
+    [id],
   );
   if (!post) throw new AppError('Artigo não encontrado.', 404);
 
-  const liked: string[] = parseJson<string[]>(post.liked_by, []);
+  const liked = parseJson<string[]>(post.liked_by, []);
   const idx = liked.indexOf(req.user.userId);
   const added = idx === -1;
-  if (added) liked.push(req.user.userId); else liked.splice(idx, 1);
+
+  if (added) liked.push(req.user.userId);
+  else liked.splice(idx, 1);
 
   await execute(
     'UPDATE blog_posts SET liked_by = ?, likes = ? WHERE id = ?',

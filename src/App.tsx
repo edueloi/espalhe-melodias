@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './lib/auth';
+import { tokenStore, professionalsApi } from './lib/api';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import DashboardView from './components/DashboardView';
@@ -8,6 +9,7 @@ import ForumView from './components/ForumView';
 import MaterialsView from './components/MaterialsView';
 import HelpRequestView from './components/HelpRequestView';
 import EventsView from './components/EventsView';
+import GalleryAdminView from './components/GalleryAdminView';
 import LearningsView from './components/LearningsView';
 import AdminUsersView from './components/AdminUsersView';
 import InviteLinksView from './components/InviteLinksView';
@@ -23,6 +25,21 @@ import { ToastProvider } from './components/ui';
 import { LayoutProvider } from './components/layouts';
 
 type AppView = 'public' | 'login' | 'member-area' | 'invite' | 'event-public' | 'prof-public';
+type PublicSection = 'home' | 'about' | 'blog' | 'gallery' | 'events' | 'contact';
+
+// Mapa seção pública → segmento de URL
+const PUBLIC_SECTION_TO_PATH: Record<PublicSection, string> = {
+  home:    '/',
+  about:   '/quem-somos',
+  blog:    '/blog',
+  gallery: '/galeria',
+  events:  '/eventos',
+  contact: '/contato',
+};
+
+const PATH_TO_PUBLIC_SECTION: Record<string, PublicSection> = Object.fromEntries(
+  Object.entries(PUBLIC_SECTION_TO_PATH).map(([section, path]) => [path, section as PublicSection]),
+);
 
 // Mapa tab → segmento de URL
 const TAB_TO_PATH: Record<string, string> = {
@@ -38,6 +55,7 @@ const TAB_TO_PATH: Record<string, string> = {
   'preciso-ajuda':       '/ajuda',
   'diretorio-membros':   '/diretorio',
   'encontros-eventos':   '/eventos',
+  'galeria-site':        '/galeria-admin',
   'usuarios-admin':      '/usuarios',
   'invite-links':        '/convites',
 };
@@ -50,25 +68,37 @@ function getPath() {
   return window.location.pathname;
 }
 
-function detectView(): { view: AppView; tab: string; inviteToken: string; eventPublicId: string; profPublicId: string; forumTopicId: string } {
+function detectView(): { view: AppView; tab: string; publicSection: PublicSection; inviteToken: string; eventPublicId: string; profPublicId: string; forumTopicId: string } {
   const path = getPath();
   const empty = { inviteToken: '', eventPublicId: '', profPublicId: '', forumTopicId: '' };
-  if (path === '/login') return { view: 'login', tab: 'projetos-melodias', ...empty };
+  if (path === '/login') return { view: 'login', tab: 'projetos-melodias', publicSection: 'home', ...empty };
   if (path.startsWith('/convite/')) {
-    return { view: 'invite', tab: 'projetos-melodias', ...empty, inviteToken: path.replace('/convite/', '') };
+    return { view: 'invite', tab: 'projetos-melodias', publicSection: 'home', ...empty, inviteToken: path.replace('/convite/', '') };
   }
   if (path.startsWith('/evento/')) {
-    return { view: 'event-public', tab: 'projetos-melodias', ...empty, eventPublicId: path.replace('/evento/', '') };
+    return { view: 'event-public', tab: 'projetos-melodias', publicSection: 'home', ...empty, eventPublicId: path.replace('/evento/', '') };
   }
   if (path.startsWith('/profissional/')) {
-    return { view: 'prof-public', tab: 'projetos-melodias', ...empty, profPublicId: path.replace('/profissional/', '') };
+    return { view: 'prof-public', tab: 'projetos-melodias', publicSection: 'home', ...empty, profPublicId: path.replace('/profissional/', '') };
   }
   if (path.startsWith('/forum/')) {
-    return { view: 'member-area', tab: 'forum', ...empty, forumTopicId: path.replace('/forum/', '') };
+    return { view: 'member-area', tab: 'forum', publicSection: 'home', ...empty, forumTopicId: path.replace('/forum/', '') };
   }
+  if (path.startsWith('/blog/')) {
+    return { view: 'public', tab: 'projetos-melodias', publicSection: 'blog', ...empty };
+  }
+
+  // Sessão ativa: alguns paths (ex: /eventos, /blog) existem tanto no site público
+  // quanto na área de membros. Se o usuário está logado, prioriza a área de membros
+  // para não "deslogar" visualmente ao dar refresh numa dessas rotas.
+  const hasSession = Boolean(tokenStore.get());
   const tab = PATH_TO_TAB[path];
-  if (tab) return { view: 'member-area', tab, ...empty };
-  return { view: 'public', tab: 'projetos-melodias', ...empty };
+  if (hasSession && tab) return { view: 'member-area', tab, publicSection: 'home', ...empty };
+
+  const publicSection = PATH_TO_PUBLIC_SECTION[path];
+  if (publicSection) return { view: 'public', tab: 'projetos-melodias', publicSection, ...empty };
+  if (tab) return { view: 'member-area', tab, publicSection: 'home', ...empty };
+  return { view: 'public', tab: 'projetos-melodias', publicSection: 'home', ...empty };
 }
 
 // ─── Inner app (needs AuthContext) ────────────────────────────────────────────
@@ -79,24 +109,43 @@ function AppInner() {
   const initial = detectView();
   const [appView,      setAppView]      = useState<AppView>(initial.view);
   const [currentTab,   setCurrentTabRaw] = useState<string>(initial.tab);
+  const [publicSection, setPublicSectionRaw] = useState<PublicSection>(initial.publicSection);
   const [inviteToken,    setInviteToken]    = useState<string>(initial.inviteToken);
   const [eventPublicId,  setEventPublicId]  = useState<string>(initial.eventPublicId);
   const [profPublicId,   setProfPublicId]   = useState<string>(initial.profPublicId);
   const [forumTopicId,   setForumTopicId]   = useState<string>(initial.forumTopicId);
   const [searchTerm,   setSearchTerm]   = useState('');
   const [sidebarOpen,  setSidebarOpen]  = useState(false);
+  const [autoOpenProfile, setAutoOpenProfile] = useState(false);
+  const [mySitePath,   setMySitePath]   = useState<string | null>(null);
 
-  // Atualiza a URL quando muda de view ou tab (history API, sem #)
+  // Descobre a URL do site público do próprio usuário (quando ele tem perfil profissional)
+  useEffect(() => {
+    if (!user || user.role === 'member') { setMySitePath(null); return; }
+    let cancelled = false;
+    professionalsApi.list({ limit: 200 })
+      .then(res => {
+        if (cancelled) return;
+        const own = res.data.find(p => p.user_id === user.id);
+        setMySitePath(own ? `/profissional/${own.slug ?? own.user_id}` : null);
+      })
+      .catch(() => setMySitePath(null));
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // Atualiza a URL quando muda de view, tab ou seção pública (history API, sem #)
   useEffect(() => {
     if (appView === 'public') {
-      if (getPath() !== '/') window.history.replaceState(null, '', '/');
+      const path = PUBLIC_SECTION_TO_PATH[publicSection];
+      const isBlogArticle = publicSection === 'blog' && getPath().startsWith('/blog/');
+      if (!isBlogArticle && getPath() !== path) window.history.replaceState(null, '', path);
     } else if (appView === 'login') {
       if (getPath() !== '/login') window.history.replaceState(null, '', '/login');
     } else if (appView === 'member-area') {
       const path = TAB_TO_PATH[currentTab] ?? `/${currentTab}`;
       if (getPath() !== path) window.history.replaceState(null, '', path);
     }
-  }, [appView, currentTab]);
+  }, [appView, currentTab, publicSection]);
 
   // Redireciona quando sessão restaurada na tela de login
   useEffect(() => {
@@ -112,6 +161,7 @@ function AppInner() {
       const detected = detectView();
       setAppView(detected.view);
       setCurrentTabRaw(detected.tab);
+      setPublicSectionRaw(detected.publicSection);
       setInviteToken(detected.inviteToken);
       setEventPublicId(detected.eventPublicId);
       setProfPublicId(detected.profPublicId);
@@ -121,9 +171,16 @@ function AppInner() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
+  const setPublicSection = (section: PublicSection) => {
+    setPublicSectionRaw(section);
+    const path = PUBLIC_SECTION_TO_PATH[section];
+    window.history.pushState(null, '', path);
+  };
+
   const setCurrentTab = (tab: string) => {
     setCurrentTabRaw(tab);
     setSidebarOpen(false);
+    if (tab !== 'diretorio-membros') setAutoOpenProfile(false);
     const path = TAB_TO_PATH[tab] ?? `/${tab}`;
     window.history.pushState(null, '', path);
   };
@@ -191,6 +248,8 @@ function AppInner() {
       <PublicSite
         blogs={[]}
         events={[]}
+        initialSection={publicSection}
+        onSectionChange={setPublicSection}
         onGoToLogin={() => {
           setAppView('login');
           window.history.pushState(null, '', '/login');
@@ -269,6 +328,10 @@ function AppInner() {
             setAppView('public');
             window.history.pushState(null, '', '/');
           }}
+          onGoToProfile={() => {
+            setAutoOpenProfile(true);
+            setCurrentTab('diretorio-membros');
+          }}
           onToggleSidebar={() => setSidebarOpen(v => !v)}
         />
 
@@ -327,9 +390,18 @@ function AppInner() {
 
           {currentTab === 'preciso-ajuda' && <HelpRequestView />}
 
-          {currentTab === 'diretorio-membros' && <DirectoryView />}
+          {currentTab === 'diretorio-membros' && (
+            <DirectoryView
+              autoOpenOwnProfile={autoOpenProfile}
+              key={autoOpenProfile ? 'auto-profile' : 'default'}
+            />
+          )}
 
           {currentTab === 'encontros-eventos' && <EventsView />}
+
+          {currentTab === 'galeria-site' && (
+            <GalleryAdminView currentUser={userForComponents as never} />
+          )}
 
           {currentTab === 'usuarios-admin' && <AdminUsersView viewType="usuarios" />}
 

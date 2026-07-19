@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Music,
   Brain,
@@ -21,10 +22,46 @@ import {
   X,
   HelpCircle,
   TrendingUp,
-  Award
+  Award,
+  Maximize,
+  Minimize,
+  Clock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PageWrapper } from './ui/PageWrapper';
+import fotoJessica from '../images/jessica.jpg';
+import fotoKaren from '../images/karen_gomes.jpg';
+
+// Tempo mínimo/máximo de leitura por slide (ms) — evita que slides curtos passem rápido
+// demais e slides longos sejam cortados no auto play.
+const MIN_SLIDE_MS = 6000;
+const MAX_SLIDE_MS = 16000;
+const WORDS_PER_MINUTE = 180;
+
+// Estimativa de palavras "de leitura" de cada slide, usada para calcular o tempo de
+// permanência no auto play e o selo de "tempo de leitura" mostrado ao usuário.
+const SLIDE_WORD_COUNTS: Record<string, number> = {
+  welcome: 40,
+  origin: 160,
+  purpose: 150,
+  'why-meet': 140,
+  'connection-flow': 130,
+  saboteurs: 170,
+  'how-works': 150,
+  founders: 160,
+  'feedback-interactive': 90,
+};
+
+function readingTimeMs(slideId: string): number {
+  const words = SLIDE_WORD_COUNTS[slideId] ?? 100;
+  const estimated = (words / WORDS_PER_MINUTE) * 60000;
+  return Math.min(MAX_SLIDE_MS, Math.max(MIN_SLIDE_MS, estimated));
+}
+
+function readingTimeLabel(slideId: string): string {
+  const seconds = Math.round(readingTimeMs(slideId) / 1000);
+  return `${seconds}s de leitura`;
+}
 
 // Interfaces for our custom interactive feedback responses
 interface FeedbackNote {
@@ -40,33 +77,19 @@ interface FeedbackNote {
 export default function ProjectsView() {
   const [activeSlide, setActiveSlide] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [direction, setDirection] = useState<1 | -1>(1);
   const [revealSaboteurId, setRevealSaboteurId] = useState<string | null>(null);
   const [selectedConnectionKey, setSelectedConnectionKey] = useState<string | null>('escuta');
+  const stageRef = useRef<HTMLDivElement>(null);
   
   // Feedback note state for dynamic user interactions
   const [feedbackNotes, setFeedbackNotes] = useState<FeedbackNote[]>(() => {
     const saved = localStorage.getItem('melodias_project_feedback');
-    if (saved) return JSON.parse(saved);
-    return [
-      {
-        id: 'note-1',
-        question1: 'Incrível! A sinergia entre música e psicologia traz uma dimensão de acolhimento sem igual.',
-        question2: 'Superar o isolamento do consultório e encontrar parceiros de indicação segura.',
-        question3: 'Compartilhar materiais sobre TCC e orientações de transição de carreira.',
-        authorName: 'Dra. Aline Becker',
-        createdAt: 'Haver 10min',
-        color: 'bg-[#faf3e8] border-[#eacfaf]'
-      },
-      {
-        id: 'note-2',
-        question1: 'Um divisor de águas na saúde mental. Os encontros mensais são um respiro ético e humano.',
-        question2: 'Espaço prático para debates de casos difíceis respeitando o sigilo absoluto.',
-        question3: 'Oferecer workshops de mindfulness para terapeutas que sofrem com stress.',
-        authorName: 'Dr. Marcos Toledo',
-        createdAt: 'Haver 30min',
-        color: 'bg-[#f1f5e8] border-[#d3dfb8]'
-      }
-    ];
+    if (saved) {
+      try { return JSON.parse(saved); } catch { /* ignore */ }
+    }
+    return [];
   });
 
   // Feedback form fields
@@ -138,24 +161,63 @@ export default function ProjectsView() {
     }
   ];
 
-  // Auto-scroller for the slideshow simulation
-  useEffect(() => {
-    let interval: any;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        setActiveSlide(prev => (prev + 1) % slides.length);
-      }, 7000);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, slides.length]);
-
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
+    setDirection(1);
     setActiveSlide(prev => (prev + 1) % slides.length);
+  }, [slides.length]);
+
+  const handlePrev = useCallback(() => {
+    setDirection(-1);
+    setActiveSlide(prev => (prev - 1 + slides.length) % slides.length);
+  }, [slides.length]);
+
+  const goToSlide = (i: number) => {
+    setDirection(i > activeSlide ? 1 : -1);
+    setActiveSlide(i);
   };
 
-  const handlePrev = () => {
-    setActiveSlide(prev => (prev - 1 + slides.length) % slides.length);
+  // Auto-play com tempo de permanência proporcional ao tempo de leitura de cada slide.
+  // Depende só do id do slide atual (string estável) — `slides` é um array literal
+  // recriado a cada render, então usá-lo como dependência reiniciaria o timer sem parar.
+  const currentSlideId = slides[activeSlide].id;
+  useEffect(() => {
+    if (!isPlaying) return;
+    const duration = readingTimeMs(currentSlideId);
+    const timer = setTimeout(handleNext, duration);
+    return () => clearTimeout(timer);
+  }, [isPlaying, currentSlideId, handleNext]);
+
+  // Fullscreen real do navegador — sincroniza estado com eventos do próprio browser
+  // (ex: usuário aperta Esc, o que sai do fullscreen sem passar pelo nosso botão)
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
+
+  const enterPresentation = async () => {
+    setIsPlaying(true);
+    try {
+      await stageRef.current?.requestFullscreen?.();
+    } catch { /* navegador pode bloquear sem gesto direto do usuário — segue sem fullscreen nativo */ }
   };
+
+  const exitPresentation = () => {
+    setIsPlaying(false);
+    if (document.fullscreenElement) document.exitFullscreen?.();
+  };
+
+  // Navegação por teclado durante a apresentação
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); handleNext(); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); handlePrev(); }
+      else if (e.key === 'Escape') exitPresentation();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isFullscreen, handleNext, handlePrev]);
 
   const submitFeedbackForm = (e: React.FormEvent) => {
     e.preventDefault();
@@ -295,20 +357,14 @@ export default function ProjectsView() {
         </div>
 
         {/* PPT Remote control */}
-        <div className="flex items-center space-x-3 bg-white p-2 rounded-2xl border border-brand-sand shadow-sm self-start">
+        <div className="flex items-center gap-2 sm:gap-3 bg-white p-2 rounded-2xl border border-brand-sand shadow-sm self-start flex-wrap">
           <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            className={`p-2 rounded-xl border transition-all ${
-              isPlaying 
-                ? 'bg-amber-100 text-amber-700 border-amber-200' 
-                : 'bg-brand-cream hover:bg-brand-sand/35 text-brand-navy border-brand-sand'
-            } flex items-center space-x-1 cursor-pointer`}
-            title={isPlaying ? "Pausar reprodução automática" : "Iniciar reprodução automática"}
+            onClick={enterPresentation}
+            className="p-2 px-3 rounded-xl border transition-all bg-brand-clay text-white border-transparent hover:bg-brand-clay-dark flex items-center gap-1.5 cursor-pointer shadow-sm shadow-brand-clay/20"
+            title="Reproduzir em tela cheia"
           >
-            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-brand-navy" />}
-            <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline">
-              {isPlaying ? 'Reproduzindo' : 'Auto Play'}
-            </span>
+            <Maximize className="w-4 h-4" />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Reproduzir</span>
           </button>
 
           <div className="h-6 w-px bg-brand-sand"></div>
@@ -332,41 +388,91 @@ export default function ProjectsView() {
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
+
+          <div className="h-6 w-px bg-brand-sand hidden sm:block"></div>
+
+          <span className="hidden sm:flex items-center gap-1 text-[10px] font-bold text-slate-400 px-1">
+            <Clock className="w-3.5 h-3.5" />
+            {readingTimeLabel(slides[activeSlide].id)}
+          </span>
         </div>
       </div>
 
       {/* CORE CAROUSEL SCREEN FRAME WITH FULL BRAND COLORS */}
-      <div className="relative shadow-2xl rounded-3xl border border-brand-sand overflow-hidden bg-brand-cream aspect-[16/10] sm:aspect-[16/9.5] min-h-[480px]">
-        
+      <div
+        ref={stageRef}
+        className={`relative shadow-2xl border border-brand-sand overflow-hidden bg-brand-cream ${
+          isFullscreen
+            ? 'w-screen h-screen rounded-none'
+            : 'rounded-3xl min-h-[520px] sm:min-h-[480px] sm:aspect-[16/9.5]'
+        }`}
+      >
+
         {/* Decorative Top Accent line representing botanical feel */}
         <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-brand-clay via-brand-moss to-brand-moss-light z-30"></div>
 
-        {/* Slide Deck Container with CSS Fade animations */}
-        <div className="w-full h-full p-6 sm:p-12 pb-16 flex flex-col justify-between relative overflow-y-auto">
-          
-          <AnimatePresence mode="wait">
+        {/* Controles flutuantes exclusivos do modo apresentação em tela cheia */}
+        {isFullscreen && (
+          <div className="absolute top-4 right-4 z-40 flex items-center gap-2">
+            <button
+              onClick={() => setIsPlaying(v => !v)}
+              className="p-2.5 rounded-xl bg-white/90 backdrop-blur border border-brand-sand shadow-md text-brand-navy hover:bg-white transition"
+              title={isPlaying ? 'Pausar' : 'Continuar auto play'}
+            >
+              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-brand-navy" />}
+            </button>
+            <button
+              onClick={exitPresentation}
+              className="p-2.5 rounded-xl bg-white/90 backdrop-blur border border-brand-sand shadow-md text-brand-navy hover:bg-white transition"
+              title="Sair da apresentação (Esc)"
+            >
+              <Minimize className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Barra de progresso do tempo de leitura do slide atual (só durante auto play) */}
+        {isPlaying && (
+          <div className="absolute top-2 left-0 right-0 h-1 bg-black/5 z-30 overflow-hidden">
             <motion.div
               key={activeSlide}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.4 }}
+              className="h-full bg-brand-navy/70"
+              initial={{ width: '0%' }}
+              animate={{ width: '100%' }}
+              transition={{ duration: readingTimeMs(slides[activeSlide].id) / 1000, ease: 'linear' }}
+            />
+          </div>
+        )}
+
+        {/* Slide Deck Container with CSS Fade animations */}
+        <div className={`w-full h-full flex flex-col justify-between relative overflow-y-auto ${
+          isFullscreen ? 'p-6 sm:p-10 md:p-16 pb-14' : 'p-4 sm:p-6 md:p-12 pb-14 sm:pb-16'
+        }`}>
+
+          <AnimatePresence mode="wait" custom={direction}>
+            <motion.div
+              key={activeSlide}
+              custom={direction}
+              initial={{ opacity: 0, x: direction * 32, scale: 0.98 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: direction * -32, scale: 0.98 }}
+              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
               className="flex-1 flex flex-col justify-between w-full h-full"
             >
-              
+
               {/* Slide Context Indicator */}
               <div className="flex items-center justify-between border-b border-brand-sand/40 pb-3 mb-4 shrink-0">
                 <div className="flex items-center space-x-2">
                   <Music className="w-5 h-5 text-brand-clay" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#5a6242] font-sans">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#5a6242] font-sans hidden sm:inline">
                     Espalhe Melodias
                   </span>
-                  <span>·</span>
+                  <span className="hidden sm:inline">·</span>
                   <span className="text-[10px] text-slate-400 font-bold font-mono">
                     Slide {(activeSlide + 1).toString().padStart(2, '0')}
                   </span>
                 </div>
-                <span className="text-[10px] font-bold text-brand-clay bg-brand-sand px-2.5 py-0.5 rounded-full uppercase">
+                <span className="text-[9px] sm:text-[10px] font-bold text-brand-clay bg-brand-sand px-2 sm:px-2.5 py-0.5 rounded-full uppercase max-w-[45%] sm:max-w-none truncate text-right">
                   {slides[activeSlide].subtitle}
                 </span>
               </div>
@@ -394,7 +500,7 @@ export default function ProjectsView() {
                       </h1>
                       <div className="w-16 h-0.5 bg-brand-clay mx-auto"></div>
                       <p className="text-xs sm:text-sm font-semibold text-brand-navy-light uppercase tracking-wider">
-                        ao 1º Encontro do Espalhe Melodias
+                        à comunidade Espalhe Melodias
                       </p>
                     </div>
 
@@ -671,14 +777,14 @@ export default function ProjectsView() {
                       <p className="text-xs text-brand-navy-light leading-tight">Mapeamento de comportamentos silenciosos que enfraquecem e dividem o ecossistema médico-terapêutico.</p>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-[290px] overflow-y-auto pr-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-[420px] sm:max-h-[290px] overflow-y-auto pr-1">
                       {sabotadoresList.map((sab) => {
                         const isRevealed = revealSaboteurId === sab.id;
                         return (
                           <div 
                             key={sab.id}
                             onClick={() => setRevealSaboteurId(isRevealed ? null : sab.id)}
-                            className={`p-3 border rounded-2xl cursor-pointer transition-all flex flex-col justify-between shrink-0 min-h-[110px] text-left hover:scale-[1.01.5] ${
+                            className={`p-3 border rounded-2xl cursor-pointer transition-all flex flex-col justify-between shrink-0 min-h-[110px] text-left hover:scale-[1.02] ${
                               isRevealed 
                                 ? 'bg-brand-moss text-white border-transparent shadow shadow-brand-moss/35' 
                                 : `bg-white hover:border-brand-clay border-brand-sand/70 shadow-sm`
@@ -687,7 +793,7 @@ export default function ProjectsView() {
                             <div className="space-y-1.5">
                               <div className="flex justify-between items-start">
                                 <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                                  isRevealed ? 'bg-amber-150 text-brand-navy' : 'bg-slate-100 text-slate-500'
+                                  isRevealed ? 'bg-amber-100 text-brand-navy' : 'bg-slate-100 text-slate-500'
                                 }`}>
                                   {isRevealed ? 'REMEDIO CLÍNICO' : 'COMPORTAMENTO'}
                                 </span>
@@ -777,10 +883,10 @@ export default function ProjectsView() {
                     {/* Founder 1 */}
                     <div className="bg-white border border-brand-sand rounded-2xl p-5 shadow-sm space-y-4 relative overflow-hidden flex flex-col sm:flex-row gap-4 items-start text-left">
                       <div className="relative shrink-0 mx-auto sm:mx-0">
-                        <img 
-                          src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop" 
-                          alt="Dra. Jéssica Muhamed"
-                          className="w-24 h-24 rounded-2xl object-cover border-2 border-brand-sand"
+                        <img
+                          src={fotoJessica}
+                          alt="Jéssica Muhamed"
+                          className="w-24 h-24 rounded-2xl object-cover border-2 border-brand-sand shadow-sm"
                         />
                         <div className="absolute -bottom-1 -right-1 bg-[#5a6242] text-white p-1 rounded-full">
                           <Check className="w-3 h-3 stroke-[3]" />
@@ -812,10 +918,10 @@ export default function ProjectsView() {
                     {/* Founder 2 */}
                     <div className="bg-white border border-brand-sand rounded-2xl p-5 shadow-sm space-y-4 relative overflow-hidden flex flex-col sm:flex-row gap-4 items-start text-left">
                       <div className="relative shrink-0 mx-auto sm:mx-0">
-                        <img 
-                          src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop" 
-                          alt="Psic. Karen Gomes"
-                          className="w-24 h-24 rounded-2xl object-cover border-2 border-brand-sand"
+                        <img
+                          src={fotoKaren}
+                          alt="Karen Gomes"
+                          className="w-24 h-24 rounded-2xl object-cover border-2 border-brand-sand shadow-sm"
                         />
                         <div className="absolute -bottom-1 -right-1 bg-brand-clay text-white p-1 rounded-full">
                           <Check className="w-3 h-3 stroke-[3]" />
@@ -933,6 +1039,12 @@ export default function ProjectsView() {
                       <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Ressonância do Encontro</span>
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[240px] overflow-y-auto pr-1">
+                        {feedbackNotes.length === 0 && (
+                          <div className="col-span-2 py-8 text-center text-slate-400">
+                            <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                            <p className="text-xs">Nenhuma resposta ainda. Seja o primeiro!</p>
+                          </div>
+                        )}
                         {feedbackNotes.map((note) => (
                           <div 
                             key={note.id}
@@ -985,10 +1097,10 @@ export default function ProjectsView() {
           {slides.map((slide, i) => (
             <button
               key={slide.id}
-              onClick={() => setActiveSlide(i)}
+              onClick={() => goToSlide(i)}
               className={`w-2.5 h-2.5 rounded-full transition-all duration-300 border cursor-pointer ${
-                activeSlide === i 
-                  ? 'bg-brand-clay border-transparent scale-125' 
+                activeSlide === i
+                  ? 'bg-brand-clay border-transparent scale-125'
                   : 'bg-brand-sand/60 border-brand-sand hover:bg-brand-sand'
               }`}
               title={slide.title}

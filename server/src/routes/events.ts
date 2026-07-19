@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, professionalOrAdmin } from '../middleware/auth';
+import { authenticate, optionalAuthenticate, professionalOrAdmin } from '../middleware/auth';
 import { asyncHandler } from '../utils/asyncHandler';
 import * as ctrl from '../controllers/eventsController';
 import * as pub from '../controllers/eventPublicController';
@@ -17,8 +17,8 @@ router.put('/item-lists/:id',    authenticate, asyncHandler(pub.updateItemList))
 router.delete('/item-lists/:id', authenticate, asyncHandler(pub.deleteItemList));
 
 // ── Rotas autenticadas ────────────────────────────────────────────────────────
-router.get('/',            authenticate, asyncHandler(ctrl.listEvents));
-router.get('/:id',         authenticate, asyncHandler(ctrl.getEvent));
+router.get('/',            optionalAuthenticate, asyncHandler(ctrl.listEvents));
+router.get('/:id',         optionalAuthenticate, asyncHandler(ctrl.getEvent));
 router.post('/',           authenticate, professionalOrAdmin, asyncHandler(ctrl.createEvent));
 router.put('/:id',         authenticate, professionalOrAdmin, asyncHandler(ctrl.updateEvent));
 router.delete('/:id',      authenticate, professionalOrAdmin, asyncHandler(ctrl.deleteEvent));
@@ -26,5 +26,7 @@ router.post('/:id/enroll', authenticate, asyncHandler(ctrl.enrollEvent));
 router.get('/:id/rsvps',              authenticate, professionalOrAdmin, asyncHandler(pub.listRsvps));
 router.patch('/:id/rsvps/:rsvpId',   authenticate, professionalOrAdmin, asyncHandler(pub.updateRsvpAttendance));
 router.delete('/:id/rsvps/:rsvpId',  authenticate, professionalOrAdmin, asyncHandler(pub.deleteRsvp));
+router.post('/:id/items',            authenticate, professionalOrAdmin, asyncHandler(pub.addEventItem));
+router.delete('/:id/items/:itemId',  authenticate, professionalOrAdmin, asyncHandler(pub.deleteEventItem));
 
 export default router;

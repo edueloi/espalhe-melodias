@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Calendar, Users, Video, Plus, Check, PlayCircle,
+  Calendar, Users, Plus, Check,
   Clock, User, RefreshCw, Music2, ChevronRight,
   Upload, Trash2, Link2, Share2, Copy, Package,
   MapPin, Pencil, X, BarChart2, MessageCircle,
@@ -560,16 +560,12 @@ function CreateEventModal({ isOpen, onClose, onSuccess, lists, onOpenManageLists
             onChange={v => set('date', v ?? '')}
             min={new Date().toISOString().split('T')[0]}
           />
-          <Select
+          <Input
             label="Hora *"
-            placeholder="Selecione..."
+            type="time"
             value={form.time}
             onChange={e => set('time', e.target.value)}
-            options={Array.from({ length: 48 }, (_, i) => {
-              const h = String(Math.floor(i / 2)).padStart(2, '0');
-              const m = i % 2 === 0 ? '00' : '30';
-              return { value: `${h}:${m}`, label: `${h}:${m}` };
-            })}
+            required
           />
         </FormRow>
 
@@ -583,8 +579,8 @@ function CreateEventModal({ isOpen, onClose, onSuccess, lists, onOpenManageLists
 
         {/* Localização */}
         <Input
-          label="Localização / Formato *"
-          placeholder="Ex: Online (Zoom), Clínica Melodias — Rua..."
+          label="Localização *"
+          placeholder="Ex: Clínica Melodias — Rua das Flores, 123"
           value={form.location}
           onChange={e => set('location', e.target.value)}
           iconLeft={<MapPin size={14} />}
@@ -594,7 +590,7 @@ function CreateEventModal({ isOpen, onClose, onSuccess, lists, onOpenManageLists
         {/* Link do mapa */}
         <Input
           label="Link para Mapa (opcional)"
-          placeholder="Google Maps ou link do Zoom"
+          placeholder="Link do Google Maps"
           type="url"
           value={form.mapLink}
           onChange={e => set('mapLink', e.target.value)}
@@ -755,14 +751,21 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [confirmDeleteRsvpId, setConfirmDeleteRsvpId] = useState<string | null>(null);
 
+  // Aba Itens
+  const [eventItemsList, setEventItemsList] = useState<Array<{ id: string; name: string }>>([]);
+  const [loadingItems, setLoadingItems] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [addingItem, setAddingItem] = useState(false);
+  const [confirmDeleteItemId, setConfirmDeleteItemId] = useState<string | null>(null);
+
   // Aba Editar
   const [editForm, setEditForm] = useState({
     title: event.title,
     date: event.event_date ? event.event_date.slice(0, 10) : '',
     time: event.event_time ?? '',
     category: event.category,
-    location: (event as unknown as Record<string, string>).location ?? '',
-    mapLink: (event as unknown as Record<string, string>).map_link ?? '',
+    location: event.location ?? '',
+    mapLink: event.map_link ?? '',
     description: event.description ?? '',
   });
   const [saving, setSaving] = useState(false);
@@ -780,8 +783,8 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
         date: event.event_date ? event.event_date.slice(0, 10) : '',
         time: event.event_time ?? '',
         category: event.category,
-        location: (event as unknown as Record<string, string>).location ?? '',
-        mapLink: (event as unknown as Record<string, string>).map_link ?? '',
+        location: event.location ?? '',
+        mapLink: event.map_link ?? '',
         description: event.description ?? '',
       });
     }
@@ -796,6 +799,47 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
       .catch(() => toast.error('Erro ao carregar inscrições.'))
       .finally(() => setLoadingRsvps(false));
   }, [isOpen, event.id]);
+
+  // Carregar itens do evento ao abrir o modal
+  const loadItems = useCallback(() => {
+    setLoadingItems(true);
+    eventsApi.get(event.id)
+      .then(full => setEventItemsList(full.items ?? []))
+      .catch(() => toast.error('Erro ao carregar itens.'))
+      .finally(() => setLoadingItems(false));
+  }, [event.id, toast]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    loadItems();
+  }, [isOpen, loadItems]);
+
+  async function handleAddItem() {
+    if (!newItemName.trim()) return;
+    setAddingItem(true);
+    try {
+      await eventsApi.addItem(event.id, newItemName.trim());
+      setNewItemName('');
+      toast.success('Item adicionado.');
+      loadItems();
+    } catch {
+      toast.error('Erro ao adicionar item.');
+    } finally {
+      setAddingItem(false);
+    }
+  }
+
+  async function handleDeleteItem(itemId: string) {
+    try {
+      await eventsApi.deleteItem(event.id, itemId);
+      toast.success('Item removido.');
+      loadItems();
+    } catch {
+      toast.error('Erro ao remover item.');
+    } finally {
+      setConfirmDeleteItemId(null);
+    }
+  }
 
   // ── Derived stats ──
   const totalConfirmed = rsvps.length;
@@ -868,11 +912,13 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
     try {
       await eventsApi.update(event.id, {
         title: editForm.title.trim(),
-        event_date: editForm.date,
-        event_time: editForm.time,
+        date: editForm.date,
+        time: editForm.time,
         category: editForm.category,
         description: editForm.description.trim(),
-      } as Partial<HealthEvent>);
+        location: editForm.location.trim(),
+        mapLink: editForm.mapLink.trim(),
+      });
       toast.success('Evento atualizado!');
       onUpdated();
     } catch {
@@ -908,9 +954,8 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
       eventItemsMap.get(r.item_id)!.takers.push(r.name);
     }
   });
-  // Itens sem ninguém: busca da lista de itens do evento via public endpoint
-  const eventItemsFromEvent = (event as unknown as { items?: Array<{ id: string; name: string }> }).items ?? [];
-  eventItemsFromEvent.forEach(i => {
+  // Itens sem ninguém: vem da lista completa carregada via eventsApi.get()
+  eventItemsList.forEach(i => {
     if (!eventItemsMap.has(i.id)) {
       eventItemsMap.set(i.id, { id: i.id, name: i.name, takers: [] });
     }
@@ -956,9 +1001,9 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
             <span className="flex items-center gap-1">
               <Clock size={11} />{event.event_time ?? '—'}
             </span>
-            {(event as unknown as Record<string, string>).location && (
+            {event.location && (
               <span className="flex items-center gap-1">
-                <MapPin size={11} />{(event as unknown as Record<string, string>).location}
+                <MapPin size={11} />{event.location}
               </span>
             )}
           </div>
@@ -1092,23 +1137,27 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
                       </span>
 
                       {/* Ações */}
-                      <div className="flex gap-1 shrink-0">
+                      <div className="flex gap-1.5 shrink-0">
                         {phone && (
                           <IconButton
                             size="sm"
                             variant="ghost"
-                            title="WhatsApp"
+                            title="Enviar WhatsApp"
                             onClick={() => window.open(`https://wa.me/55${phone}`, '_blank')}
                           >
                             <MessageCircle size={12} />
                           </IconButton>
                         )}
-                        <IconButton
-                          size="sm"
-                          variant="ghost"
-                          title={isPresent ? 'Marcar falta' : 'Marcar presente'}
+                        <button
+                          type="button"
                           onClick={() => toggleAttendance(rsvp)}
                           disabled={togglingId === rsvp.id}
+                          title={isPresent ? 'Marcar falta' : 'Marcar presente'}
+                          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition disabled:opacity-50 ${
+                            isPresent
+                              ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                              : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                          }`}
                         >
                           {togglingId === rsvp.id
                             ? <RefreshCw size={12} className="animate-spin" />
@@ -1116,7 +1165,8 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
                               ? <UserX size={12} />
                               : <Check size={12} />
                           }
-                        </IconButton>
+                          {isPresent ? 'Marcar falta' : 'Marcar presente'}
+                        </button>
                         <IconButton
                           size="sm"
                           variant="danger"
@@ -1137,8 +1187,31 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
         {/* ── ABA ITENS ── */}
         {activeTab === 'items' && (
           <div className="space-y-4">
-            {eventItems.length === 0 ? (
-              <EmptyState icon={Package} title="Sem itens" description="Este evento não tem divisão de itens configurada." />
+            {/* Adicionar novo item */}
+            <div className="flex gap-2">
+              <Input
+                placeholder="Ex: Café, Bolo, Copos descartáveis..."
+                value={newItemName}
+                onChange={e => setNewItemName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddItem()}
+                wrapperClassName="flex-1"
+              />
+              <Button
+                variant="success"
+                iconLeft={<Plus size={14} />}
+                onClick={handleAddItem}
+                loading={addingItem}
+              >
+                Adicionar
+              </Button>
+            </div>
+
+            {loadingItems ? (
+              <div className="flex items-center justify-center py-8 gap-2 text-zinc-400 text-sm">
+                <RefreshCw size={14} className="animate-spin" /> Carregando itens...
+              </div>
+            ) : eventItems.length === 0 ? (
+              <EmptyState icon={Package} title="Sem itens" description="Adicione itens para os participantes se organizarem (ex: lista de café)." />
             ) : (
               <>
                 <div className="flex items-center justify-between">
@@ -1164,11 +1237,21 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
                             <span className={`w-2 h-2 rounded-full shrink-0 ${hasTakers ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
                             <p className="text-xs font-bold text-zinc-800">{item.name}</p>
                           </div>
-                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                            hasTakers ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-500'
-                          }`}>
-                            {hasTakers ? `${item.takers.length} pessoa${item.takers.length > 1 ? 's' : ''}` : 'Vago'}
-                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                              hasTakers ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-500'
+                            }`}>
+                              {hasTakers ? `${item.takers.length} pessoa${item.takers.length > 1 ? 's' : ''}` : 'Vago'}
+                            </span>
+                            <IconButton
+                              size="sm"
+                              variant="danger"
+                              title="Remover item"
+                              onClick={() => setConfirmDeleteItemId(item.id)}
+                            >
+                              <Trash2 size={12} />
+                            </IconButton>
+                          </div>
                         </div>
                         {hasTakers ? (
                           <div className="flex flex-wrap gap-1.5 ml-4">
@@ -1204,16 +1287,11 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
                 value={editForm.date || null}
                 onChange={v => setEditForm(p => ({ ...p, date: v ?? '' }))}
               />
-              <Select
+              <Input
                 label="Hora"
-                placeholder="Selecione..."
+                type="time"
                 value={editForm.time}
                 onChange={e => setEditForm(p => ({ ...p, time: e.target.value }))}
-                options={Array.from({ length: 48 }, (_, i) => {
-                  const h = String(Math.floor(i / 2)).padStart(2, '0');
-                  const m = i % 2 === 0 ? '00' : '30';
-                  return { value: `${h}:${m}`, label: `${h}:${m}` };
-                })}
               />
             </FormRow>
             <Select
@@ -1268,6 +1346,17 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
         variant="danger"
       />
 
+      {/* Confirmar delete item */}
+      <ConfirmModal
+        isOpen={!!confirmDeleteItemId}
+        onClose={() => setConfirmDeleteItemId(null)}
+        onConfirm={() => confirmDeleteItemId && handleDeleteItem(confirmDeleteItemId)}
+        title="Remover item"
+        message="Este item será removido da lista. Quem já tinha escolhido levá-lo ficará sem item atribuído."
+        confirmLabel="Remover"
+        variant="danger"
+      />
+
       {/* Confirmar delete evento */}
       <ConfirmModal
         isOpen={confirmDelete}
@@ -1291,7 +1380,6 @@ export default function EventsView() {
   const [events, setEvents]         = useState<HealthEvent[]>([]);
   const [loading, setLoading]       = useState(true);
   const [tab, setTab]               = useState<'upcoming' | 'past'>('upcoming');
-  const [playingId, setPlayingId]   = useState<string | null>(null);
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
 
   // Modals
@@ -1415,7 +1503,7 @@ export default function EventsView() {
                   Encontros, Palestras & Workshops
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5 max-w-lg">
-                  Participe dos nossos encontros virtuais e presenciais mediados por psicólogos credenciados.
+                  Participe dos nossos encontros presenciais mediados por psicólogos credenciados.
                 </p>
               </div>
             </div>
@@ -1462,7 +1550,7 @@ export default function EventsView() {
         <div className="flex gap-1 bg-white border border-brand-sand/60 rounded-xl p-1 w-fit">
           {[
             { val: 'upcoming' as const, label: `Próximos (${upcoming.length})` },
-            { val: 'past'     as const, label: `Gravações (${past.length})` },
+            { val: 'past'     as const, label: `Realizados (${past.length})` },
           ].map(t => (
             <button
               key={t.val}
@@ -1478,35 +1566,6 @@ export default function EventsView() {
             </button>
           ))}
         </div>
-
-        {/* ── VIDEO PLAYER ───────────────────────────────────────────────── */}
-        {playingId && (
-          <ContentCard padding="none" id={`player-${playingId}`}>
-            <div className="bg-slate-900 rounded-2xl sm:rounded-3xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
-                <div className="flex items-center gap-2">
-                  <Video className="w-4 h-4 text-violet-400" />
-                  <span className="text-xs font-bold text-violet-300 uppercase tracking-widest">Sala de Gravações Melodias</span>
-                </div>
-                <button
-                  onClick={() => setPlayingId(null)}
-                  className="text-xs text-slate-400 hover:text-white transition"
-                >
-                  Fechar
-                </button>
-              </div>
-              <div className="aspect-video max-w-2xl mx-auto flex flex-col items-center justify-center p-10 text-center">
-                <div className="w-20 h-20 rounded-full bg-violet-500/20 border border-violet-500/30 flex items-center justify-center mb-4">
-                  <PlayCircle className="w-10 h-10 text-violet-400 animate-pulse" />
-                </div>
-                <p className="text-sm font-bold text-white mb-1">Reprodutor Melodias</p>
-                <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
-                  A gravação completa está disponível para membros credenciados. Acesso privado garantido pelo protocolo Melodias.
-                </p>
-              </div>
-            </div>
-          </ContentCard>
-        )}
 
         {/* ── CONTEÚDO ───────────────────────────────────────────────────── */}
         {loading ? (
@@ -1539,7 +1598,7 @@ export default function EventsView() {
               {upcoming.map(evt => {
                 const meta = CAT_META[evt.category] ?? CAT_META['Grupo de Apoio'];
                 const isEnrolling = enrollingId === evt.id;
-                const divisionItems = (evt as unknown as { division_items?: Array<{ name: string; takers?: string[] }> }).division_items ?? [];
+                const divisionItems = evt.division_items ?? [];
                 return (
                   <React.Fragment key={evt.id}>
                     <UpcomingEventCard
@@ -1561,12 +1620,12 @@ export default function EventsView() {
 
         ) : (
 
-          /* PAST / RECORDINGS */
+          /* PAST EVENTS */
           past.length === 0 ? (
             <EmptyState
-              icon={Video}
+              icon={Calendar}
               title="Nenhum evento encerrado"
-              description="As gravações dos encontros realizados aparecerão aqui."
+              description="Os encontros já realizados aparecerão aqui."
             />
           ) : (
             <div className="space-y-5">
@@ -1629,7 +1688,6 @@ export default function EventsView() {
                       <PastEventCard
                         evt={evt}
                         isAdmin={isAdmin}
-                        onPlay={() => setPlayingId(evt.id)}
                         onManage={() => setManageEvent(evt)}
                         onDelete={() => setConfirmDeleteEvent({ id: evt.id, title: evt.title })}
                         onCopyLink={() => copyPublicLink(evt.id)}
@@ -1747,8 +1805,8 @@ function UpcomingEventCard({
   evt, meta, isEnrolling, isAdmin, divisionItems,
   onEnroll, onCopyLink, onManage, onDelete,
 }: UpcomingEventCardProps) {
-  const coverUrl = (evt as unknown as Record<string, string>).cover_url;
-  const location = (evt as unknown as Record<string, string>).location;
+  const coverUrl = evt.cover_url;
+  const location = evt.location;
 
   const catGradient: Record<string, string> = {
     success: 'from-brand-moss to-brand-moss-dark',
@@ -1773,8 +1831,8 @@ function UpcomingEventCard({
     >
       {/* CAPA / HERO */}
       {coverUrl ? (
-        <div className="relative h-44 overflow-hidden">
-          <img src={coverUrl} alt={evt.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        <div className="relative h-64 overflow-hidden bg-zinc-100">
+          <img src={coverUrl} alt={evt.title} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
           {/* Badges sobre a imagem */}
           <div className="absolute top-3 left-3 right-3 flex items-start justify-between">
@@ -1935,16 +1993,15 @@ function UpcomingEventCard({
 interface PastEventCardProps {
   evt: HealthEvent;
   isAdmin: boolean;
-  onPlay: () => void;
   onManage: () => void;
   onDelete: () => void;
   onCopyLink: () => void;
 }
 
-function PastEventCard({ evt, isAdmin, onPlay, onManage, onDelete, onCopyLink }: PastEventCardProps) {
-  const presentes = (evt as unknown as Record<string, number>).presents_count ?? 0;
+function PastEventCard({ evt, isAdmin, onManage, onDelete, onCopyLink }: PastEventCardProps) {
+  const presentes = evt.presents_count ?? 0;
   const faltas    = (evt.participants_count ?? 0) - presentes;
-  const coverUrl  = (evt as unknown as Record<string, string>).cover_url;
+  const coverUrl  = evt.cover_url;
 
   const dateStr = (() => {
     const d = evt.event_date;
@@ -2019,31 +2076,17 @@ function PastEventCard({ evt, isAdmin, onPlay, onManage, onDelete, onCopyLink }:
         )}
 
         {/* Rodapé */}
-        <div className="flex items-center justify-between pt-3 border-t border-zinc-100 mt-auto gap-2 flex-wrap">
-          <span className="text-[10px] text-slate-400 font-semibold">
-            {evt.recording_url ? 'Gravação disponível' : 'Sem gravação'}
-          </span>
-          <div className="flex gap-2">
-            {isAdmin && (
-              <Button
-                variant="ghost"
-                size="sm"
-                iconLeft={<BarChart2 size={13} />}
-                onClick={onManage}
-              >
-                Ver gestão
-              </Button>
-            )}
+        <div className="flex items-center justify-end pt-3 border-t border-zinc-100 mt-auto gap-2 flex-wrap">
+          {isAdmin && (
             <Button
-              id={`btn-play-${evt.id}`}
-              variant="outline"
+              variant="ghost"
               size="sm"
-              iconLeft={<PlayCircle size={14} />}
-              onClick={onPlay}
+              iconLeft={<BarChart2 size={13} />}
+              onClick={onManage}
             >
-              Ver Gravação
+              Ver gestão
             </Button>
-          </div>
+          )}
         </div>
       </div>
     </div>

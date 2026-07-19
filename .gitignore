@@ -6,3 +6,11 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Uploads de usuário (gerados em runtime, não versionados)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Projeto de referência legado (PHP, não faz parte do deploy)
+/melodias/
+ENTREGA_TESTES.txt

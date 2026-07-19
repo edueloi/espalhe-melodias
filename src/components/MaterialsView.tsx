@@ -1,13 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   BookOpen, Search, FileText, Download, BookMarked,
   Volume2, Lock, Plus, Play, Pause, X,
-  Headphones, FileImage, BookCopy, Filter
+  Headphones, FileImage, BookCopy, Filter, Upload, Loader2, Paperclip,
 } from 'lucide-react';
 import { AppUser } from '../types';
 import { PageWrapper, SectionTitle, ContentCard } from './ui/PageWrapper';
 import { Badge } from './ui/Badge';
-import { materialsApi, type Material } from '../lib/api';
+import { useToast } from './ui';
+import { materialsApi, uploadApi, resolveUploadUrl, MATERIAL_MAX_SIZE_MB, type Material } from '../lib/api';
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatTime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return '00:00';
+  const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+  const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
 
 interface MaterialsViewProps {
   currentUser: AppUser;
@@ -34,6 +48,8 @@ const CAT_COLORS: Record<string, 'default' | 'success' | 'info' | 'warning' | 'd
 };
 
 export default function MaterialsView({ currentUser }: MaterialsViewProps) {
+  const toast = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [catFilter, setCatFilter] = useState('all');
@@ -41,7 +57,10 @@ export default function MaterialsView({ currentUser }: MaterialsViewProps) {
   const [search, setSearch]       = useState('');
   const [showForm, setShowForm]   = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
-  const [progress]   = useState(30);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration]   = useState(0);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   // form state
   const [fTitle, setFTitle]   = useState('');
@@ -49,6 +68,8 @@ export default function MaterialsView({ currentUser }: MaterialsViewProps) {
   const [fType, setFType]     = useState<typeof FORMATS[number]>('E-book');
   const [fDesc, setFDesc]     = useState('');
   const [fPrivate, setFPrivate] = useState(false);
+  const [fFile, setFFile]     = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const loadMaterials = () => {
@@ -60,7 +81,7 @@ export default function MaterialsView({ currentUser }: MaterialsViewProps) {
       limit: 100,
     })
       .then(res => setMaterials(res.data))
-      .catch(console.error)
+      .catch(() => toast.error('Erro ao carregar materiais.'))
       .finally(() => setLoading(false));
   };
 
@@ -68,19 +89,70 @@ export default function MaterialsView({ currentUser }: MaterialsViewProps) {
 
   const filtered = materials;
 
+  const resetForm = () => {
+    setFTitle(''); setFDesc(''); setFPrivate(false); setFFile(null); setShowForm(false);
+  };
+
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > MATERIAL_MAX_SIZE_MB * 1024 * 1024) {
+      toast.error(`Arquivo muito grande. O limite é ${MATERIAL_MAX_SIZE_MB} MB.`);
+      return;
+    }
+    setFFile(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fTitle.trim() || !fDesc.trim()) return;
+    if (!fFile) {
+      toast.error('Anexe um arquivo para o material.');
+      return;
+    }
     setSubmitting(true);
     try {
-      await materialsApi.create({ title: fTitle, category: fCat, type: fType, description: fDesc, downloadUrl: '#', restrictedToMembers: fPrivate });
-      setFTitle(''); setFDesc(''); setFPrivate(false); setShowForm(false);
+      setUploading(true);
+      const { fileUrl } = await uploadApi.uploadMaterial(fFile);
+      setUploading(false);
+      await materialsApi.create({ title: fTitle, category: fCat, type: fType, description: fDesc, downloadUrl: fileUrl, restrictedToMembers: fPrivate });
+      toast.success('Material adicionado à biblioteca!');
+      resetForm();
       loadMaterials();
-    } catch (err) { console.error(err); }
-    finally { setSubmitting(false); }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao enviar material.');
+    } finally {
+      setUploading(false);
+      setSubmitting(false);
+    }
   };
 
   const playingMat = materials.find(m => m.id === playingId);
+
+  const togglePlay = (matId: string) => {
+    if (playingId === matId) {
+      // mesma faixa: alterna play/pause
+      if (audioPlaying) audioRef.current?.pause();
+      else audioRef.current?.play();
+      return;
+    }
+    // troca de faixa: reseta progresso e deixa o <audio> tocar assim que carregar (autoPlay)
+    setCurrentTime(0);
+    setDuration(0);
+    setPlayingId(matId);
+  };
+
+  const closePlayer = () => {
+    audioRef.current?.pause();
+    setPlayingId(null);
+    setAudioPlaying(false);
+  };
+
+  const seekTo = (fraction: number) => {
+    if (!audioRef.current || !duration) return;
+    audioRef.current.currentTime = fraction * duration;
+  };
 
   return (
     <PageWrapper id="materials-main-view">
@@ -194,14 +266,51 @@ export default function MaterialsView({ currentUser }: MaterialsViewProps) {
                   className="w-full text-xs text-brand-navy bg-brand-cream border border-brand-sand px-3 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/30 transition resize-none" />
               </div>
 
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Arquivo do Material</label>
+                  <span className="text-[10px] text-slate-400">Limite: {MATERIAL_MAX_SIZE_MB} MB</span>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.epub,audio/*,image/*"
+                  className="hidden"
+                  onChange={handleFileSelected}
+                />
+                {fFile ? (
+                  <div className="flex items-center justify-between gap-3 bg-brand-cream border border-brand-sand rounded-xl px-3 py-2.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Paperclip className="w-4 h-4 text-brand-clay shrink-0" />
+                      <span className="text-xs text-brand-navy truncate">{fFile.name}</span>
+                      <span className="text-[10px] text-slate-400 shrink-0">({formatBytes(fFile.size)})</span>
+                    </div>
+                    <button type="button" onClick={() => setFFile(null)} className="p-1 text-slate-400 hover:text-red-500 shrink-0 transition">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-brand-sand hover:border-brand-clay/50 hover:bg-brand-clay/5 rounded-xl px-3 py-4 text-xs font-semibold text-slate-500 hover:text-brand-clay transition"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Selecionar arquivo (PDF, áudio, e-book ou imagem)
+                  </button>
+                )}
+              </div>
+
               <div className="flex flex-col sm:flex-row justify-end gap-3 pt-3 border-t border-brand-sand/50">
-                <button type="button" onClick={() => setShowForm(false)}
+                <button type="button" onClick={resetForm}
                   className="px-4 py-2.5 border border-brand-sand hover:bg-brand-sand/40 rounded-xl text-xs font-bold text-brand-navy transition">
                   Cancelar
                 </button>
-                <button id="btn-submit-material" type="submit"
-                  className="px-5 py-2.5 bg-brand-clay hover:bg-brand-clay-dark text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md transition">
-                  Confirmar Cadastro
+                <button id="btn-submit-material" type="submit" disabled={submitting}
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-clay hover:bg-brand-clay-dark disabled:opacity-60 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md transition">
+                  {submitting ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" />{uploading ? 'Enviando arquivo...' : 'Salvando...'}</>
+                  ) : 'Confirmar Cadastro'}
                 </button>
               </div>
             </form>
@@ -213,9 +322,22 @@ export default function MaterialsView({ currentUser }: MaterialsViewProps) {
           <div id="audio-player" className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-brand-navy-light/30 bg-gradient-to-r from-brand-navy-dark via-[#1a2f45] to-brand-navy shadow-xl">
             {/* bg note */}
             <div className="absolute top-2 right-6 text-7xl font-script text-white/5 select-none pointer-events-none">♫</div>
+
+            <audio
+              ref={audioRef}
+              src={resolveUploadUrl(playingMat.download_url)}
+              autoPlay
+              onPlay={() => setAudioPlaying(true)}
+              onPause={() => setAudioPlaying(false)}
+              onTimeUpdate={e => setCurrentTime(e.currentTarget.currentTime)}
+              onLoadedMetadata={e => setDuration(e.currentTarget.duration)}
+              onEnded={() => setAudioPlaying(false)}
+              className="hidden"
+            />
+
             <div className="relative z-10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className={`p-3 rounded-xl bg-white/10 border border-white/20 shrink-0 ${playingId ? 'animate-pulse' : ''}`}>
+                <div className={`p-3 rounded-xl bg-white/10 border border-white/20 shrink-0 ${audioPlaying ? 'animate-pulse' : ''}`}>
                   <Headphones className="w-5 h-5 text-emerald-300" />
                 </div>
                 <div className="min-w-0">
@@ -226,23 +348,33 @@ export default function MaterialsView({ currentUser }: MaterialsViewProps) {
               </div>
 
               <div className="flex items-center gap-3 flex-1 max-w-xs">
-                <button onClick={() => setPlayingId(playingId ? null : playingMat.id)}
+                <button onClick={() => togglePlay(playingMat.id)}
                   className="p-2.5 rounded-full bg-white text-brand-navy hover:scale-105 active:scale-95 transition shrink-0">
-                  {playingId ? <Pause className="w-4 h-4 fill-brand-navy" /> : <Play className="w-4 h-4 fill-brand-navy ml-0.5" />}
+                  {audioPlaying ? <Pause className="w-4 h-4 fill-brand-navy" /> : <Play className="w-4 h-4 fill-brand-navy ml-0.5" />}
                 </button>
                 <div className="flex-1 space-y-1">
-                  <div className="w-full bg-white/20 rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-emerald-400 h-full rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={e => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      seekTo((e.clientX - rect.left) / rect.width);
+                    }}
+                    className="w-full bg-white/20 rounded-full h-1.5 overflow-hidden cursor-pointer"
+                  >
+                    <div
+                      className="bg-emerald-400 h-full rounded-full transition-all duration-150"
+                      style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+                    />
+                  </button>
                   <div className="flex justify-between text-[10px] text-slate-400">
-                    <span>03:22</span>
-                    <span className="font-semibold text-emerald-400">{playingId ? 'Tocando...' : 'Pausado'}</span>
-                    <span>10:00</span>
+                    <span>{formatTime(currentTime)}</span>
+                    <span className="font-semibold text-emerald-400">{audioPlaying ? 'Tocando...' : 'Pausado'}</span>
+                    <span>{formatTime(duration)}</span>
                   </div>
                 </div>
               </div>
 
-              <button onClick={() => setPlayingId(null)}
+              <button onClick={closePlayer}
                 className="text-xs text-white/50 hover:text-white border border-white/20 hover:border-white px-3 py-1.5 rounded-lg transition shrink-0">
                 Fechar
               </button>
@@ -301,7 +433,8 @@ export default function MaterialsView({ currentUser }: MaterialsViewProps) {
               const fmt = FORMAT_META[mat.type] ?? FORMAT_META['E-book'];
               const FmtIcon = fmt.icon;
               const isAudio = mat.type === 'Áudio';
-              const isPlaying = playingId === mat.id;
+              const isSelected = playingId === mat.id;
+              const isPlaying = isSelected && audioPlaying;
 
               return (
                 <div key={mat.id} id={`material-card-${mat.id}`}
@@ -323,12 +456,12 @@ export default function MaterialsView({ currentUser }: MaterialsViewProps) {
                           </Badge>
                         </div>
                       </div>
-                      {mat.restrictedToMembers && (
+                      {mat.restricted_to_members ? (
                         <div className="flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">
                           <Lock className="w-3 h-3" />
                           Premium
                         </div>
-                      )}
+                      ) : null}
                     </div>
 
                     {/* Title + author */}
@@ -351,7 +484,7 @@ export default function MaterialsView({ currentUser }: MaterialsViewProps) {
                       {isAudio ? (
                         <button
                           id={`btn-listen-${mat.id}`}
-                          onClick={() => setPlayingId(isPlaying ? null : mat.id)}
+                          onClick={() => togglePlay(mat.id)}
                           className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold uppercase rounded-xl transition ${
                             isPlaying
                               ? 'bg-emerald-600 text-white'
@@ -362,14 +495,17 @@ export default function MaterialsView({ currentUser }: MaterialsViewProps) {
                           {isPlaying ? 'Pausar' : 'Ouvir'}
                         </button>
                       ) : (
-                        <button
+                        <a
                           id={`btn-download-${mat.id}`}
-                          onClick={() => alert(`💾 Download de "${mat.title}" iniciado!`)}
+                          href={resolveUploadUrl(mat.download_url)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => materialsApi.trackDownload(mat.id).catch(() => {})}
                           className="flex items-center gap-1.5 px-4 py-2 bg-brand-clay text-white text-xs font-bold uppercase rounded-xl hover:bg-brand-clay-dark transition"
                         >
                           <Download className="w-3.5 h-3.5" />
                           Baixar
-                        </button>
+                        </a>
                       )}
                     </div>
                   </div>

@@ -1,6 +1,14 @@
 // Cliente HTTP centralizado para a API Espalhe Melodias
 
-const BASE_URL = 'http://localhost:3001/api';
+const API_ORIGIN = 'http://localhost:3001';
+const BASE_URL = `${API_ORIGIN}/api`;
+
+/** Resolve um caminho relativo de upload (ex: /uploads/gallery/x.jpg) para URL absoluta do backend. */
+export function resolveUploadUrl(path: string | undefined | null): string {
+  if (!path) return '';
+  if (/^https?:\/\//.test(path)) return path;
+  return `${API_ORIGIN}${path.startsWith('/') ? path : `/${path}`}`;
+}
 
 // ─── Token storage ────────────────────────────────────────────────────────────
 
@@ -428,6 +436,15 @@ export interface HealthEvent {
   enrolledUserIds: string[];
   isEnrolled: boolean;
   recording_url?: string;
+  location?: string;
+  map_link?: string;
+  cover_url?: string;
+  rsvp_enabled?: boolean | number;
+  allow_guests?: boolean | number;
+  item_division?: boolean | number;
+  items?: Array<{ id: string; name: string }>;
+  division_items?: Array<{ id: string; name: string; takers: string[] }>;
+  presents_count?: number;
   created_at: string;
 }
 
@@ -440,10 +457,17 @@ export const eventsApi = {
     location?: string; mapLink?: string; coverUrl?: string; recordingUrl?: string;
     rsvpEnabled?: boolean; allowGuests?: boolean; itemDivision?: boolean; divisionItems?: string[];
   }) => post<{ id: string }>('/events', data),
-  update: (id: string, data: Partial<HealthEvent>) => put<void>(`/events/${id}`, data),
+  update: (id: string, data: {
+    title?: string; date?: string; time?: string; description?: string; category?: string;
+    status?: 'upcoming' | 'past'; location?: string; mapLink?: string; coverUrl?: string;
+    rsvpEnabled?: boolean; allowGuests?: boolean;
+  }) => put<void>(`/events/${id}`, data),
   delete: (id: string) => del<void>(`/events/${id}`),
   enroll: (id: string) => post<{ enrolled: boolean; participantsCount: number }>(`/events/${id}/enroll`, {}),
   listRsvps: (id: string) => get<Record<string, unknown>[]>(`/events/${id}/rsvps`),
+  // Itens do evento (lista de café/contribuição)
+  addItem: (eventId: string, name: string) => post<{ id: string; name: string }>(`/events/${eventId}/items`, { name }),
+  deleteItem: (eventId: string, itemId: string) => del<void>(`/events/${eventId}/items/${itemId}`),
   // Listas pré-definidas de itens (persistidas no backend)
   listItemLists: () => get<EventItemList[]>('/events/item-lists'),
   createItemList: (data: { name: string; items: string[] }) => post<EventItemList>('/events/item-lists', data),
@@ -491,12 +515,62 @@ export const helpApi = {
   stats: () => get<{ total: number; open: number; inProgress: number; done: number; urgent: number }>('/help/stats'),
 };
 
+// ─── Peer Help (rede de apoio entre colegas) ──────────────────────────────────
+
+export interface PeerHelpReply {
+  id: string;
+  request_id: string;
+  author_id: string;
+  author_name: string;
+  message: string;
+  is_private: number;
+  created_at: string;
+}
+
+export interface PeerHelpRequest {
+  id: string;
+  author_id: string;
+  author_name: string;
+  author_specialty?: string;
+  title: string;
+  description: string;
+  category: string;
+  urgency: 'normal' | 'urgente';
+  anonymous: boolean;
+  response_pref: 'qualquer' | 'whatsapp' | 'privado';
+  status: 'aberto' | 'resolvido';
+  isMine: boolean;
+  repliesCount: number;
+  replies: PeerHelpReply[];
+  created_at: string;
+  updated_at: string;
+}
+
+export const peerHelpApi = {
+  list: (params?: { status?: string; mine?: boolean; page?: number }) =>
+    getPaged<PeerHelpRequest>('/peer-help', {
+      status: params?.status,
+      mine: params?.mine ? 'true' : undefined,
+      page: params?.page,
+    }),
+  create: (data: {
+    title: string; description: string; category: string;
+    urgency?: 'normal' | 'urgente'; anonymous?: boolean;
+    responsePref?: 'qualquer' | 'whatsapp' | 'privado';
+  }) => post<{ id: string }>('/peer-help', data),
+  reply: (requestId: string, data: { message: string; isPrivate?: boolean }) =>
+    post<{ id: string }>(`/peer-help/${requestId}/replies`, data),
+  resolve: (requestId: string) => patch<void>(`/peer-help/${requestId}/resolve`, {}),
+};
+
 // ─── Suggestions ──────────────────────────────────────────────────────────────
 
 export interface Suggestion {
   id: string;
   author_id: string;
   author_name: string;
+  author_avatar?: string;
+  author_role?: string;
   content: string;
   likes: number;
   likedBy: string[];
@@ -563,7 +637,7 @@ function normalizeProfessional(professional: Professional): Professional {
 }
 
 export const professionalsApi = {
-  list: async (params?: { specialty?: string; search?: string; page?: number }) => {
+  list: async (params?: { specialty?: string; search?: string; page?: number; limit?: number }) => {
     const result = await getPaged<Professional>('/professionals', params);
     return { ...result, data: result.data.map(normalizeProfessional) };
   },
@@ -667,6 +741,7 @@ export interface BlogPost {
   author_avatar?: string;
   read_time: string;
   likes: number;
+  views?: number;
   likedBy?: string[];
   published: number;
   post_date: string;
@@ -679,9 +754,32 @@ export const blogsApi = {
   get: (id: string) => get<BlogPost>(`/blogs/${id}`),
   create: (data: { title: string; excerpt: string; content: string; category: string; imageUrl?: string; readTime?: string; published?: boolean }) =>
     post<{ id: string }>('/blogs', data),
-  update: (id: string, data: Partial<BlogPost>) => put<void>(`/blogs/${id}`, data),
+  update: (id: string, data: { title?: string; excerpt?: string; content?: string; category?: string; imageUrl?: string; readTime?: string; published?: boolean }) =>
+    put<void>(`/blogs/${id}`, data),
   delete: (id: string) => del<void>(`/blogs/${id}`),
   like: (id: string) => post<{ likes: number; liked: boolean }>(`/blogs/${id}/like`, {}),
+};
+
+// ─── Gallery ──────────────────────────────────────────────────────────────────
+
+export interface GalleryPhoto {
+  id: string;
+  image_url: string;
+  caption?: string;
+  author_id: string;
+  author_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const galleryApi = {
+  list: (params?: { page?: number; limit?: number }) =>
+    getPaged<GalleryPhoto>('/gallery', params),
+  get: (id: string) => get<GalleryPhoto>(`/gallery/${id}`),
+  create: (data: { imageUrl: string; caption?: string }) =>
+    post<{ id: string }>('/gallery', data),
+  update: (id: string, data: { caption?: string }) => put<void>(`/gallery/${id}`, data),
+  delete: (id: string) => del<void>(`/gallery/${id}`),
 };
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
@@ -701,7 +799,36 @@ export const uploadApi = {
     return body.data!;
   },
   deleteAvatar: () => del<void>('/upload/avatar'),
+  uploadGalleryPhoto: async (file: File): Promise<{ imageUrl: string }> => {
+    const token = tokenStore.get();
+    const form = new FormData();
+    form.append('photo', file);
+    const res = await fetch(`${BASE_URL}/upload/gallery-photo`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    const body = await res.json().catch(() => ({})) as ApiResponse<{ imageUrl: string }>;
+    if (!res.ok) throw new ApiError(body.message ?? `Erro ${res.status}`, res.status);
+    return body.data!;
+  },
+  uploadMaterial: async (file: File): Promise<{ fileUrl: string; originalName: string; sizeBytes: number; mimeType: string }> => {
+    const token = tokenStore.get();
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`${BASE_URL}/upload/material`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    const body = await res.json().catch(() => ({})) as ApiResponse<{ fileUrl: string; originalName: string; sizeBytes: number; mimeType: string }>;
+    if (!res.ok) throw new ApiError(body.message ?? `Erro ${res.status}`, res.status);
+    return body.data!;
+  },
 };
+
+/** Limite de tamanho de arquivo para materiais de apoio (deve bater com server/src/controllers/uploadController.ts) */
+export const MATERIAL_MAX_SIZE_MB = 20;
 
 // ─── Newsletter ────────────────────────────────────────────────────────────
 
@@ -715,11 +842,11 @@ export interface NewsletterSubscription {
 
 export const newsletterApi = {
   subscribe: (email: string) =>
-    post<{ id: string; message: string }>('/newsletters/subscribe', { email }),
+    post<{ id: string; message: string }>('/newsletter/subscribe', { email }),
   unsubscribe: (email: string) =>
-    post<void>('/newsletters/unsubscribe', { email }),
+    post<{ email: string }>('/newsletter/unsubscribe', { email }),
   count: () =>
-    get<{ total: number; active: number }>('/newsletters/stats'),
+    get<{ total: number; active: number }>('/newsletter/count'),
 };
 
 // ─── Contact Form ─────────────────────────────────────────────────────────
@@ -732,7 +859,9 @@ export interface ContactMessage {
   subject: string;
   message: string;
   created_at: string;
-  status: 'new' | 'read' | 'responded';
+  status: 'new' | 'responded' | 'resolved' | 'spam';
+  admin_reply?: string;
+  responded_at?: string;
 }
 
 export const contactApi = {
@@ -763,21 +892,6 @@ export interface BlogPostAPI {
   updated_at: string;
 }
 
-// Convert API format to local format for compatibility
-export interface BlogPost {
-  id: string;
-  title: string;
-  excerpt: string;
-  content: string;
-  category: string;
-  imageUrl: string;
-  authorName: string;
-  authorAvatar: string;
-  date: string;
-  readTime: string;
-  featured?: boolean;
-  published?: boolean;
-};
 
 // ─── Instagram Integration ────────────────────────────────────────────────
 
@@ -791,11 +905,57 @@ export interface InstagramPost {
   published_at: string;
 }
 
+interface InstagramMediaPayload {
+  id: string;
+  caption?: string;
+  media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL';
+  media_url: string;
+  thumbnail_url?: string;
+  like_count?: number;
+  comments_count?: number;
+  permalink: string;
+  timestamp: string;
+}
+
+interface InstagramFeedPayload {
+  posts: InstagramMediaPayload[];
+  stats: {
+    followers_count: number;
+    media_count: number;
+  };
+  fetchedAt: string;
+  cacheExpiry?: number;
+}
+
+function normalizeInstagramPost(post: InstagramMediaPayload): InstagramPost {
+  return {
+    id: post.id,
+    image_url: post.thumbnail_url ?? post.media_url,
+    caption: post.caption ?? '',
+    likes_count: post.like_count ?? 0,
+    comments_count: post.comments_count ?? 0,
+    instagram_url: post.permalink,
+    published_at: post.timestamp,
+  };
+}
+
 export const instagramApi = {
-  feed: (params?: { limit?: number }) =>
-    get<InstagramPost[]>('/instagram/posts'),
-  stats: () =>
-    get<{ followers: number; posts: number; engagement_rate: number }>('/instagram/stats'),
+  feed: async (params?: { limit?: number }) => {
+    const query = params?.limit ? `?limit=${encodeURIComponent(String(params.limit))}` : '';
+    const payload = await get<InstagramFeedPayload>(`/instagram/feed${query}`);
+    return payload.posts.map(normalizeInstagramPost);
+  },
+  stats: async () => {
+    const stats = await get<{
+      followers_count: number;
+      media_count: number;
+    }>('/instagram/stats');
+    return {
+      followers: stats.followers_count ?? 0,
+      posts: stats.media_count ?? 0,
+      engagement_rate: 0,
+    };
+  },
 };
 
 // ─── Stories/Highlights ───────────────────────────────────────────────────
@@ -810,6 +970,14 @@ export interface StoryHighlight {
 }
 
 export const storiesApi = {
-  list: () =>
-    get<StoryHighlight[]>('/stories/highlights'),
+  list: async () => {
+    const payload = await get<InstagramFeedPayload>('/instagram/stories');
+    return payload.posts.map((story, index) => ({
+      id: story.id,
+      title: story.caption?.trim().slice(0, 32) || `Story ${index + 1}`,
+      image_url: story.thumbnail_url ?? story.media_url,
+      order: index + 1,
+      link: story.permalink,
+    }));
+  },
 };

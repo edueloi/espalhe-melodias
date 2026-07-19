@@ -258,6 +258,42 @@ CREATE TABLE IF NOT EXISTS suggestion_ideas (
   CONSTRAINT fk_sug_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ── Peer Help Requests (rede de apoio entre colegas profissionais) ─────────────
+CREATE TABLE IF NOT EXISTS peer_help_requests (
+  id             CHAR(36)     NOT NULL PRIMARY KEY,
+  author_id      CHAR(36)     NOT NULL,
+  author_name    VARCHAR(150) NOT NULL,
+  author_specialty VARCHAR(150),
+  title          VARCHAR(200) NOT NULL,
+  description    TEXT         NOT NULL,
+  category       VARCHAR(100) NOT NULL,
+  urgency        ENUM('normal','urgente') NOT NULL DEFAULT 'normal',
+  anonymous      TINYINT(1)   NOT NULL DEFAULT 0,
+  response_pref  ENUM('qualquer','whatsapp','privado') NOT NULL DEFAULT 'qualquer',
+  status         ENUM('aberto','resolvido') NOT NULL DEFAULT 'aberto',
+  created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  INDEX idx_peer_help_status  (status),
+  INDEX idx_peer_help_author  (author_id),
+  CONSTRAINT fk_peer_help_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Peer Help Replies ───────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS peer_help_replies (
+  id          CHAR(36)     NOT NULL PRIMARY KEY,
+  request_id  CHAR(36)     NOT NULL,
+  author_id   CHAR(36)     NOT NULL,
+  author_name VARCHAR(150) NOT NULL,
+  message     TEXT         NOT NULL,
+  is_private  TINYINT(1)   NOT NULL DEFAULT 0,
+  created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  INDEX idx_peer_reply_request (request_id),
+  CONSTRAINT fk_peer_reply_request FOREIGN KEY (request_id) REFERENCES peer_help_requests(id) ON DELETE CASCADE,
+  CONSTRAINT fk_peer_reply_author  FOREIGN KEY (author_id)  REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ── Blog Posts ────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS blog_posts (
   id            CHAR(36)     NOT NULL PRIMARY KEY,
@@ -280,6 +316,20 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   INDEX idx_blog_author    (author_id),
   INDEX idx_blog_published (published),
   CONSTRAINT fk_blog_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Gallery Photos ──────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS gallery_photos (
+  id          CHAR(36)     NOT NULL PRIMARY KEY,
+  image_url   TEXT         NOT NULL,
+  caption     VARCHAR(300),
+  author_id   CHAR(36)     NOT NULL,
+  author_name VARCHAR(150) NOT NULL,
+  created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  INDEX idx_gallery_author (author_id),
+  CONSTRAINT fk_gallery_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Event Items (divisão de contribuições) ────────────────────────────────────

@@ -42,6 +42,12 @@ export function errorHandler(
     return;
   }
 
+  // Multer: arquivo excedeu o limite de tamanho configurado
+  if ((err as NodeJS.ErrnoException).code === 'LIMIT_FILE_SIZE') {
+    res.status(413).json({ success: false, message: 'Arquivo muito grande. Verifique o limite de tamanho permitido.' });
+    return;
+  }
+
   console.error('[ErrorHandler]', err);
 
   res.status(500).json({

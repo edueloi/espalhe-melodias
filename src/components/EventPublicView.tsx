@@ -4,6 +4,7 @@ import {
   RefreshCw, AlertCircle, Share2, Copy, Phone, UserX,
   CheckCircle2, XCircle, Minus, Plus as PlusIcon, ExternalLink,
 } from 'lucide-react';
+import logoEspalheMelodias from '../images/logo-espalhe-melodias.png';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -201,9 +202,7 @@ export default function EventPublicView({ eventId }: Props) {
     return (
       <div className="min-h-screen bg-[#f5ede3] flex items-center justify-center">
         <div className="text-center space-y-3">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#3d4a2e] to-[#b5571a] flex items-center justify-center shadow-xl mx-auto">
-            <span className="text-2xl text-white font-serif font-black italic">♩Ψ</span>
-          </div>
+          <img src={logoEspalheMelodias} alt="Espalhe Melodias" className="w-14 h-14 rounded-2xl object-cover shadow-xl mx-auto" />
           <div className="flex items-center gap-2 text-slate-400 text-sm justify-center">
             <RefreshCw size={13} className="animate-spin" />Carregando evento...
           </div>
@@ -217,9 +216,7 @@ export default function EventPublicView({ eventId }: Props) {
     return (
       <div className="min-h-screen bg-[#f5ede3] flex items-center justify-center p-6">
         <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl p-8 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#3d4a2e] to-[#b5571a] flex items-center justify-center shadow-lg mx-auto mb-6">
-            <span className="text-2xl text-white font-serif font-black italic">♩Ψ</span>
-          </div>
+          <img src={logoEspalheMelodias} alt="Espalhe Melodias" className="w-14 h-14 rounded-2xl object-cover shadow-lg mx-auto mb-6" />
           <XCircle size={36} className="text-red-400 mx-auto mb-4" />
           <h2 className="font-serif text-xl font-bold text-[#1a1a2e] mb-2">Evento não encontrado</h2>
           <p className="text-sm text-slate-500">Este link pode estar incorreto ou o evento foi removido.</p>
@@ -314,9 +311,7 @@ export default function EventPublicView({ eventId }: Props) {
         <div className="relative z-10 max-w-2xl mx-auto px-5 pt-10 pb-12 text-center">
           {/* Logo */}
           <div className="flex items-center justify-center gap-2.5 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shadow">
-              <span className="text-lg text-white font-serif font-black italic">♩Ψ</span>
-            </div>
+            <img src={logoEspalheMelodias} alt="Espalhe Melodias" className="w-10 h-10 rounded-xl object-cover shadow" />
             <div className="text-left">
               <div className="font-serif text-base font-black text-white/90 leading-none">Espalhe</div>
               <div className="font-script text-xl text-white leading-none -mt-1">Melodias</div>
@@ -611,9 +606,7 @@ export default function EventPublicView({ eventId }: Props) {
       {/* ── FOOTER ── */}
       <div className="py-8 text-center">
         <div className="flex items-center justify-center gap-2 text-zinc-400 text-xs">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#3d4a2e] to-[#b5571a] flex items-center justify-center shadow">
-            <span className="text-[10px] text-white font-serif font-black italic">♩Ψ</span>
-          </div>
+          <img src={logoEspalheMelodias} alt="Espalhe Melodias" className="w-7 h-7 rounded-lg object-cover shadow" />
           <span>Realização: <strong className="text-[#b5571a]">Espalhe Melodias</strong></span>
         </div>
       </div>

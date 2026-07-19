@@ -10,6 +10,7 @@ export async function listSuggestions(req: AuthRequest, res: Response): Promise<
   const { status } = req.query as Record<string, string | undefined>;
 
   const where = status ? 'WHERE status = ?' : '';
+  const whereJoined = status ? 'WHERE s.status = ?' : '';
   const params: unknown[] = status ? [status] : [];
 
   const [countRow] = await query<{ total: number }>(
@@ -17,7 +18,10 @@ export async function listSuggestions(req: AuthRequest, res: Response): Promise<
   );
 
   const rows = await query<Record<string, unknown>>(
-    `SELECT * FROM suggestion_ideas ${where} ORDER BY likes DESC, created_at DESC LIMIT ? OFFSET ?`,
+    `SELECT s.*, u.avatar AS author_avatar, u.role AS author_role
+     FROM suggestion_ideas s
+     LEFT JOIN users u ON u.id = s.author_id
+     ${whereJoined} ORDER BY s.likes DESC, s.created_at DESC LIMIT ? OFFSET ?`,
     [...params, limit, offset],
   );
 

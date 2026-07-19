@@ -16,6 +16,7 @@ import forumRoutes         from './routes/forum';
 import materialsRoutes     from './routes/materials';
 import eventsRoutes        from './routes/events';
 import helpRoutes          from './routes/help';
+import peerHelpRoutes      from './routes/peerHelp';
 import suggestionsRoutes   from './routes/suggestions';
 import professionalsRoutes from './routes/professionals';
 import blogsRoutes         from './routes/blogs';
@@ -25,12 +26,15 @@ import profPublicRoutes        from './routes/profPublic';
 import uploadRoutes            from './routes/upload';
 import publicWebsiteRoutes     from './routes/publicWebsite';
 import instagramRoutes         from './routes/instagram';
+import galleryRoutes           from './routes/gallery';
 
 const app = express();
 
 // ─── Security & Utilities ──────────────────────────────────────────────────────
 
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 const allowedOrigins = config.cors.origin.split(',').map(o => o.trim());
 app.use(cors({
   origin: (origin, cb) => {
@@ -81,12 +85,14 @@ app.use('/api/forum',         forumRoutes);
 app.use('/api/materials',     materialsRoutes);
 app.use('/api/events',        eventsRoutes);
 app.use('/api/help',          helpRoutes);
+app.use('/api/peer-help',     peerHelpRoutes);
 app.use('/api/suggestions',   suggestionsRoutes);
 app.use('/api/professionals', professionalsRoutes);
 app.use('/api/blogs',         blogsRoutes);
 app.use('/api/invite-links',  inviteLinksRoutes);
 app.use('/api/member-requests', memberRequestsRoutes);
 app.use('/api/upload',         uploadRoutes);
+app.use('/api/gallery',        galleryRoutes);
 
 // ─── Public Website Routes ────────────────────────────────────────────────────
 app.use('/api', publicWebsiteRoutes);

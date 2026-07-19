@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import {
   BookMarked, Search, Clock, ArrowLeft, PenTool,
   Share2, CheckCircle, FileText, Image,
-  Layers, Heart, X
+  Layers, Heart, X, Pencil, Trash2
 } from 'lucide-react';
 import { AppUser } from '../types';
-import { PageWrapper, ContentCard } from './ui/PageWrapper';
+import { PageWrapper, ContentCard, ConfirmModal, useToast } from './ui';
 import { blogsApi, type BlogPost } from '../lib/api';
 
 interface LearningsViewProps {
@@ -30,6 +30,7 @@ const CAT_COLORS: Record<string, string> = {
 };
 
 export default function LearningsView({ currentUser }: LearningsViewProps) {
+  const { show: showToast } = useToast();
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBlogId, setSelectedBlogId] = useState<string | null>(null);
@@ -37,6 +38,7 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('todos');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [newExcerpt, setNewExcerpt] = useState('');
   const [newContent, setNewContent] = useState('');
@@ -44,6 +46,8 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
   const [presetImg, setPresetImg] = useState(PRESET_IMAGES[0].url);
   const [publishing, setPublishing] = useState(false);
   const [liked, setLiked] = useState<Record<string, boolean>>({});
+  const [deletingPost, setDeletingPost] = useState<BlogPost | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadBlogs = (cat?: string, q?: string) => {
     setLoading(true);
@@ -73,17 +77,67 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
 
   const filtered = blogs; // filtering is server-side
 
+  const canManage = (post: BlogPost) =>
+    post.author_id === currentUser.id || currentUser.role === 'super-admin';
+
+  const resetForm = () => {
+    setNewTitle(''); setNewExcerpt(''); setNewContent('');
+    setNewCategory('Autoconhecimento'); setPresetImg(PRESET_IMAGES[0].url);
+    setEditingId(null);
+  };
+
+  const openCreateForm = () => {
+    resetForm();
+    setShowAddForm(true);
+  };
+
+  const openEditForm = (post: BlogPost) => {
+    setEditingId(post.id);
+    setNewTitle(post.title);
+    setNewExcerpt(post.excerpt);
+    setNewContent(post.content);
+    setNewCategory(post.category);
+    setPresetImg(post.image_url || PRESET_IMAGES[0].url);
+    setShowAddForm(true);
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newExcerpt.trim() || !newContent.trim()) return;
     setPublishing(true);
     try {
-      await blogsApi.create({ title: newTitle, excerpt: newExcerpt, content: newContent, category: newCategory, imageUrl: presetImg, readTime: '5 min' });
-      setNewTitle(''); setNewExcerpt(''); setNewContent('');
+      if (editingId) {
+        await blogsApi.update(editingId, {
+          title: newTitle, excerpt: newExcerpt, content: newContent,
+          category: newCategory, imageUrl: presetImg,
+        });
+        showToast('Artigo atualizado!', 'success');
+      } else {
+        await blogsApi.create({ title: newTitle, excerpt: newExcerpt, content: newContent, category: newCategory, imageUrl: presetImg, readTime: '5 min' });
+        showToast('Artigo publicado!', 'success');
+      }
+      resetForm();
       setShowAddForm(false);
       loadBlogs();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erro ao salvar artigo.', 'error');
+    }
     finally { setPublishing(false); }
+  };
+
+  const handleDelete = async () => {
+    if (!deletingPost) return;
+    setDeleting(true);
+    try {
+      await blogsApi.delete(deletingPost.id);
+      showToast('Artigo excluído.', 'success');
+      setDeletingPost(null);
+      loadBlogs();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erro ao excluir artigo.', 'error');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // ── SINGLE ARTICLE VIEW ──────────────────────────────────────────────────
@@ -156,13 +210,33 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
                   <Heart className={`w-4 h-4 ${liked[post.id] ? 'fill-brand-clay stroke-brand-clay' : ''}`} />
                   {liked[post.id] ? `Você gostou! (${(post.likes ?? 0) + 1})` : `Marcar como útil (${post.likes ?? 0})`}
                 </button>
-                <button
-                  onClick={() => { navigator.clipboard?.writeText(window.location.href); alert('📋 Link copiado!'); }}
-                  className="flex items-center gap-2 text-xs font-bold text-brand-moss hover:text-brand-moss-dark transition"
-                >
-                  <Share2 className="w-4 h-4" />
-                  Compartilhar artigo
-                </button>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => { navigator.clipboard?.writeText(window.location.href); alert('📋 Link copiado!'); }}
+                    className="flex items-center gap-2 text-xs font-bold text-brand-moss hover:text-brand-moss-dark transition"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Compartilhar artigo
+                  </button>
+                  {canManage(post) && (
+                    <>
+                      <button
+                        onClick={() => openEditForm(post)}
+                        className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-brand-clay transition"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => setDeletingPost(post)}
+                        className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-red-600 transition"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Excluir
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </ContentCard>
           )}
@@ -183,11 +257,11 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
                   <PenTool className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-brand-navy">Redator de Artigos</h3>
-                  <p className="text-[10px] text-slate-400">Espalhe saberes para a comunidade</p>
+                  <h3 className="text-sm font-bold text-brand-navy">{editingId ? 'Editar Artigo' : 'Redator de Artigos'}</h3>
+                  <p className="text-[10px] text-slate-400">{editingId ? 'Atualize o conteúdo do artigo' : 'Espalhe saberes para a comunidade'}</p>
                 </div>
               </div>
-              <button id="btn-cancel-blog" onClick={() => setShowAddForm(false)}
+              <button id="btn-cancel-blog" onClick={() => { setShowAddForm(false); resetForm(); }}
                 className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-brand-clay transition">
                 <X className="w-4 h-4" /> Cancelar
               </button>
@@ -198,7 +272,7 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
                 <span className="w-16 h-16 rounded-full bg-brand-moss/10 text-brand-moss flex items-center justify-center animate-bounce">
                   <CheckCircle className="w-9 h-9 stroke-[2.5]" />
                 </span>
-                <p className="font-serif font-bold text-brand-navy text-lg">Publicando artigo...</p>
+                <p className="font-serif font-bold text-brand-navy text-lg">{editingId ? 'Salvando alterações...' : 'Publicando artigo...'}</p>
                 <p className="text-xs text-slate-400 max-w-xs">Registrando seu ensinamento na plataforma Espalhe Melodias.</p>
               </div>
             ) : (
@@ -258,13 +332,13 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
                   </div>
 
                   <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-brand-sand/50">
-                    <button type="button" onClick={() => setShowAddForm(false)}
+                    <button type="button" onClick={() => { setShowAddForm(false); resetForm(); }}
                       className="px-4 py-2.5 border border-brand-sand hover:bg-brand-sand/40 rounded-xl text-xs font-bold text-brand-navy transition">
                       Cancelar
                     </button>
                     <button id="btn-publish-blog" type="submit"
                       className="px-5 py-2.5 bg-brand-moss hover:bg-brand-moss-dark text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md transition">
-                      Publicar no Melodias
+                      {editingId ? 'Salvar Alterações' : 'Publicar no Melodias'}
                     </button>
                   </div>
                 </form>
@@ -285,7 +359,15 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
                         {newExcerpt || 'Resumo curto aparecerá aqui...'}
                       </p>
                       <div className="flex items-center gap-2 pt-2 border-t border-brand-sand/50">
-                        <img src={currentUser.avatar} alt="" className="w-5 h-5 rounded-full object-cover" />
+                        {currentUser.avatar ? (
+                          <img src={currentUser.avatar} alt="" className="w-5 h-5 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-brand-clay/15 flex items-center justify-center">
+                            <span className="text-[7px] font-bold text-brand-clay">
+                              {currentUser.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()}
+                            </span>
+                          </div>
+                        )}
                         <span className="text-[9px] font-bold text-brand-navy">{currentUser.name}</span>
                       </div>
                     </div>
@@ -321,7 +403,7 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
               </p>
             </div>
             {currentUser.role !== 'member' && (
-              <button id="btn-trigger-write-article" onClick={() => setShowAddForm(true)}
+              <button id="btn-trigger-write-article" onClick={openCreateForm}
                 className="flex items-center gap-2 px-5 py-3 bg-brand-clay hover:bg-brand-clay-dark text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md transition shrink-0">
                 <PenTool className="w-4 h-4" />
                 Redigir Artigo
@@ -381,6 +463,24 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
                   <span className={`absolute top-3 left-3 text-[9px] font-bold px-2.5 py-0.5 rounded-full border backdrop-blur-sm ${CAT_COLORS[post.category] ?? 'bg-white/90 text-slate-600 border-slate-100'}`}>
                     {post.category}
                   </span>
+                  {canManage(post) && (
+                    <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition">
+                      <button
+                        onClick={e => { e.stopPropagation(); openEditForm(post); }}
+                        className="p-1.5 rounded-lg bg-white/90 backdrop-blur text-slate-600 hover:text-brand-clay shadow-sm transition"
+                        aria-label="Editar artigo"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={e => { e.stopPropagation(); setDeletingPost(post); }}
+                        className="p-1.5 rounded-lg bg-white/90 backdrop-blur text-slate-600 hover:text-red-600 shadow-sm transition"
+                        aria-label="Excluir artigo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between gap-3">
@@ -407,6 +507,17 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
         )}
 
       </div>
+
+      <ConfirmModal
+        isOpen={!!deletingPost}
+        onClose={() => setDeletingPost(null)}
+        onConfirm={handleDelete}
+        title="Excluir artigo"
+        message={`O artigo "${deletingPost?.title}" será excluído permanentemente.`}
+        variant="danger"
+        confirmLabel="Excluir"
+        loading={deleting}
+      />
     </PageWrapper>
   );
 }

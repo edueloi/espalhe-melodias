@@ -38,59 +38,56 @@ export default function ConfigView({
     <PageWrapper id="config-view" mobileBottomPad>
       <div className="space-y-6 sm:space-y-8 animate-fadeIn">
 
-        {/* ── TOP PREMIUM HERO ── */}
-        <div className="relative bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-orange-400/30">
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
-            <div className="absolute bottom-0 left-1/4 w-48 h-48 rounded-full bg-yellow-300/10 blur-2xl" />
-            <div className="absolute top-6 right-8 text-7xl font-script text-white/15 select-none">♩</div>
-            <div className="absolute bottom-6 left-8 text-6xl font-script text-white/15 select-none">♪</div>
-          </div>
-
-          <div className="relative z-10 p-6 sm:p-10">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        {/* ── HEADER ── */}
+        <ContentCard padding="md">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 bg-brand-clay/10 rounded-xl shrink-0">
+                <Settings className="w-5 h-5 text-brand-clay" />
+              </div>
               <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 border border-white/40 rounded-full text-sm font-bold text-white uppercase tracking-wider mb-3">
-                  <Crown className="w-4 h-4" />
-                  Premium Ativo
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[10px] font-bold text-brand-clay uppercase tracking-widest flex items-center gap-1">
+                    <Crown className="w-3 h-3" />
+                    Premium Ativo
+                  </span>
                 </div>
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-black text-white mb-2">
+                <h2 className="text-lg sm:text-xl font-serif font-bold text-brand-navy">
                   Configurações & Controle
-                </h1>
-                <p className="text-lg sm:text-xl text-white/90 max-w-2xl leading-relaxed">
-                  Gerencie sua plataforma, preferências e dados do ecossistema Espalhe Melodias com acesso total.
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5 max-w-lg">
+                  Gerencie sua plataforma, preferências e dados do ecossistema Espalhe Melodias.
                 </p>
               </div>
-              <div className="flex items-center gap-3 px-6 py-4 bg-white/20 backdrop-blur-sm border border-white/40 rounded-xl shrink-0">
-                <div className="text-right">
-                  <p className="text-xs text-white/80 font-semibold uppercase tracking-wider">Seu Acesso</p>
-                  <p className="text-2xl font-black text-white mt-1">100%</p>
-                </div>
-                <div className="w-16 h-16 rounded-lg bg-white/30 flex items-center justify-center">
-                  <Star className="w-8 h-8 text-white fill-white" />
-                </div>
-              </div>
             </div>
 
-            {/* System Stats Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8 pt-8 border-t border-white/20">
-              {[
-                { label: 'Versão', value: SYSTEM_VERSION, icon: Cpu },
-                { label: 'Build', value: BUILD_DATE, icon: Calendar },
-                { label: 'Armazenamento', value: 'API + MySQL', icon: HardDrive },
-                { label: 'Status', value: 'Online', icon: Wifi, green: true },
-              ].map(item => (
-                <div key={item.label} className="flex flex-col items-center gap-2">
-                  <div className="p-2.5 bg-white/15 rounded-lg">
-                    <item.icon className={`w-5 h-5 ${item.green ? 'text-emerald-200' : 'text-white'}`} />
-                  </div>
-                  <span className="text-xs font-semibold text-white/80 text-center">{item.label}</span>
-                  <span className="text-sm font-bold text-white">{item.value}</span>
-                </div>
-              ))}
+            <div className="flex items-center gap-2 px-4 py-2 bg-brand-clay/5 border border-brand-clay/20 rounded-xl shrink-0">
+              <Star className="w-4 h-4 text-brand-clay" />
+              <div className="text-right">
+                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Seu Acesso</p>
+                <p className="text-sm font-black text-brand-navy">100%</p>
+              </div>
             </div>
           </div>
-        </div>
+
+          {/* System Stats Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-5 border-t border-brand-sand/60">
+            {[
+              { label: 'Versão', value: SYSTEM_VERSION, icon: Cpu },
+              { label: 'Build', value: BUILD_DATE, icon: Calendar },
+              { label: 'Armazenamento', value: 'API + MySQL', icon: HardDrive },
+              { label: 'Status', value: 'Online', icon: Wifi, green: true },
+            ].map(item => (
+              <div key={item.label} className="text-center">
+                <p className={`text-sm font-black flex items-center justify-center gap-1 ${item.green ? 'text-emerald-600' : 'text-brand-navy'}`}>
+                  <item.icon className="w-3.5 h-3.5" />
+                  {item.value}
+                </p>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">{item.label}</p>
+              </div>
+            ))}
+          </div>
+        </ContentCard>
 
         {/* ── DADOS DO SISTEMA ── */}
         <ContentCard padding="lg" id="config-system-data" className="border border-brand-sand/60">

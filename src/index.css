@@ -25,14 +25,37 @@
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Sem `transform` em nenhum frame: com animation-fill-mode:forwards (usado nas
+   variáveis --animate-* abaixo), o browser cria um containing block permanente
+   para position:fixed em QUALQUER elemento com uma propriedade `transform`
+   animada — mesmo que o valor final seja a matriz identidade. Isso quebrava
+   modais fixed renderizados dentro de containers com essas classes. */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes scaleUp {
-  from { opacity: 0; transform: scale(0.96) translateY(12px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes drawerSlideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes backdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.drawer-panel {
+  animation: drawerSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.drawer-backdrop {
+  animation: backdropFadeIn 0.2s ease-out forwards;
 }
 
 /* Custom styles for high editorial design */

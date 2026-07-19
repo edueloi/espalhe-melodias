@@ -2,12 +2,26 @@ import React, { useState, useEffect } from 'react';
 import {
   HeartPulse, AlertOctagon, ShieldCheck, Send, CheckCircle2,
   MessageSquare, X, Phone, Lock, Zap, Clock, User,
-  Stethoscope, AlertTriangle, Heart, Wifi, RefreshCw, AlertCircle
+  Stethoscope, AlertTriangle, Heart, Wifi, RefreshCw, AlertCircle,
+  HandHeart, Plus, EyeOff, Reply, Bolt, Users2,
 } from 'lucide-react';
-import { helpApi, type HelpRequest } from '../lib/api';
+import { helpApi, peerHelpApi, type HelpRequest, type PeerHelpRequest } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { PageWrapper, SectionTitle, ContentCard } from './ui/PageWrapper';
 import { Badge } from './ui/Badge';
+import { Modal, ModalFooter, Button, Input, Textarea, Select } from './ui';
+
+const PEER_CATEGORIES = [
+  'Preciso de supervisão',
+  'Preciso de encaminhamento',
+  'Preciso conversar',
+  'Estou inseguro profissionalmente',
+  'Preciso organizar meu consultório',
+  'Preciso de ajuda financeira',
+  'Preciso de ajuda com marketing',
+  'Preciso de parceria',
+  'Preciso de apoio emocional profissional',
+];
 
 const URGENCY_OPT = [
   { level: 'baixa'   as const, label: 'Leve',     sublabel: 'Ansiedade comum / cansaço',     active: 'bg-slate-700 border-slate-700 text-white',   dot: 'bg-slate-400'   },
@@ -35,8 +49,318 @@ function StatusBadge({ status }: { status: string }) {
   return <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"><CheckCircle2 className="w-2.5 h-2.5"/>Concluído</span>;
 }
 
+// ── REDE DE APOIO ENTRE COLEGAS (mural de pedidos) ────────────────────────────
+
+function ReplyForm({ requestId, onSent }: { requestId: string; onSent: () => void }) {
+  const [message, setMessage] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim()) return;
+    setSending(true);
+    try {
+      await peerHelpApi.reply(requestId, { message: message.trim(), isPrivate });
+      setMessage('');
+      setIsPrivate(false);
+      onSent();
+    } catch { /* ignore */ }
+    finally { setSending(false); }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-brand-cream/60 border border-brand-sand rounded-xl p-3.5 mt-3 space-y-2.5">
+      <textarea
+        value={message}
+        onChange={e => setMessage(e.target.value)}
+        rows={2}
+        placeholder="Escreva sua resposta..."
+        className="w-full text-xs text-brand-navy bg-white border border-brand-sand px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-clay/30 transition resize-none"
+      />
+      <div className="flex items-center justify-between gap-3">
+        <label className="flex items-center gap-1.5 text-[11px] text-slate-500 cursor-pointer select-none">
+          <input type="checkbox" checked={isPrivate} onChange={e => setIsPrivate(e.target.checked)} className="w-3.5 h-3.5 accent-brand-clay" />
+          Resposta privada (só o autor vê)
+        </label>
+        <button type="submit" disabled={sending || !message.trim()}
+          className="flex items-center gap-1.5 px-3.5 py-2 bg-brand-clay hover:bg-brand-clay-dark disabled:opacity-50 text-white text-xs font-bold rounded-lg transition shrink-0">
+          <Send className="w-3.5 h-3.5" />Responder
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function NewPeerRequestModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState('');
+  const [description, setDescription] = useState('');
+  const [urgency, setUrgency] = useState<'normal' | 'urgente'>('normal');
+  const [responsePref, setResponsePref] = useState<'qualquer' | 'whatsapp' | 'privado'>('qualquer');
+  const [anonymous, setAnonymous] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !category || !description.trim()) {
+      setError('Preencha título, categoria e descrição.');
+      return;
+    }
+    setSending(true);
+    setError('');
+    try {
+      await peerHelpApi.create({ title: title.trim(), description: description.trim(), category, urgency, anonymous, responsePref });
+      onCreated();
+      onClose();
+    } catch {
+      setError('Erro ao publicar. Tente novamente.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title="Novo Pedido de Apoio"
+      size="lg"
+      mobileStyle="bottom-sheet"
+      footer={
+        <ModalFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button
+            variant="primary"
+            loading={sending}
+            iconLeft={<Send size={14} />}
+            onClick={handleSubmit}
+          >
+            Publicar Pedido
+          </Button>
+        </ModalFooter>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="Título do Pedido"
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder="Ex: Preciso de supervisão para caso complexo"
+        />
+        <Select
+          label="Categoria"
+          value={category}
+          onChange={e => setCategory(e.target.value)}
+          placeholder="Selecione..."
+          options={PEER_CATEGORIES.map(c => ({ value: c, label: c }))}
+        />
+        <Textarea
+          label="Descreva sua necessidade"
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          rows={4}
+          placeholder="Explique o que você precisa com o máximo de detalhes que se sentir confortável..."
+        />
+        <div className="grid grid-cols-2 gap-3">
+          <Select
+            label="Urgência"
+            value={urgency}
+            onChange={e => setUrgency(e.target.value as 'normal' | 'urgente')}
+            options={[
+              { value: 'normal', label: 'Normal' },
+              { value: 'urgente', label: 'Urgente' },
+            ]}
+          />
+          <Select
+            label="Tipo de Resposta"
+            value={responsePref}
+            onChange={e => setResponsePref(e.target.value as typeof responsePref)}
+            options={[
+              { value: 'qualquer', label: 'Qualquer forma' },
+              { value: 'whatsapp', label: 'Prefiro WhatsApp' },
+              { value: 'privado', label: 'Somente privado' },
+            ]}
+          />
+        </div>
+        <label className="flex items-center gap-2.5 p-3 bg-brand-cream border border-brand-sand rounded-xl cursor-pointer">
+          <input type="checkbox" checked={anonymous} onChange={e => setAnonymous(e.target.checked)} className="w-4 h-4 accent-brand-clay" />
+          <div>
+            <p className="text-xs font-bold text-brand-navy">Pedido Anônimo</p>
+            <p className="text-[10px] text-slate-500">Seu nome não aparecerá para outros membros</p>
+          </div>
+        </label>
+
+        {error && (
+          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
+            <AlertCircle className="w-4 h-4 shrink-0" />{error}
+          </div>
+        )}
+      </form>
+    </Modal>
+  );
+}
+
+function PeerHelpBoard() {
+  const { user } = useAuth();
+  const [requests, setRequests] = useState<PeerHelpRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [replyingId, setReplyingId] = useState<string | null>(null);
+
+  const load = () => {
+    setLoading(true);
+    peerHelpApi.list({ status: 'aberto' })
+      .then(res => { setRequests(res.data); setError(null); })
+      .catch(() => setError('Não foi possível carregar os pedidos.'))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const resolve = async (id: string) => {
+    try {
+      await peerHelpApi.resolve(id);
+      load();
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <div className="space-y-5 sm:space-y-6 animate-fadeIn">
+      <ContentCard padding="md">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 bg-brand-clay/10 rounded-xl shrink-0">
+              <HandHeart className="w-5 h-5 text-brand-clay" />
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-serif font-bold text-brand-navy">Rede de Apoio entre Colegas</h2>
+              <p className="text-xs text-slate-400 mt-0.5 max-w-lg">
+                Espaço seguro para pedir e oferecer apoio entre colegas da comunidade Espalhe Melodias.
+              </p>
+            </div>
+          </div>
+          <button onClick={() => setShowNewModal(true)}
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-brand-clay hover:bg-brand-clay-dark text-white text-xs font-bold uppercase rounded-xl shadow-md transition shrink-0">
+            <Plus className="w-4 h-4" />Fazer Pedido
+          </button>
+        </div>
+      </ContentCard>
+
+      {error && (
+        <div className="flex items-center gap-2.5 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <AlertCircle className="w-4 h-4 shrink-0" />{error}
+          <button onClick={load} className="ml-auto text-xs font-bold underline">Tentar novamente</button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12 text-slate-400 text-sm gap-2">
+          <RefreshCw className="w-4 h-4 animate-spin" />Carregando pedidos...
+        </div>
+      ) : requests.length === 0 ? (
+        <ContentCard padding="lg">
+          <div className="text-center py-10">
+            <HandHeart className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+            <h3 className="text-sm font-bold text-slate-500">Nenhum pedido em aberto</h3>
+            <p className="text-xs text-slate-400 mt-1">Se você precisar de apoio da rede, clique em "Fazer Pedido".</p>
+            <button onClick={() => setShowNewModal(true)}
+              className="mt-4 inline-flex items-center gap-1.5 px-4 py-2.5 bg-brand-clay hover:bg-brand-clay-dark text-white text-xs font-bold rounded-xl transition">
+              <Plus className="w-4 h-4" />Fazer meu primeiro pedido
+            </button>
+          </div>
+        </ContentCard>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {requests.map(req => {
+            const isUrgent = req.urgency === 'urgente';
+            const initials = req.anonymous ? '?' : (req.author_name?.charAt(0).toUpperCase() ?? '?');
+            const isMine = req.isMine ?? req.author_id === user?.id;
+
+            return (
+              <div key={req.id} className={`bg-white border rounded-2xl p-5 ${isUrgent ? 'border-l-4 border-l-rose-500 border-y-zinc-100 border-r-zinc-100' : 'border-zinc-100'}`}>
+                <div className="flex items-start gap-2.5 mb-3">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-clay/20 to-brand-moss/20 flex items-center justify-center shrink-0 text-xs font-black text-brand-navy">
+                    {initials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-brand-navy">{req.author_name}</p>
+                    <p className="text-[10px] text-slate-400">
+                      {!req.anonymous && req.author_specialty ? `${req.author_specialty} · ` : ''}
+                      {new Date(req.created_at).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  {isMine && (
+                    <button onClick={() => resolve(req.id)}
+                      className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full hover:bg-emerald-100 transition shrink-0">
+                      <CheckCircle2 className="w-3 h-3" />Resolvido
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  <span className="text-[10px] font-semibold bg-brand-clay/10 text-brand-clay px-2 py-0.5 rounded-full">{req.category}</span>
+                  {isUrgent && (
+                    <span className="flex items-center gap-1 text-[10px] font-bold bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full">
+                      <Bolt className="w-2.5 h-2.5" />Urgente
+                    </span>
+                  )}
+                  {req.anonymous && (
+                    <span className="flex items-center gap-1 text-[10px] font-semibold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
+                      <EyeOff className="w-2.5 h-2.5" />Anônimo
+                    </span>
+                  )}
+                  {req.repliesCount > 0 && (
+                    <span className="flex items-center gap-1 text-[10px] font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+                      <Reply className="w-2.5 h-2.5" />{req.repliesCount} resposta{req.repliesCount > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-sm font-bold text-brand-navy mb-1.5 leading-snug">{req.title}</p>
+                <p className="text-xs text-slate-500 leading-relaxed line-clamp-4">{req.description}</p>
+
+                {req.replies.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {req.replies.map(reply => (
+                      <div key={reply.id} className="bg-brand-cream/50 border-l-2 border-brand-clay rounded-lg px-3 py-2">
+                        <p className="text-[11px] font-bold text-brand-navy flex items-center gap-1.5">
+                          {reply.author_name}
+                          {Boolean(reply.is_private) && <span className="text-[9px] font-normal text-slate-400">· privada</span>}
+                        </p>
+                        <p className="text-[11px] text-slate-500 leading-relaxed mt-0.5">{reply.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {!isMine && (
+                  replyingId === req.id ? (
+                    <ReplyForm requestId={req.id} onSent={() => { setReplyingId(null); load(); }} />
+                  ) : (
+                    <button onClick={() => setReplyingId(req.id)}
+                      className="mt-3 flex items-center gap-1.5 text-xs font-bold text-brand-clay hover:underline">
+                      <Reply className="w-3.5 h-3.5" />Responder
+                    </button>
+                  )
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {showNewModal && (
+        <NewPeerRequestModal onClose={() => setShowNewModal(false)} onCreated={load} />
+      )}
+    </div>
+  );
+}
+
 // ── WORKSPACE (profissional/admin) ────────────────────────────────────────────
-function WorkspaceView() {
+function WorkspaceViewInner() {
   const { user } = useAuth();
   const [requests, setRequests] = useState<HelpRequest[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -86,7 +410,7 @@ function WorkspaceView() {
   };
 
   return (
-    <PageWrapper id="help-desk-workspace">
+    <div id="help-desk-workspace">
       <div className="space-y-5 sm:space-y-6 animate-fadeIn">
 
         <ContentCard padding="md" id="workspace-header">
@@ -260,12 +584,12 @@ function WorkspaceView() {
           </div>
         )}
       </div>
-    </PageWrapper>
+    </div>
   );
 }
 
 // ── MEMBER VIEW ───────────────────────────────────────────────────────────────
-function MemberHelpView() {
+function MemberHelpViewInner() {
   const [urgency, setUrgency] = useState<'baixa'|'media'|'alta'|'urgente'>('media');
   const [desc, setDesc]       = useState('');
   const [sending, setSending] = useState(false);
@@ -290,27 +614,23 @@ function MemberHelpView() {
   };
 
   return (
-    <PageWrapper id="help-request-member-view">
-      <div className="space-y-5 sm:space-y-6 animate-fadeIn max-w-4xl mx-auto">
+    <div id="help-request-member-view">
+      <div className="space-y-5 sm:space-y-6 animate-fadeIn">
 
-        {/* Hero */}
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-brand-navy via-[#1e2f44] to-brand-navy-dark border border-brand-navy-light/20 p-6 sm:p-8">
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-rose-500/8 rounded-full blur-3xl" />
-            <div className="absolute top-4 right-8 text-6xl font-script text-brand-clay/10 select-none">♡</div>
-          </div>
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="p-3 bg-rose-500/15 border border-rose-500/20 rounded-2xl shrink-0">
-              <HeartPulse className="w-7 h-7 text-rose-400 animate-pulse" />
+        {/* Header */}
+        <ContentCard padding="md">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 bg-rose-50 rounded-xl shrink-0">
+              <HeartPulse className="w-5 h-5 text-rose-500 animate-pulse" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-serif font-bold text-white">Canal de Ajuda e Acolhimento</h2>
-              <p className="text-xs text-slate-400 mt-1 max-w-xl leading-relaxed">
+              <h2 className="text-lg sm:text-xl font-serif font-bold text-brand-navy">Canal de Ajuda e Acolhimento</h2>
+              <p className="text-xs text-slate-400 mt-0.5 max-w-xl leading-relaxed">
                 Está passando por um momento difícil? Descreva como se sente. Um psicólogo homologado irá acolher seu caso com sigilo e ética.
               </p>
             </div>
           </div>
-        </div>
+        </ContentCard>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <ContentCard padding="lg" id="help-form-card" className="lg:col-span-2">
@@ -411,7 +731,7 @@ function MemberHelpView() {
           </div>
         </div>
       </div>
-    </PageWrapper>
+    </div>
   );
 }
 
@@ -419,6 +739,39 @@ function MemberHelpView() {
 export default function HelpRequestView() {
   const { user } = useAuth();
   const isSpecialist = user?.role === 'professional' || user?.role === 'super-admin';
-  if (isSpecialist) return <WorkspaceView />;
-  return <MemberHelpView />;
+  const [tab, setTab] = useState<'canal' | 'rede'>('canal');
+
+  const TABS = [
+    { key: 'canal' as const, label: 'Canal Individual', icon: HeartPulse },
+    { key: 'rede'  as const, label: 'Rede de Apoio',     icon: Users2 },
+  ];
+
+  return (
+    <PageWrapper id="help-request-view">
+      <div className="space-y-5 sm:space-y-6">
+        <div className="flex gap-1 bg-white border border-brand-sand/60 rounded-xl p-1 w-fit">
+          {TABS.map(t => {
+            const Icon = t.icon;
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition ${
+                  active ? 'bg-brand-clay text-white shadow-sm' : 'text-slate-500 hover:text-brand-navy'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />{t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {tab === 'canal'
+          ? (isSpecialist ? <WorkspaceViewInner /> : <MemberHelpViewInner />)
+          : <PeerHelpBoard />
+        }
+      </div>
+    </PageWrapper>
+  );
 }

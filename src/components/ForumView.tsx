@@ -757,75 +757,62 @@ export default function ForumView({ currentUser, initialTopicId, onTopicOpen, on
     <PageWrapper mobileBottomPad>
       <div className="space-y-6 sm:space-y-8 animate-fadeIn">
 
-        {/* ── HERO HEADER ── */}
-        <div className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-brand-navy-dark rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-blue-500/30">
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
-            <div className="absolute bottom-0 left-1/3 w-56 h-56 rounded-full bg-cyan-400/10 blur-2xl" />
-            <div className="absolute top-8 right-8 text-6xl font-script text-white/10 select-none">♩</div>
-          </div>
-
-          <div className="relative z-10 p-6 sm:p-10">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        {/* ── HEADER ── */}
+        <ContentCard padding="md">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 bg-blue-50 rounded-xl shrink-0">
+                <MessageSquarePlus className="w-5 h-5 text-blue-600" />
+              </div>
               <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 border border-white/40 rounded-full text-sm font-bold text-white uppercase tracking-wider mb-3">
-                  <MessageSquarePlus className="w-4 h-4" />
-                  Comunidade Ativa
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Comunidade Ativa</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
                 </div>
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-black text-white mb-2">
+                <h2 className="text-lg sm:text-xl font-serif font-bold text-brand-navy">
                   Fórum de Discussão
-                </h1>
-                <p className="text-lg sm:text-xl text-white/90 max-w-2xl leading-relaxed">
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5 max-w-lg">
                   Espaço seguro e acolhedor para compartilhar, apoiar e crescer juntos. Psicólogos credenciados disponíveis para orientações.
                 </p>
               </div>
-              <Button
-                variant="primary"
-                size="lg"
-                iconLeft={<Plus size={18} />}
-                onClick={() => setShowForm(true)}
-                className="bg-white text-blue-700 hover:bg-slate-100 font-bold shadow-xl shrink-0"
-              >
-                Novo Tópico
-              </Button>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-8 pt-8 border-t border-white/20">
-              {[
-                { icon: MessageSquare, label: 'Tópicos', value: topics.length, color: 'text-blue-100' },
-                { icon: MessageCircle, label: 'Respostas', value: topics.reduce((s, t) => s + (t.replies_count ?? 0), 0), color: 'text-cyan-100' },
-                { icon: CheckCircle, label: 'Resolvidos', value: topics.filter(t => t.is_solved).length, color: 'text-emerald-100' },
-              ].map((stat, i) => (
-                <div key={i} className="flex flex-col items-center gap-2">
-                  <div className="p-2.5 bg-white/15 rounded-lg">
-                    <stat.icon className={`w-6 h-6 ${stat.color}`} />
-                  </div>
-                  <span className="text-xs font-semibold text-white/80 text-center">{stat.label}</span>
-                  <span className="text-2xl sm:text-3xl font-black text-white">{stat.value}</span>
-                </div>
-              ))}
-            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              iconLeft={<Plus size={16} />}
+              onClick={() => setShowForm(true)}
+              className="shrink-0"
+            >
+              Novo Tópico
+            </Button>
           </div>
-        </div>
+
+          {/* Stats strip */}
+          <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-brand-sand/60">
+            {[
+              { label: 'Tópicos', value: topics.length, color: 'text-brand-navy' },
+              { label: 'Respostas', value: topics.reduce((s, t) => s + (t.replies_count ?? 0), 0), color: 'text-blue-600' },
+              { label: 'Resolvidos', value: topics.filter(t => t.is_solved).length, color: 'text-emerald-600' },
+            ].map(s => (
+              <div key={s.label} className="text-center">
+                <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </ContentCard>
 
         {/* ── FILTROS E BUSCA ── */}
-        <div className="bg-white border border-brand-sand/60 rounded-lg p-4 sm:p-5 space-y-4">
-          <FilterLine>
-            <FilterLineSection grow>
-              <FilterLineItem grow>
-                <FilterLineSearch value={search} onChange={setSearch} placeholder="Busca por título, categoria ou autor..." />
-              </FilterLineItem>
-            </FilterLineSection>
-          </FilterLine>
-
-          <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-1.5">
             <button
               onClick={() => setCatFilter('all')}
-              className={`px-4 py-2 rounded-lg text-sm font-bold border transition ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition whitespace-nowrap ${
                 catFilter === 'all'
-                  ? 'bg-brand-navy text-white border-transparent'
-                  : 'bg-white text-slate-700 border-brand-sand/60 hover:border-brand-navy/40'
+                  ? 'bg-brand-navy text-white border-transparent shadow-sm'
+                  : 'bg-white text-slate-600 border-brand-sand hover:bg-brand-sand/30'
               }`}
             >
               Todas as Categorias
@@ -834,16 +821,24 @@ export default function ForumView({ currentUser, initialTopicId, onTopicOpen, on
               <button
                 key={cat}
                 onClick={() => setCatFilter(cat)}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold border transition whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition whitespace-nowrap ${
                   catFilter === cat
-                    ? 'bg-brand-navy text-white border-transparent'
-                    : 'bg-white text-slate-700 border-brand-sand/60 hover:border-brand-navy/40'
+                    ? 'bg-brand-navy text-white border-transparent shadow-sm'
+                    : 'bg-white text-slate-600 border-brand-sand hover:bg-brand-sand/30'
                 }`}
               >
                 {cat}
               </button>
             ))}
           </div>
+
+          <FilterLine>
+            <FilterLineSection grow>
+              <FilterLineItem grow>
+                <FilterLineSearch value={search} onChange={setSearch} placeholder="Busca por título, categoria ou autor..." />
+              </FilterLineItem>
+            </FilterLineSection>
+          </FilterLine>
         </div>
 
         {/* ── LISTA DE TÓPICOS ── */}

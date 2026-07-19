@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowRight,
   Music,
@@ -18,6 +19,7 @@ import {
   Clock,
   Eye,
   Tag,
+  Target,
   Instagram,
   Mail,
   Phone,
@@ -28,88 +30,46 @@ import {
   CheckCircle2,
   Loader2,
   Send,
-  Zap,
   Award,
   MessageSquare,
   TrendingUp,
   Smile,
-  Gift,
+  Smartphone,
   AlertCircle,
 } from 'lucide-react';
 import { BlogPost, HealthEvent } from '../types';
-import { memberRequestsApi, newsletterApi, contactApi } from '../lib/api';
-import { usePublicSiteData } from '../hooks/usePublicSiteData';
+import { memberRequestsApi, newsletterApi, contactApi, resolveUploadUrl, blogsApi } from '../lib/api';
+import { usePublicSiteData, convertBlogPost } from '../hooks/usePublicSiteData';
 import { InstagramStories } from './InstagramStories';
 import { GoogleMap } from './ui/GoogleMap';
 import { useToast } from './ui';
+import logoEspalheMelodias from '../images/logo-espalhe-melodias.png';
+import espalheMelodias01 from '../images/espalhe-melodias-01.png';
+import espalheMelodias02 from '../images/espalhe-melodias-02.png';
+import espalheMelodias03 from '../images/espalhe-melodias-03.png';
+import espalheMelodias04 from '../images/espalhe-melodias-04.png';
+import fotoJessica from '../images/jessica.jpg';
+import fotoKaren from '../images/karen_gomes.jpg';
+import logoPsiflux from '../images/logo-psiflux.png';
+
+type PublicSection = 'home' | 'blog' | 'gallery' | 'events' | 'about' | 'contact';
+
+const PUBLIC_SECTION_PATHS: Record<PublicSection, string> = {
+  home: '/',
+  about: '/quem-somos',
+  blog: '/blog',
+  gallery: '/galeria',
+  events: '/eventos',
+  contact: '/contato',
+};
 
 interface PublicSiteProps {
   blogs?: BlogPost[];
   events?: HealthEvent[];
+  initialSection?: PublicSection;
+  onSectionChange?: (section: PublicSection) => void;
   onGoToLogin: () => void;
 }
-
-const GALLERY_IMAGES = [
-  {
-    id: 'g1',
-    url: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=800&auto=format&fit=crop',
-    caption: '1º Encontro Espalhe Melodias – Maio 2026',
-    event: '1º Encontro'
-  },
-  {
-    id: 'g2',
-    url: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=800&auto=format&fit=crop',
-    caption: 'Dinâmica de Conexão – Roda de conversa',
-    event: '1º Encontro'
-  },
-  {
-    id: 'g3',
-    url: 'https://images.unsplash.com/photo-1600880292089-90a7e086ee0c?q=80&w=800&auto=format&fit=crop',
-    caption: 'Workshop de Mindfulness Corporativo',
-    event: 'Workshop'
-  },
-  {
-    id: 'g4',
-    url: 'https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?q=80&w=800&auto=format&fit=crop',
-    caption: 'Palestra: A Neurobiologia do Amor-Próprio',
-    event: 'Palestra'
-  },
-  {
-    id: 'g5',
-    url: 'https://images.unsplash.com/photo-1528605248644-14dd04022da1?q=80&w=800&auto=format&fit=crop',
-    caption: 'Grupo de Apoio Mútuo – Ansiedade Social',
-    event: 'Grupo de Apoio'
-  },
-  {
-    id: 'g6',
-    url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop',
-    caption: 'Conexões que transformam – Comunidade Melodias',
-    event: '1º Encontro'
-  },
-];
-
-const PAST_EVENTS_GALLERY = [
-  {
-    id: 'pe1',
-    title: '1º Encontro Espalhe Melodias',
-    date: '31 de Maio de 2026',
-    location: 'Tatuí – SP',
-    description: 'O encontro inaugural que deu início à nossa jornada coletiva. Mais de 20 profissionais da saúde mental reunidos para construir conexões reais.',
-    image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=800&auto=format&fit=crop',
-    participants: 22,
-    highlights: ['Dinâmica de Conexão', 'Apresentação das Idealizadoras', 'Compromisso e Pertencimento']
-  },
-  {
-    id: 'pe2',
-    title: 'Palestra: Neurobiologia do Amor-Próprio',
-    date: '20 de Maio de 2026',
-    location: 'Online – Zoom',
-    description: 'Dr. Marcos Toledo apresentou como a autocompaixão impacta nosso sistema neurológico e como cultivar um cérebro mais acolhedor.',
-    image: 'https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?q=80&w=800&auto=format&fit=crop',
-    participants: 45,
-    highlights: ['Neurobiologia da autocompaixão', 'Técnicas de reneuropadronização', 'Q&A com especialista']
-  },
-];
 
 const ESPECIALIDADES_PUBLIC = [
   { value: 'Psicólogo(a)',            label: 'Psicólogo(a)' },
@@ -121,66 +81,6 @@ const ESPECIALIDADES_PUBLIC = [
   { value: 'outro',                  label: 'Outro...' },
 ];
 
-const INSTAGRAM_POSTS = [
-  {
-    id: 'ig1',
-    image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=500&auto=format&fit=crop',
-    caption: '1º Encontro Espalhe Melodias 🎶💚 Conexões que transformam!',
-    likes: '124',
-    comments: '18',
-  },
-  {
-    id: 'ig2',
-    image: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=500&auto=format&fit=crop',
-    caption: 'Dinâmica de Conexão: Roda de conversa profunda 🤝',
-    likes: '98',
-    comments: '12',
-  },
-  {
-    id: 'ig3',
-    image: 'https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?q=80&w=500&auto=format&fit=crop',
-    caption: 'Palestra: Neurobiologia do Amor-Próprio com Dr. Marcos Toledo 🧠✨',
-    likes: '156',
-    comments: '24',
-  },
-];
-
-const STORIES_PREVIEW = [
-  { id: 's1', image: 'https://images.unsplash.com/photo-1600880292089-90a7e086ee0c?q=80&w=400&auto=format&fit=crop', title: 'Workshop' },
-  { id: 's2', image: 'https://images.unsplash.com/photo-1528605248644-14dd04022da1?q=80&w=400&auto=format&fit=crop', title: 'Grupo de Apoio' },
-  { id: 's3', image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=400&auto=format&fit=crop', title: 'Conexões' },
-];
-
-const TESTIMONIALS = [
-  {
-    id: 't1',
-    author: 'Dra. Carolina Silva',
-    role: 'Psicóloga Clínica',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=400&auto=format&fit=crop',
-    text: 'O Espalhe Melodias abriu portas para conexões genuínas com outros profissionais. Cada encontro nos fortalece e amplia nossas possibilidades.',
-  },
-  {
-    id: 't2',
-    author: 'Dr. Felipe Oliveira',
-    role: 'Psiquiatra',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop',
-    text: 'Raramente encontro um espaço tão acolhedor e profissional. A qualidade das conversas é excepcional.',
-  },
-  {
-    id: 't3',
-    author: 'Terapeuta Ana Costa',
-    role: 'Terapeuta Ocupacional',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=400&auto=format&fit=crop',
-    text: 'Multidisciplinaridade real! As perspectivas diferentes enriquecem minha prática profissional todos os dias.',
-  },
-];
-
-const RECENT_ACTIVITY = [
-  { date: '17 de junho', title: 'Newsletter: Saúde Mental no Ambiente Corporativo', type: 'newsletter' },
-  { date: '15 de junho', title: 'Novo artigo no Blog publicado', type: 'blog' },
-  { date: '12 de junho', title: 'Workshop Online: Mindfulness para Profissionais', type: 'event' },
-  { date: '08 de junho', title: 'Galeria atualizada com fotos do 1º Encontro', type: 'gallery' },
-];
 
 interface RequestForm {
   name: string;
@@ -192,20 +92,35 @@ interface RequestForm {
   observation: string;
 }
 
-export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoToLogin }: PublicSiteProps) {
+export default function PublicSite({ blogs: blogsProp, events: eventsProp, initialSection, onSectionChange, onGoToLogin }: PublicSiteProps) {
   // ── Hook para dados dinâmicos do site público ───────────────────────────────
   const publicSiteData = usePublicSiteData();
-  const { showToast } = useToast();
+  const { show: showToast } = useToast();
 
   // ── Usar dados dinâmicos com fallback para props ────────────────────────────
   const blogs = blogsProp && blogsProp.length > 0 ? blogsProp : publicSiteData.blogs;
-  const events = eventsProp && eventsProp.length > 0 ? eventsProp : publicSiteData.upcomingEvents;
-  const pastEvents = publicSiteData.pastEvents;
+  const events = eventsProp && eventsProp.length > 0 ? eventsProp : publicSiteData.events;
+  const upcomingEvents = events.filter(event => event.status === 'upcoming');
+  const pastEvents = events.filter(event => event.status === 'past');
   const instagramPosts = publicSiteData.instagramPosts;
   const stories: any[] = publicSiteData.stories;
+  const galleryImages = publicSiteData.galleryPhotos.map((photo) => ({
+    id: photo.id,
+    url: resolveUploadUrl(photo.image_url),
+    caption: photo.caption || 'Publicação da comunidade Espalhe Melodias',
+    event: new Date(photo.created_at).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }),
+  }));
 
-  const [activeSection, setActiveSection] = useState<'home' | 'blog' | 'gallery' | 'events' | 'about'>('home');
+  const [activeSection, setActiveSection] = useState<PublicSection>(initialSection ?? 'home');
   const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
+  const [blogPostId, setBlogPostId] = useState<string | null>(() => {
+    const match = window.location.pathname.match(/^\/blog\/([^/]+)$/);
+    return match ? decodeURIComponent(match[1]) : null;
+  });
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [igCarouselIndex, setIgCarouselIndex] = useState(0);
@@ -272,13 +187,65 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
     { id: 'blog', label: 'Blog' },
     { id: 'gallery', label: 'Galeria' },
     { id: 'events', label: 'Eventos' },
+    { id: 'contact', label: 'Contato' },
   ] as const;
 
-  const scrollTo = (section: typeof activeSection) => {
+  const scrollTo = (section: PublicSection) => {
     setActiveSection(section);
+    setBlogPostId(null);
+    onSectionChange?.(section);
     setMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const openBlogPost = (post: BlogPost) => {
+    setSelectedBlog(post);
+    setBlogPostId(post.id);
+    window.history.pushState(null, '', `/blog/${encodeURIComponent(post.id)}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const closeBlogPost = () => {
+    setSelectedBlog(null);
+    setBlogPostId(null);
+    const fallbackPath = activeSection === 'blog' ? '/blog' : PUBLIC_SECTION_PATHS[activeSection];
+    window.history.pushState(null, '', fallbackPath);
+  };
+
+  // Sincroniza com navegação externa (botão voltar/avançar do browser)
+  useEffect(() => {
+    if (initialSection && initialSection !== activeSection) {
+      setActiveSection(initialSection);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSection]);
+
+  // Detecta URL /blog/:id no load e ao navegar via voltar/avançar do browser
+  useEffect(() => {
+    const syncFromUrl = () => {
+      const match = window.location.pathname.match(/^\/blog\/([^/]+)$/);
+      setBlogPostId(match ? decodeURIComponent(match[1]) : null);
+    };
+    window.addEventListener('popstate', syncFromUrl);
+    return () => window.removeEventListener('popstate', syncFromUrl);
+  }, []);
+
+  // Busca o post completo (com content) quando blogPostId muda (ex: acesso direto à URL)
+  useEffect(() => {
+    if (!blogPostId) { setSelectedBlog(null); return; }
+    if (selectedBlog?.id === blogPostId && selectedBlog.content) return;
+
+    // Mostra a versão resumida (já carregada na listagem) enquanto busca a completa
+    const found = blogs.find(b => b.id === blogPostId);
+    if (found) setSelectedBlog(found);
+
+    let cancelled = false;
+    blogsApi.get(blogPostId)
+      .then(full => { if (!cancelled) setSelectedBlog(convertBlogPost(full)); })
+      .catch(() => { /* mantém a versão resumida ou null se falhar */ });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blogPostId, blogs]);
 
   // ── Validação de e-mail ─────────────────────────────────────────────────────
   const validateEmail = (email: string): boolean => {
@@ -370,6 +337,177 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
     }
   };
 
+  // ===== PÁGINA DE ARTIGO INDIVIDUAL (URL própria /blog/:id) =====
+  if (blogPostId) {
+    return (
+      <div className="min-h-screen bg-brand-cream font-sans">
+        {/* NAVBAR (simplificada, reaproveitando o mesmo logo) */}
+        <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-100 shadow-sm">
+          <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+            <button onClick={() => scrollTo('home')} className="flex items-center space-x-3 group">
+              <img
+                src={logoEspalheMelodias}
+                alt="Espalhe Melodias"
+                className="w-10 h-10 rounded-xl object-cover shadow-md group-hover:shadow-lg transition"
+              />
+              <div>
+                <span className="font-serif text-base font-black text-brand-navy tracking-wide leading-none block">Espalhe</span>
+                <span className="font-script text-xl text-brand-clay leading-none -mt-1 block">Melodias</span>
+              </div>
+            </button>
+            <button
+              onClick={onGoToLogin}
+              className="flex items-center space-x-2 bg-gradient-to-r from-brand-clay to-brand-clay-dark text-white px-4 py-2 rounded-xl text-sm font-bold hover:shadow-lg transition shadow-md shadow-brand-clay/20"
+            >
+              <LogIn className="w-4 h-4" />
+              <span>Área de Membros</span>
+            </button>
+          </div>
+        </nav>
+
+        <div className="max-w-3xl mx-auto px-6 py-16">
+          <button
+            onClick={closeBlogPost}
+            className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-brand-clay transition mb-8"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Voltar para o blog</span>
+          </button>
+
+          {!selectedBlog ? (
+            <div className="text-center py-24 text-slate-400">
+              <BookOpen className="w-14 h-14 mx-auto mb-4 opacity-30" />
+              <p className="font-serif text-xl font-bold text-brand-navy">Artigo não encontrado</p>
+              <p className="text-sm mt-2">Ele pode ter sido removido ou o link está incorreto.</p>
+            </div>
+          ) : (
+            <article className="bg-white rounded-3xl shadow-lg border border-brand-sand overflow-hidden">
+              {selectedBlog.imageUrl && (
+                <img src={selectedBlog.imageUrl} alt={selectedBlog.title} className="w-full h-64 sm:h-80 object-cover" />
+              )}
+              <div className="p-8 sm:p-10">
+                <div className="flex items-center space-x-3 mb-5">
+                  <span className="text-xs bg-brand-sand text-brand-clay font-bold px-3 py-1 rounded-full">{selectedBlog.category}</span>
+                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5" />
+                    {selectedBlog.readTime} de leitura
+                  </span>
+                </div>
+                <h1 className="font-serif text-3xl sm:text-4xl font-bold text-brand-navy mb-5 leading-tight">{selectedBlog.title}</h1>
+                <div className="flex items-center space-x-3 mb-8 pb-8 border-b border-slate-100">
+                  <img src={selectedBlog.authorAvatar} alt={selectedBlog.authorName} className="w-11 h-11 rounded-full object-cover" />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">{selectedBlog.authorName}</p>
+                    <p className="text-sm text-slate-400">{new Date(selectedBlog.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                  </div>
+                </div>
+                <p className="text-slate-700 leading-relaxed text-lg italic border-l-4 border-brand-clay pl-5 mb-6">{selectedBlog.excerpt}</p>
+                <div
+                  className="text-slate-700 leading-relaxed text-base prose prose-slate max-w-none"
+                  dangerouslySetInnerHTML={{ __html: selectedBlog.content }}
+                />
+              </div>
+            </article>
+          )}
+        </div>
+
+        {/* FOOTER */}
+        <footer className="bg-brand-navy-dark border-t border-white/10">
+          <div className="max-w-6xl mx-auto px-6 py-20">
+            <div className="grid md:grid-cols-[1.4fr_1fr_1fr] gap-12 mb-14">
+              {/* Brand */}
+              <div>
+                <div className="flex items-center space-x-3 mb-5">
+                  <img
+                    src={logoEspalheMelodias}
+                    alt="Espalhe Melodias"
+                    className="w-11 h-11 rounded-xl object-cover flex-shrink-0"
+                  />
+                  <div>
+                    <div className="font-serif text-lg font-black text-brand-cream">Espalhe Melodias</div>
+                    <div className="text-sm text-slate-500">Conexões em Saúde Mental</div>
+                  </div>
+                </div>
+                <p className="text-sm text-slate-400 leading-relaxed max-w-xs">Uma comunidade multidisciplinar de profissionais da saúde mental construindo cuidados mais humanos e integrados.</p>
+              </div>
+
+              {/* Navigation */}
+              <div>
+                <h4 className="font-semibold text-white text-sm tracking-wide uppercase mb-5">Navegação</h4>
+                <ul className="space-y-3">
+                  {navLinks.map(link => (
+                    <li key={link.id}>
+                      <button onClick={() => scrollTo(link.id)} className="text-sm text-slate-400 hover:text-brand-clay-light transition">
+                        {link.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Social */}
+              <div>
+                <h4 className="font-semibold text-white text-sm tracking-wide uppercase mb-5">Redes Sociais</h4>
+                <ul className="space-y-3">
+                  <li>
+                    <a
+                      href="https://instagram.com/espalhemelodias"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2.5 text-sm text-slate-400 hover:text-brand-clay-light transition"
+                    >
+                      <Instagram className="w-4 h-4" strokeWidth={1.75} />
+                      <span>Instagram</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://wa.me/5515991234567"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2.5 text-sm text-slate-400 hover:text-brand-clay-light transition"
+                    >
+                      <Phone className="w-4 h-4" strokeWidth={1.75} />
+                      <span>WhatsApp</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="mailto:contato@espalhemelodias.com.br"
+                      className="flex items-center gap-2.5 text-sm text-slate-400 hover:text-brand-clay-light transition"
+                    >
+                      <Mail className="w-4 h-4" strokeWidth={1.75} />
+                      <span>E-mail</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-white/10 pt-10 mb-10">
+              <div className="text-center">
+                <p className="font-script text-2xl md:text-3xl text-brand-clay-light/70">Cada conexão é uma nota que, junta com outras, cria uma linda melodia. ♡</p>
+              </div>
+            </div>
+
+            {/* Bottom */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-5">
+              <p className="text-sm text-slate-500 text-center md:text-left">© 2026 Espalhe Melodias – Conexões em Saúde Mental. Tatuí, SP. Todos os direitos reservados.</p>
+              <button
+                onClick={onGoToLogin}
+                className="flex items-center space-x-2 bg-brand-clay/20 border border-brand-clay/40 text-brand-clay-light px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-brand-clay/30 transition"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Área de Membros</span>
+              </button>
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-brand-cream font-sans">
       {/* LIGHTBOX */}
@@ -385,43 +523,16 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
         </div>
       )}
 
-      {/* BLOG POST OVERLAY */}
-      {selectedBlog && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setSelectedBlog(null)}>
-          <div className="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl" onClick={e => e.stopPropagation()}>
-            <img src={selectedBlog.imageUrl} alt={selectedBlog.title} className="w-full h-56 object-cover rounded-t-3xl" />
-            <div className="p-8">
-              <div className="flex items-center space-x-3 mb-4">
-                <span className="text-xs bg-brand-sand text-brand-clay font-bold px-3 py-1 rounded-full">{selectedBlog.category}</span>
-                <span className="text-xs text-slate-400">{selectedBlog.readTime} de leitura</span>
-              </div>
-              <h2 className="font-serif text-2xl font-bold text-brand-navy mb-3 leading-tight">{selectedBlog.title}</h2>
-              <div className="flex items-center space-x-3 mb-6 pb-6 border-b border-slate-100">
-                <img src={selectedBlog.authorAvatar} alt={selectedBlog.authorName} className="w-9 h-9 rounded-full object-cover" />
-                <div>
-                  <p className="text-sm font-semibold text-slate-700">{selectedBlog.authorName}</p>
-                  <p className="text-xs text-slate-400">{new Date(selectedBlog.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-                </div>
-              </div>
-              <p className="text-slate-600 leading-relaxed text-base mb-4">{selectedBlog.excerpt}</p>
-              <p className="text-slate-700 leading-relaxed">{selectedBlog.content}</p>
-              <button onClick={() => setSelectedBlog(null)} className="mt-8 text-sm text-brand-clay font-semibold hover:underline flex items-center space-x-1">
-                <ChevronLeft className="w-4 h-4" />
-                <span>Voltar para o blog</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* NAVBAR */}
       <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-100 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
           <button onClick={() => scrollTo('home')} className="flex items-center space-x-3 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-clay to-brand-moss flex items-center justify-center shadow-md group-hover:shadow-lg transition">
-              <span className="text-base text-white font-serif font-black italic">♩Ψ</span>
-            </div>
+            <img
+              src={logoEspalheMelodias}
+              alt="Espalhe Melodias"
+              className="w-10 h-10 rounded-xl object-cover shadow-md group-hover:shadow-lg transition"
+            />
             <div>
               <span className="font-serif text-base font-black text-brand-navy tracking-wide leading-none block">Espalhe</span>
               <span className="font-script text-xl text-brand-clay leading-none -mt-1 block">Melodias</span>
@@ -447,15 +558,15 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
 
           <div className="flex items-center space-x-3">
             {/* Social icons - Desktop */}
-            <div className="hidden sm:flex items-center space-x-2">
-              <a href="https://instagram.com/espalhemelodias" target="_blank" rel="noopener noreferrer" className="p-2 text-slate-600 hover:text-brand-clay hover:bg-brand-clay/5 rounded-lg transition">
+            <div className="hidden sm:flex items-center">
+              <a
+                href="https://instagram.com/espalhemelodias"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 text-slate-500 rounded-lg transition hover:text-[#E1306C] hover:bg-[#E1306C]/10"
+                aria-label="Instagram"
+              >
                 <Instagram className="w-5 h-5" />
-              </a>
-              <a href="https://wa.me/5515991234567" target="_blank" rel="noopener noreferrer" className="p-2 text-slate-600 hover:text-brand-clay hover:bg-brand-clay/5 rounded-lg transition">
-                <Phone className="w-5 h-5" />
-              </a>
-              <a href="mailto:contato@espalhemelodias.com.br" className="p-2 text-slate-600 hover:text-brand-clay hover:bg-brand-clay/5 rounded-lg transition">
-                <Mail className="w-5 h-5" />
               </a>
             </div>
 
@@ -466,38 +577,92 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
               <LogIn className="w-4 h-4" />
               <span>Área de Membros</span>
             </button>
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 text-slate-600 hover:text-brand-clay">
-              <Menu className="w-5 h-5" />
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 text-slate-600 hover:text-brand-clay"
+              aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-t border-slate-100 px-6 py-4 space-y-2 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
-            {navLinks.map(link => (
-              <button key={link.id} onClick={() => scrollTo(link.id)} className="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-brand-sand rounded-lg transition">
-                {link.label}
+      </nav>
+
+      {/* Mobile menu — drawer lateral (direita), fora da <nav> via portal para não herdar o containing block do sticky/backdrop-blur */}
+      {mobileMenuOpen && createPortal(
+        <>
+          {/* Backdrop */}
+          <div
+            className="md:hidden fixed inset-0 z-40 bg-black/40 drawer-backdrop"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          {/* Painel */}
+          <div className="md:hidden fixed inset-y-0 right-0 z-50 w-[82%] max-w-xs bg-white shadow-2xl flex flex-col drawer-panel">
+            <div className="flex items-center justify-between px-5 h-16 border-b border-slate-100">
+              <div className="flex items-center space-x-3">
+                <img
+                  src={logoEspalheMelodias}
+                  alt="Espalhe Melodias"
+                  className="w-9 h-9 rounded-xl object-cover shadow-md"
+                />
+                <div>
+                  <span className="font-serif text-sm font-black text-brand-navy tracking-wide leading-none block">Espalhe</span>
+                  <span className="font-script text-lg text-brand-clay leading-none -mt-1 block">Melodias</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 text-slate-500 hover:text-brand-clay rounded-lg transition"
+                aria-label="Fechar menu"
+              >
+                <X className="w-5 h-5" />
               </button>
-            ))}
-            <div className="flex items-center space-x-2 py-2 px-4 border-t border-slate-100">
-              <a href="https://instagram.com/espalhemelodias" target="_blank" rel="noopener noreferrer" className="p-2 text-slate-600 hover:text-brand-clay rounded-lg transition">
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1.5">
+              {navLinks.map(link => (
+                <button
+                  key={link.id}
+                  onClick={() => scrollTo(link.id)}
+                  className={`w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition ${
+                    activeSection === link.id
+                      ? 'text-brand-clay bg-brand-clay/10'
+                      : 'text-slate-700 hover:bg-brand-sand/60'
+                  }`}
+                >
+                  {link.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="px-5 py-3 border-t border-slate-100">
+              <a
+                href="https://instagram.com/espalhemelodias"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-2 text-sm font-semibold text-slate-600 hover:text-[#E1306C] transition"
+              >
                 <Instagram className="w-5 h-5" />
-              </a>
-              <a href="https://wa.me/5515991234567" target="_blank" rel="noopener noreferrer" className="p-2 text-slate-600 hover:text-brand-clay rounded-lg transition">
-                <Phone className="w-5 h-5" />
-              </a>
-              <a href="mailto:contato@espalhemelodias.com.br" className="p-2 text-slate-600 hover:text-brand-clay rounded-lg transition">
-                <Mail className="w-5 h-5" />
+                <span>@espalhemelodias</span>
               </a>
             </div>
-            <button onClick={onGoToLogin} className="w-full mt-2 bg-gradient-to-r from-brand-clay to-brand-clay-dark text-white py-2.5 rounded-xl text-sm font-bold flex items-center justify-center space-x-2">
-              <LogIn className="w-4 h-4" />
-              <span>Área de Membros</span>
-            </button>
+
+            <div className="px-5 pb-6 pt-1">
+              <button
+                onClick={onGoToLogin}
+                className="w-full bg-gradient-to-r from-brand-clay to-brand-clay-dark text-white py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 shadow-md shadow-brand-clay/20"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Área de Membros</span>
+              </button>
+            </div>
           </div>
-        )}
-      </nav>
+        </>,
+        document.body
+      )}
 
       {/* ===== HOME ===== */}
       {activeSection === 'home' && (
@@ -519,12 +684,12 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
 
             <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center relative z-10 py-20">
               <div>
-                <div className="inline-flex items-center space-x-2 bg-brand-moss/10 border border-brand-moss/20 text-brand-moss-dark px-4 py-1.5 rounded-full text-xs font-bold mb-6">
-                  <Sparkles className="w-3.5 h-3.5" />
+                <div className="inline-flex items-center space-x-2 bg-brand-moss/10 border border-brand-moss/20 text-brand-moss-dark px-4 py-2 rounded-full text-sm font-bold mb-7">
+                  <Sparkles className="w-4 h-4" />
                   <span>Conexões em Saúde Mental</span>
                 </div>
 
-                <h1 className="font-serif text-5xl lg:text-6xl font-bold text-brand-navy leading-tight mb-6">
+                <h1 className="font-serif text-5xl lg:text-6xl font-bold text-brand-navy leading-tight mb-7">
                   Conectando<br />
                   <span className="text-brand-clay font-script text-6xl lg:text-7xl">profissionais.</span><br />
                   Fortalecendo<br />
@@ -560,20 +725,6 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
                     <span>Seguir no Instagram</span>
                   </a>
                 </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4 mt-12 pt-8 border-t border-brand-sand">
-                  {[
-                    { value: '20+', label: 'Membros' },
-                    { value: '2', label: 'Idealizadoras' },
-                    { value: '2026', label: 'Nascimento' },
-                  ].map(stat => (
-                    <div key={stat.label} className="text-center">
-                      <div className="font-serif text-2xl font-bold text-brand-clay">{stat.value}</div>
-                      <div className="text-xs text-slate-500 font-semibold mt-0.5">{stat.label}</div>
-                    </div>
-                  ))}
-                </div>
               </div>
 
               {/* Right visual */}
@@ -583,24 +734,24 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
                   <div className="relative grid grid-cols-2 gap-4">
                     <div className="space-y-4">
                       <img
-                        src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=400&auto=format&fit=crop"
+                        src={espalheMelodias01}
                         alt="Encontro"
                         className="w-full h-48 object-cover rounded-2xl shadow-xl"
                       />
                       <img
-                        src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=400&auto=format&fit=crop"
+                        src={espalheMelodias02}
                         alt="Conexão"
                         className="w-full h-36 object-cover rounded-2xl shadow-lg"
                       />
                     </div>
                     <div className="space-y-4 mt-8">
                       <img
-                        src="https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?q=80&w=400&auto=format&fit=crop"
+                        src={espalheMelodias03}
                         alt="Palestra"
                         className="w-full h-36 object-cover rounded-2xl shadow-lg"
                       />
                       <img
-                        src="https://images.unsplash.com/photo-1600880292089-90a7e086ee0c?q=80&w=400&auto=format&fit=crop"
+                        src={espalheMelodias04}
                         alt="Workshop"
                         className="w-full h-48 object-cover rounded-2xl shadow-xl"
                       />
@@ -613,8 +764,8 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
                       <Heart className="w-5 h-5 text-brand-moss" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-800">Compartilhar é cuidar!</p>
-                      <p className="text-[11px] text-slate-400">Juntos somos mais fortes</p>
+                      <p className="text-sm font-bold text-slate-800">Compartilhar é cuidar!</p>
+                      <p className="text-xs text-slate-400">Juntos somos mais fortes</p>
                     </div>
                   </div>
                 </div>
@@ -622,72 +773,57 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
             </div>
           </section>
 
-          {/* Stats showcase */}
-          <section className="bg-gradient-to-r from-brand-navy via-brand-navy to-brand-navy-dark py-12">
-            <div className="max-w-6xl mx-auto px-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {[
-                  { icon: Users, value: '20+', label: 'Profissionais Ativos' },
-                  { icon: Calendar, value: '2', label: 'Encontros Realizados' },
-                  { icon: Zap, value: '45+', label: 'Participantes em Eventos' },
-                  { icon: TrendingUp, value: '100%', label: 'Satisfação' },
-                ].map((stat, i) => (
-                  <div key={i} className="text-center bg-white/5 rounded-xl p-4 border border-white/10 hover:bg-white/10 transition">
-                    <stat.icon className="w-6 h-6 text-brand-clay-light mx-auto mb-2" />
-                    <div className="font-serif text-2xl md:text-3xl font-bold text-brand-clay mb-1">{stat.value}</div>
-                    <div className="text-xs md:text-sm text-slate-300 font-semibold">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
           {/* Values strip */}
-          <section className="bg-brand-navy py-14">
+          <section className="bg-brand-navy py-20">
             <div className="max-w-6xl mx-auto px-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
                 {[
-                  { icon: '🤝', title: 'Conexões Reais', desc: 'Mais que contatos, vínculos verdadeiros e duradouros.' },
-                  { icon: '💚', title: 'Apoio Mútuo', desc: 'Ninguém caminha longe quando tem com quem contar.' },
-                  { icon: '🌱', title: 'Crescimento', desc: 'Juntos aprendemos, evoluímos e ampliamos horizontes.' },
-                  { icon: '⭐', title: 'Pertencimento', desc: 'Construindo uma comunidade onde todos se sentem parte.' },
+                  { icon: Users, title: 'Conexões Reais', desc: 'Mais que contatos, vínculos verdadeiros e duradouros.' },
+                  { icon: Heart, title: 'Apoio Mútuo', desc: 'Ninguém caminha longe quando tem com quem contar.' },
+                  { icon: TrendingUp, title: 'Crescimento', desc: 'Juntos aprendemos, evoluímos e ampliamos horizontes.' },
+                  { icon: Star, title: 'Pertencimento', desc: 'Construindo uma comunidade onde todos se sentem parte.' },
                 ].map(v => (
                   <div key={v.title} className="text-center">
-                    <div className="text-3xl mb-3">{v.icon}</div>
-                    <h3 className="font-serif text-base font-bold text-brand-cream mb-1">{v.title}</h3>
-                    <p className="text-slate-400 text-xs leading-relaxed">{v.desc}</p>
+                    <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-5">
+                      <v.icon className="w-6 h-6 text-brand-clay-light" strokeWidth={1.75} />
+                    </div>
+                    <h3 className="font-serif text-lg font-bold text-brand-cream mb-2">{v.title}</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed">{v.desc}</p>
                   </div>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* Instagram Feed Section */}
-          <section className="py-20 max-w-6xl mx-auto px-6">
-            <div className="flex items-end justify-between mb-10">
+          {/* Instagram Feed Section — só renderiza se houver stories, posts, ou dados carregando */}
+          {(stories.length > 0 || instagramPosts.length > 0 || publicSiteData.storiesLoading || publicSiteData.instagramLoading) && (
+          <section className="py-24 max-w-6xl mx-auto px-6">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 mb-12">
               <div>
-                <p className="text-xs font-bold text-brand-clay uppercase tracking-widest mb-2">Nos Acompanhe</p>
-                <h2 className="font-serif text-3xl font-bold text-brand-navy">Momentos no Instagram</h2>
+                <p className="text-sm font-bold text-brand-clay uppercase tracking-widest mb-2">Nos Acompanhe</p>
+                <h2 className="font-serif text-3xl md:text-4xl font-bold text-brand-navy">Momentos no Instagram</h2>
               </div>
               <a
                 href="https://instagram.com/espalhemelodias"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center space-x-2 text-sm bg-gradient-to-r from-pink-500 to-brand-clay text-white px-4 py-2.5 rounded-xl font-bold hover:shadow-lg transition shadow-md"
+                className="inline-flex items-center gap-2 text-sm bg-gradient-to-r from-pink-500 to-brand-clay text-white px-5 py-3 rounded-xl font-bold hover:shadow-lg transition shadow-md self-start"
               >
                 <Instagram className="w-4 h-4" />
                 <span>Seguir @espalhemelodias</span>
               </a>
             </div>
 
-            {/* Stories Carousel - Dinâmico */}
-            <div className="mb-12">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Stories Recentes</p>
-              <InstagramStories
-                stories={stories}
-                loading={publicSiteData.storiesLoading}
-              />
-            </div>
+            {/* Stories Carousel - só renderiza se houver stories ou estiver carregando */}
+            {(stories.length > 0 || publicSiteData.storiesLoading) && (
+              <div className="mb-14">
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-5">Stories Recentes</p>
+                <InstagramStories
+                  stories={stories}
+                  loading={publicSiteData.storiesLoading}
+                />
+              </div>
+            )}
 
             {/* Instagram Posts Grid - Dinâmico */}
             {publicSiteData.instagramLoading ? (
@@ -721,39 +857,37 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
                         </div>
                       </div>
                     </div>
-                    <div className="p-4 bg-white">
-                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">{post.caption}</p>
+                    <div className="p-5 bg-white">
+                      <p className="text-sm text-slate-600 leading-relaxed line-clamp-2">{post.caption}</p>
                     </div>
                   </a>
                 ))}
               </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-slate-500">Nenhum post encontrado. Siga-nos no Instagram!</p>
-              </div>
-            )}
+            ) : null}
           </section>
+          )}
 
-          {/* Testimonials Section */}
-          <section className="py-20 bg-gradient-to-br from-brand-cream/50 to-brand-sand/30">
+          {/* Testimonials Section — só renderiza se houver depoimentos */}
+          {publicSiteData.testimonials.length > 0 && (
+          <section className="py-24 bg-gradient-to-br from-brand-cream/50 to-brand-sand/30">
             <div className="max-w-5xl mx-auto px-6">
-              <div className="text-center mb-12">
-                <p className="text-xs font-bold text-brand-clay uppercase tracking-widest mb-2">Depoimentos</p>
-                <h2 className="font-serif text-3xl font-bold text-brand-navy mb-3">O que dizem nossos membros</h2>
-                <p className="text-slate-600 max-w-xl mx-auto">Histórias reais de profissionais que fazem parte dessa jornada coletiva</p>
+              <div className="text-center mb-14">
+                <p className="text-sm font-bold text-brand-clay uppercase tracking-widest mb-2">Depoimentos</p>
+                <h2 className="font-serif text-3xl md:text-4xl font-bold text-brand-navy mb-4">O que dizem nossos membros</h2>
+                <p className="text-slate-600 max-w-xl mx-auto text-base leading-relaxed">Histórias reais de profissionais que fazem parte dessa jornada coletiva</p>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-3 gap-7">
                 {publicSiteData.testimonials.map(testimonial => (
-                  <div key={testimonial.id} className="bg-white rounded-2xl p-6 shadow-sm border border-brand-sand hover:shadow-lg hover:-translate-y-1 transition-all">
-                    <div className="flex items-center space-x-3 mb-4">
+                  <div key={testimonial.id} className="bg-white rounded-2xl p-7 shadow-sm border border-brand-sand hover:shadow-lg hover:-translate-y-1 transition-all">
+                    <div className="flex items-center space-x-3 mb-5">
                       <img src={testimonial.avatar} alt={testimonial.authorName} className="w-12 h-12 rounded-full object-cover" />
                       <div>
-                        <p className="font-semibold text-brand-navy text-sm">{testimonial.authorName}</p>
-                        <p className="text-xs text-brand-clay font-semibold">{testimonial.role}</p>
+                        <p className="font-semibold text-brand-navy text-base">{testimonial.authorName}</p>
+                        <p className="text-sm text-brand-clay font-semibold">{testimonial.role}</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-1 mb-3">
+                    <div className="flex items-center space-x-1 mb-4">
                       {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-brand-clay text-brand-clay" />)}
                     </div>
                     <p className="text-slate-600 text-sm leading-relaxed italic">"{testimonial.text}"</p>
@@ -762,62 +896,26 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
               </div>
             </div>
           </section>
+          )}
 
-          {/* Recent Activity Timeline */}
-          <section className="py-20 max-w-5xl mx-auto px-6">
-            <div className="text-center mb-12">
-              <p className="text-xs font-bold text-brand-moss uppercase tracking-widest mb-2">Atividades</p>
-              <h2 className="font-serif text-3xl font-bold text-brand-navy">O que tem acontecido</h2>
-            </div>
-
-            <div className="relative">
-              {/* Timeline line */}
-              <div className="absolute left-6 md:left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-brand-clay via-brand-moss to-transparent" />
-
-              {/* Timeline items */}
-              <div className="space-y-8">
-                {RECENT_ACTIVITY.map((activity, i) => (
-                  <div key={i} className={`flex gap-6 ${i % 2 === 0 ? 'md:flex-row-reverse' : ''}`}>
-                    {/* Dot */}
-                    <div className="flex flex-col items-center shrink-0">
-                      <div className="absolute left-0 md:left-1/2 w-14 h-14 md:w-16 md:h-16 -translate-x-1/2 bg-white rounded-full border-4 border-brand-clay flex items-center justify-center shadow-lg">
-                        {activity.type === 'newsletter' && <Gift className="w-6 h-6 text-brand-clay" />}
-                        {activity.type === 'blog' && <BookOpen className="w-6 h-6 text-brand-clay" />}
-                        {activity.type === 'event' && <Calendar className="w-6 h-6 text-brand-clay" />}
-                        {activity.type === 'gallery' && <Image className="w-6 h-6 text-brand-clay" />}
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className={`flex-1 ${i % 2 === 0 ? 'md:text-right md:pr-8' : 'md:pl-8'} pt-1`}>
-                      <div className="bg-white rounded-xl p-5 border border-brand-sand shadow-sm hover:shadow-md transition">
-                        <p className="text-xs font-bold text-brand-moss uppercase tracking-wider mb-1">{activity.date}</p>
-                        <p className="font-semibold text-brand-navy">{activity.title}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Latest blog posts */}
-          <section className="py-20 max-w-6xl mx-auto px-6">
-            <div className="flex items-end justify-between mb-10">
+          {/* Latest blog posts — só renderiza se houver posts */}
+          {blogs.length > 0 && (
+          <section className="py-24 max-w-6xl mx-auto px-6">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 mb-12">
               <div>
-                <p className="text-xs font-bold text-brand-clay uppercase tracking-widest mb-2">Blog & Conteúdo</p>
-                <h2 className="font-serif text-3xl font-bold text-brand-navy">Últimas publicações</h2>
+                <p className="text-sm font-bold text-brand-clay uppercase tracking-widest mb-2">Blog & Conteúdo</p>
+                <h2 className="font-serif text-3xl md:text-4xl font-bold text-brand-navy">Últimas publicações</h2>
               </div>
-              <button onClick={() => scrollTo('blog')} className="flex items-center space-x-1 text-sm text-brand-clay font-bold hover:underline">
+              <button onClick={() => scrollTo('blog')} className="inline-flex items-center gap-1 text-sm text-brand-clay font-bold hover:underline self-start">
                 <span>Ver todos</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-7">
               {blogs.slice(0, 2).map(post => (
                 <button
                   key={post.id}
-                  onClick={() => setSelectedBlog(post)}
+                  onClick={() => openBlogPost(post)}
                   className="text-left bg-white rounded-2xl overflow-hidden shadow-sm border border-brand-sand hover:shadow-lg hover:-translate-y-0.5 transition group"
                 >
                   <div className="relative overflow-hidden">
@@ -826,16 +924,16 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
                       <span className="bg-white/90 backdrop-blur text-brand-clay text-xs font-bold px-3 py-1 rounded-full">{post.category}</span>
                     </div>
                   </div>
-                  <div className="p-6">
-                    <h3 className="font-serif text-lg font-bold text-brand-navy mb-2 leading-snug group-hover:text-brand-clay transition">{post.title}</h3>
-                    <p className="text-slate-500 text-sm leading-relaxed mb-4 line-clamp-2">{post.excerpt}</p>
+                  <div className="p-7">
+                    <h3 className="font-serif text-lg font-bold text-brand-navy mb-2.5 leading-snug group-hover:text-brand-clay transition">{post.title}</h3>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-5 line-clamp-2">{post.excerpt}</p>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <img src={post.authorAvatar} alt={post.authorName} className="w-7 h-7 rounded-full object-cover" />
-                        <span className="text-xs text-slate-500 font-semibold">{post.authorName}</span>
+                      <div className="flex items-center space-x-2.5">
+                        <img src={post.authorAvatar} alt={post.authorName} className="w-8 h-8 rounded-full object-cover" />
+                        <span className="text-sm text-slate-500 font-semibold">{post.authorName}</span>
                       </div>
                       <span className="text-xs text-slate-400 flex items-center space-x-1">
-                        <Clock className="w-3 h-3" />
+                        <Clock className="w-3.5 h-3.5" />
                         <span>{post.readTime}</span>
                       </span>
                     </div>
@@ -844,37 +942,39 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
               ))}
             </div>
           </section>
+          )}
 
-          {/* Upcoming events teaser */}
-          <section className="py-16 bg-brand-sand/40">
+          {/* Upcoming events teaser — só renderiza se houver eventos futuros */}
+          {upcomingEvents.length > 0 && (
+          <section className="py-20 bg-brand-sand/40">
             <div className="max-w-6xl mx-auto px-6">
-              <div className="flex items-end justify-between mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 mb-10">
                 <div>
-                  <p className="text-xs font-bold text-brand-moss uppercase tracking-widest mb-2">Agenda</p>
-                  <h2 className="font-serif text-3xl font-bold text-brand-navy">Próximos encontros</h2>
+                  <p className="text-sm font-bold text-brand-moss uppercase tracking-widest mb-2">Agenda</p>
+                  <h2 className="font-serif text-3xl md:text-4xl font-bold text-brand-navy">Próximos encontros</h2>
                 </div>
-                <button onClick={() => scrollTo('events')} className="flex items-center space-x-1 text-sm text-brand-moss font-bold hover:underline">
+                <button onClick={() => scrollTo('events')} className="inline-flex items-center gap-1 text-sm text-brand-moss font-bold hover:underline self-start">
                   <span>Ver agenda</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
-              <div className="grid md:grid-cols-2 gap-5">
-                {events.filter(e => e.status === 'upcoming').slice(0, 2).map(evt => (
-                  <div key={evt.id} className="bg-white rounded-2xl p-6 border border-brand-sand shadow-sm flex items-start space-x-4 hover:shadow-md transition">
-                    <div className="w-14 h-14 bg-brand-moss/10 rounded-xl flex flex-col items-center justify-center shrink-0">
+              <div className="grid md:grid-cols-2 gap-6">
+                {upcomingEvents.slice(0, 2).map(evt => (
+                  <div key={evt.id} className="bg-white rounded-2xl p-7 border border-brand-sand shadow-sm flex items-start space-x-5 hover:shadow-md transition">
+                    <div className="w-16 h-16 bg-brand-moss/10 rounded-xl flex flex-col items-center justify-center shrink-0">
                       <span className="text-xs font-bold text-brand-moss">{new Date(evt.date).toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase()}</span>
-                      <span className="text-xl font-black text-brand-moss leading-none">{new Date(evt.date).getDate()}</span>
+                      <span className="text-2xl font-black text-brand-moss leading-none mt-0.5">{new Date(evt.date).getDate()}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-[10px] font-bold text-brand-clay uppercase tracking-wider">{evt.category}</span>
-                      <h3 className="font-semibold text-brand-navy text-sm mt-0.5 leading-snug">{evt.title}</h3>
-                      <p className="text-xs text-slate-400 mt-1 flex items-center space-x-1">
-                        <Clock className="w-3 h-3" />
+                      <span className="text-xs font-bold text-brand-clay uppercase tracking-wider">{evt.category}</span>
+                      <h3 className="font-semibold text-brand-navy text-base mt-1 leading-snug">{evt.title}</h3>
+                      <p className="text-sm text-slate-400 mt-1.5 flex items-center space-x-1">
+                        <Clock className="w-3.5 h-3.5" />
                         <span>{evt.time}</span>
                       </p>
-                      <button onClick={onGoToLogin} className="mt-3 text-xs text-brand-clay font-bold hover:underline flex items-center space-x-0.5">
+                      <button onClick={onGoToLogin} className="mt-4 text-sm text-brand-clay font-bold hover:underline flex items-center space-x-0.5">
                         <span>Inscrever-se</span>
-                        <ChevronRight className="w-3 h-3" />
+                        <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -882,12 +982,13 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
               </div>
             </div>
           </section>
+          )}
 
           {/* Newsletter Section */}
-          <section className="py-16 bg-gradient-to-r from-brand-clay/90 to-brand-clay-dark">
+          <section className="py-20 bg-gradient-to-r from-brand-clay/90 to-brand-clay-dark">
             <div className="max-w-2xl mx-auto px-6 text-center">
-              <h2 className="font-serif text-3xl font-bold text-white mb-3">Fique por dentro das novidades</h2>
-              <p className="text-white/90 mb-8 max-w-md mx-auto">Receba artigos, dicas de saúde mental e informações sobre nossos eventos diretamente no seu e-mail.</p>
+              <h2 className="font-serif text-3xl md:text-4xl font-bold text-white mb-4">Fique por dentro das novidades</h2>
+              <p className="text-white/90 mb-9 max-w-md mx-auto text-base leading-relaxed">Receba artigos, dicas de saúde mental e informações sobre nossos eventos diretamente no seu e-mail.</p>
 
               {newsletterSuccess ? (
                 <div className="flex items-center justify-center gap-3 bg-white/20 border border-white/30 rounded-xl px-6 py-4">
@@ -949,12 +1050,12 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
                   <div className="absolute bottom-4 left-8 text-5xl font-script text-brand-moss">♫</div>
                 </div>
 
-                <div className="relative z-10 p-8 sm:p-12">
+                <div className="relative z-10 p-8 sm:p-14">
                   {/* Header */}
-                  <div className="text-center mb-8">
+                  <div className="text-center mb-10">
                     <p className="font-script text-3xl sm:text-4xl text-brand-clay-light mb-3">Compartilhar é cuidar!</p>
-                    <h2 className="font-serif text-xl sm:text-2xl font-bold text-brand-cream mb-3">Faça parte da nossa comunidade</h2>
-                    <p className="text-slate-400 text-sm leading-relaxed max-w-md mx-auto">
+                    <h2 className="font-serif text-2xl sm:text-3xl font-bold text-brand-cream mb-4">Faça parte da nossa comunidade</h2>
+                    <p className="text-slate-400 text-sm sm:text-base leading-relaxed max-w-md mx-auto">
                       Preencha os dados abaixo e nossa equipe entrará em contato após a aprovação.
                     </p>
                   </div>
@@ -977,7 +1078,7 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
                       {/* Nome e E-mail */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-bold text-slate-300 mb-1.5">Nome completo <span className="text-brand-clay">*</span></label>
+                          <label className="block text-sm font-bold text-slate-300 mb-2">Nome completo <span className="text-brand-clay">*</span></label>
                           <input
                             type="text"
                             required
@@ -988,7 +1089,7 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-300 mb-1.5">E-mail <span className="text-brand-clay">*</span></label>
+                          <label className="block text-sm font-bold text-slate-300 mb-2">E-mail <span className="text-brand-clay">*</span></label>
                           <input
                             type="email"
                             required
@@ -1003,7 +1104,7 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
                       {/* WhatsApp e Especialidade */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-bold text-slate-300 mb-1.5">WhatsApp / Telefone</label>
+                          <label className="block text-sm font-bold text-slate-300 mb-2">WhatsApp / Telefone</label>
                           <input
                             type="tel"
                             value={requestForm.phone}
@@ -1013,7 +1114,7 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-slate-300 mb-1.5">Especialidade</label>
+                          <label className="block text-sm font-bold text-slate-300 mb-2">Especialidade</label>
                           <select
                             value={requestForm.specialty}
                             onChange={e => setF('specialty', e.target.value)}
@@ -1030,7 +1131,7 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
                       {/* Especialidade Custom */}
                       {requestForm.specialty === 'outro' && (
                         <div>
-                          <label className="block text-xs font-bold text-slate-300 mb-1.5">Qual é a sua especialidade?</label>
+                          <label className="block text-sm font-bold text-slate-300 mb-2">Qual é a sua especialidade?</label>
                           <input
                             type="text"
                             value={requestForm.specialtyCustom}
@@ -1043,7 +1144,7 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
 
                       {/* Gênero */}
                       <div>
-                        <label className="block text-xs font-bold text-slate-300 mb-1.5">Gênero</label>
+                        <label className="block text-sm font-bold text-slate-300 mb-2">Gênero</label>
                         <select
                           value={requestForm.gender}
                           onChange={e => setF('gender', e.target.value)}
@@ -1057,7 +1158,7 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
 
                       {/* Observação */}
                       <div>
-                        <label className="block text-xs font-bold text-slate-300 mb-1.5">Mensagem / Apresentação</label>
+                        <label className="block text-sm font-bold text-slate-300 mb-2">Mensagem / Apresentação</label>
                         <textarea
                           value={requestForm.observation}
                           onChange={e => setF('observation', e.target.value)}
@@ -1109,53 +1210,64 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
       {/* ===== QUEM SOMOS ===== */}
       {activeSection === 'about' && (
         <div className="min-h-screen bg-gradient-to-br from-white via-brand-cream/30 to-brand-sand/20">
-          <div className="max-w-5xl mx-auto px-6 py-20">
-            <div className="text-center mb-16">
-              <p className="text-xs font-bold text-brand-clay uppercase tracking-widest mb-3">Nossa História</p>
-              <h1 className="font-serif text-5xl font-bold text-brand-navy mb-4 leading-tight">Quem Somos</h1>
+          <div className="max-w-5xl mx-auto px-6 py-24">
+            <div className="text-center mb-20">
+              <p className="text-sm font-bold text-brand-clay uppercase tracking-widest mb-3">Nossa História</p>
+              <h1 className="font-serif text-5xl font-bold text-brand-navy mb-5 leading-tight">Quem Somos</h1>
               <p className="text-slate-600 max-w-xl mx-auto text-lg leading-relaxed">
                 As idealizadoras do Espalhe Melodias e a história de um projeto que nasceu do desejo de fortalecer conexões entre profissionais de saúde mental.
               </p>
             </div>
 
           {/* Founders */}
-          <div className="grid md:grid-cols-2 gap-8 mb-16">
+          <div className="grid md:grid-cols-2 gap-8 mb-20">
             {[
               {
                 name: 'Jéssica Muhamed',
                 role: 'Idealizadora do Espalhe Psicologia',
-                avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=400&auto=format&fit=crop',
-                quote: '"Eu acredito que ninguém constrói cuidado sozinho."',
-                bio: 'Psicóloga Clínica desde 2016, fundadora do Meraki – Espaço de Saúde, psicóloga do CAPS II de Tatuí (SUS) e idealizadora do Espalhe Psicologia Tatuí.',
+                avatar: fotoJessica,
+                instagram: 'https://www.instagram.com/psi.jessicamuhamed/',
+                quote: 'Eu acredito que ninguém constrói cuidado sozinho.',
                 items: ['Psicóloga Clínica desde 2016', 'Fundadora do Meraki – Espaço de Saúde', 'Psicóloga do CAPS II de Tatuí (SUS)', 'Idealizadora do Espalhe Psicologia Tatuí'],
-                color: 'from-brand-clay/15 to-brand-sand/10'
+                textAccent: 'text-brand-clay',
+                quoteIcon: 'text-brand-clay/40',
+                dot: 'bg-brand-clay',
               },
               {
                 name: 'Karen Gomes',
                 role: 'Idealizadora do Melodias Conexões',
-                avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=400&auto=format&fit=crop',
-                quote: '"Conexões verdadeiras fortalecem o cuidado."',
-                bio: 'Psicóloga Clínica desde 2021, empreendedora da Develoi Soluções Digitais, coordenadora do MFC de Tatuí e idealizadora do Melodias Conexões.',
-                items: ['Psicóloga Clínica desde 2021', 'Empreendedora da Develoi Soluções Digitais', 'Coordenadora do MFC de Tatuí', 'Idealizadora do Melodias Conexões'],
-                color: 'from-brand-moss/15 to-brand-sand/10'
+                avatar: fotoKaren,
+                instagram: 'https://www.instagram.com/psi.karengomes/',
+                quote: 'Conexões verdadeiras fortalecem o cuidado.',
+                items: ['Psicóloga Clínica desde 2021', 'Empreendedora da Develoi Soluções Digitais', 'Fundadora do PsiFlux', 'Coordenadora do MFC de Tatuí', 'Idealizadora do Melodias Conexões'],
+                textAccent: 'text-brand-moss',
+                quoteIcon: 'text-brand-moss/40',
+                dot: 'bg-brand-moss',
               }
             ].map(founder => (
-              <div key={founder.name} className={`bg-gradient-to-br ${founder.color} rounded-3xl p-8 border border-slate-100 shadow-sm hover:shadow-md transition`}>
-                <div className="flex items-start space-x-4 mb-6">
-                  <img src={founder.avatar} alt={founder.name} className="w-20 h-20 rounded-2xl object-cover shadow-md shrink-0" />
-                  <div>
-                    <h3 className="font-serif text-lg font-bold text-brand-navy">{founder.name}</h3>
-                    <p className="text-brand-clay text-sm font-semibold mt-0.5">{founder.role}</p>
-                  </div>
+              <div key={founder.name} className="bg-white rounded-3xl p-9 border border-brand-sand shadow-sm hover:shadow-lg transition-shadow duration-300">
+                <div className="flex flex-col items-center text-center mb-7">
+                  <img src={founder.avatar} alt={founder.name} className="w-28 h-28 rounded-full object-cover shadow-md ring-4 ring-brand-sand mb-5" />
+                  <h3 className="font-serif text-xl font-bold text-brand-navy">{founder.name}</h3>
+                  <p className={`${founder.textAccent} text-sm font-semibold mt-1`}>{founder.role}</p>
+                  <a
+                    href={founder.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-slate-400 hover:text-brand-clay text-sm mt-2 transition"
+                  >
+                    <Instagram className="w-3.5 h-3.5" strokeWidth={1.75} />
+                    <span>Instagram</span>
+                  </a>
                 </div>
-                <div className="bg-white rounded-xl p-4 mb-5 border-l-4 border-brand-clay shadow-sm">
-                  <Quote className="w-4 h-4 text-brand-clay mb-1" />
-                  <p className="text-slate-700 text-sm italic font-medium">{founder.quote}</p>
+                <div className="relative bg-brand-cream/50 rounded-2xl p-6 mb-7">
+                  <Quote className={`w-6 h-6 ${founder.quoteIcon} absolute top-4 left-4`} />
+                  <p className="text-slate-700 text-base italic font-medium leading-relaxed text-center px-4">{founder.quote}</p>
                 </div>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {founder.items.map(item => (
-                    <li key={item} className="flex items-start space-x-2 text-sm text-slate-600">
-                      <Heart className="w-3.5 h-3.5 text-brand-clay shrink-0 mt-0.5" />
+                    <li key={item} className="flex items-start space-x-3 text-sm text-slate-600 leading-relaxed">
+                      <span className={`w-1.5 h-1.5 rounded-full ${founder.dot} shrink-0 mt-1.5`} />
                       <span>{item}</span>
                     </li>
                   ))}
@@ -1165,50 +1277,69 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
           </div>
 
           {/* Mission / Vision / Values */}
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
+          <div className="grid md:grid-cols-3 gap-6 mb-14">
             {[
               {
-                icon: '🎯',
+                icon: Target,
                 title: 'Nosso Propósito',
                 text: 'Fortalecer conexões entre profissionais da saúde, criando um espaço de troca, apoio e crescimento coletivo.',
-                color: 'bg-brand-moss/5 border-brand-moss/20'
+                iconBg: 'bg-brand-moss/10',
+                iconColor: 'text-brand-moss',
               },
               {
-                icon: '👁️',
+                icon: Eye,
                 title: 'Nossa Visão',
                 text: 'Construir uma comunidade multidisciplinar acolhedora, colaborativa e comprometida com um cuidado em saúde mental mais humano e integrado.',
-                color: 'bg-brand-navy/5 border-brand-navy/20'
+                iconBg: 'bg-brand-navy/10',
+                iconColor: 'text-brand-navy',
               },
               {
-                icon: '💛',
+                icon: Heart,
                 title: 'O Que Construímos',
                 text: 'Troca de experiências, integração multidisciplinar, fortalecimento profissional, parcerias e novas possibilidades de atuação.',
-                color: 'bg-brand-clay/5 border-brand-clay/20'
+                iconBg: 'bg-brand-clay/10',
+                iconColor: 'text-brand-clay',
               }
             ].map(item => (
-              <div key={item.title} className={`${item.color} border rounded-2xl p-6`}>
-                <div className="text-3xl mb-3">{item.icon}</div>
-                <h3 className="font-serif text-base font-bold text-brand-navy mb-2">{item.title}</h3>
+              <div key={item.title} className="bg-white border border-brand-sand rounded-2xl p-7 shadow-sm hover:shadow-md transition-shadow">
+                <div className={`w-14 h-14 rounded-2xl ${item.iconBg} flex items-center justify-center mb-5`}>
+                  <item.icon className={`w-6 h-6 ${item.iconColor}`} strokeWidth={1.75} />
+                </div>
+                <h3 className="font-serif text-lg font-bold text-brand-navy mb-2.5">{item.title}</h3>
                 <p className="text-slate-600 text-sm leading-relaxed">{item.text}</p>
               </div>
             ))}
           </div>
 
           {/* Values list */}
-          <div className="bg-gradient-to-br from-brand-navy via-brand-navy to-brand-navy-dark rounded-3xl p-12 text-center border border-white/5 shadow-lg">
-            <h3 className="font-serif text-3xl font-bold text-white mb-8">Nossos Valores</h3>
-            <div className="flex flex-wrap justify-center gap-3 mb-10">
+          <div className="bg-gradient-to-br from-brand-navy via-brand-navy to-brand-navy-dark rounded-3xl p-10 sm:p-14 text-center border border-white/5 shadow-lg">
+            <h3 className="font-serif text-3xl font-bold text-white mb-9">Nossos Valores</h3>
+            <div className="flex flex-wrap justify-center gap-3 mb-11">
               {['Ética', 'Acolhimento', 'Escuta Sensível', 'Respeito às Singularidades', 'Cooperação', 'Humanidade', 'Construção Coletiva'].map(v => (
-                <span key={v} className="flex items-center space-x-1.5 bg-white/10 border border-white/20 text-slate-200 px-4 py-2 rounded-full text-sm font-semibold hover:bg-white/15 transition">
-                  <Heart className="w-3 h-3 text-brand-clay-light" />
+                <span key={v} className="flex items-center space-x-1.5 bg-white/10 border border-white/20 text-slate-200 px-4 py-2.5 rounded-full text-sm font-semibold hover:bg-white/15 transition">
+                  <Heart className="w-3.5 h-3.5 text-brand-clay-light" />
                   <span>{v}</span>
                 </span>
               ))}
             </div>
-            <div className="border-t border-white/10 pt-8">
-              <p className="font-script text-4xl text-brand-clay-light mb-2">Cada conexão é uma nota que,</p>
+            <div className="border-t border-white/10 pt-9">
+              <p className="font-script text-4xl text-brand-clay-light mb-3">Cada conexão é uma nota que,</p>
               <p className="font-script text-2xl text-slate-300">junta com outras, cria uma linda melodia. ♡</p>
             </div>
+          </div>
+
+          {/* Apoio */}
+          <div className="text-center mt-14">
+            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-5">Apoio</p>
+            <a
+              href="https://psiflux.com.br/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 bg-white border border-brand-sand rounded-2xl px-6 py-4 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <img src={logoPsiflux} alt="PsiFlux" className="h-8 w-auto" />
+              <span className="text-sm text-slate-500">Sistema de gestão para psicólogos</span>
+            </a>
           </div>
           </div>
         </div>
@@ -1217,10 +1348,10 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
       {/* ===== BLOG ===== */}
       {activeSection === 'blog' && (
         <div className="min-h-screen bg-gradient-to-br from-white to-brand-cream/30">
-          <div className="max-w-5xl mx-auto px-6 py-20">
+          <div className="max-w-5xl mx-auto px-6 py-24">
             <div className="text-center mb-16">
-              <p className="text-xs font-bold text-brand-clay uppercase tracking-widest mb-3">Conhecimento & Reflexão</p>
-              <h1 className="font-serif text-5xl font-bold text-brand-navy mb-4 leading-tight">Blog Espalhe Melodias</h1>
+              <p className="text-sm font-bold text-brand-clay uppercase tracking-widest mb-3">Conhecimento & Reflexão</p>
+              <h1 className="font-serif text-5xl font-bold text-brand-navy mb-5 leading-tight">Blog Espalhe Melodias</h1>
               <p className="text-slate-600 max-w-lg mx-auto text-lg leading-relaxed">
                 Artigos, reflexões e conteúdo educativo produzido por nossos profissionais para fortalecer o cuidado em saúde mental.
               </p>
@@ -1233,11 +1364,11 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
                 <p className="text-sm mt-2 text-slate-500">Em breve novos conteúdos serão publicados. Acompanhe nossas redes sociais!</p>
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-2 gap-7">
                 {blogs.map(post => (
                   <button
                     key={post.id}
-                    onClick={() => setSelectedBlog(post)}
+                    onClick={() => openBlogPost(post)}
                     className="text-left bg-white rounded-2xl overflow-hidden shadow-sm border border-brand-sand hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group"
                   >
                     <div className="relative overflow-hidden">
@@ -1252,18 +1383,18 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
                         </span>
                       </div>
                     </div>
-                    <div className="p-6">
-                      <h3 className="font-serif text-lg font-bold text-brand-navy mb-2 group-hover:text-brand-clay transition leading-snug">{post.title}</h3>
-                      <p className="text-slate-500 text-sm leading-relaxed mb-5 line-clamp-3">{post.excerpt}</p>
-                      <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                    <div className="p-7">
+                      <h3 className="font-serif text-lg font-bold text-brand-navy mb-2.5 group-hover:text-brand-clay transition leading-snug">{post.title}</h3>
+                      <p className="text-slate-500 text-sm leading-relaxed mb-6 line-clamp-3">{post.excerpt}</p>
+                      <div className="flex items-center justify-between pt-5 border-t border-slate-100">
                         <div className="flex items-center space-x-2.5">
-                          <img src={post.authorAvatar} alt={post.authorName} className="w-8 h-8 rounded-full object-cover border-2 border-brand-sand" />
+                          <img src={post.authorAvatar} alt={post.authorName} className="w-9 h-9 rounded-full object-cover border-2 border-brand-sand" />
                           <div>
-                            <p className="text-xs font-bold text-slate-700">{post.authorName}</p>
-                            <p className="text-[11px] text-slate-400">{new Date(post.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</p>
+                            <p className="text-sm font-bold text-slate-700">{post.authorName}</p>
+                            <p className="text-xs text-slate-400">{new Date(post.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</p>
                           </div>
                         </div>
-                        <span className="text-xs text-brand-clay font-bold flex items-center space-x-1 group-hover:space-x-1.5 transition-all">
+                        <span className="text-sm text-brand-clay font-bold flex items-center space-x-1 group-hover:space-x-1.5 transition-all">
                           <span>Ler artigo</span>
                           <ChevronRight className="w-3.5 h-3.5" />
                         </span>
@@ -1280,40 +1411,50 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
       {/* ===== GALERIA ===== */}
       {activeSection === 'gallery' && (
         <div className="min-h-screen bg-gradient-to-br from-white to-brand-cream/20">
-          <div className="max-w-6xl mx-auto px-6 py-20">
+          <div className="max-w-6xl mx-auto px-6 py-24">
             <div className="text-center mb-16">
-              <p className="text-xs font-bold text-brand-clay uppercase tracking-widest mb-3">Memórias & Momentos</p>
-              <h1 className="font-serif text-5xl font-bold text-brand-navy mb-4 leading-tight">Galeria de Imagens</h1>
+              <p className="text-sm font-bold text-brand-clay uppercase tracking-widest mb-3">Memórias & Momentos</p>
+              <h1 className="font-serif text-5xl font-bold text-brand-navy mb-5 leading-tight">Galeria de Imagens</h1>
               <p className="text-slate-600 max-w-lg mx-auto text-lg leading-relaxed">
                 Registros dos nossos encontros, workshops e momentos de conexão que fazem parte da história do Espalhe Melodias.
               </p>
             </div>
 
           {/* Masonry-style gallery */}
-          <div className="columns-2 md:columns-3 gap-4 space-y-4">
-            {GALLERY_IMAGES.map((img, i) => (
-              <button
-                key={img.id}
-                onClick={() => setLightboxImage(img.url)}
-                className="break-inside-avoid block w-full group relative overflow-hidden rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300"
-              >
-                <img
-                  src={img.url}
-                  alt={img.caption}
-                  className={`w-full object-cover group-hover:scale-105 transition duration-500 ${i % 3 === 0 ? 'h-64' : i % 3 === 1 ? 'h-48' : 'h-56'}`}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end p-4">
-                  <div>
-                    <p className="text-white text-xs font-bold">{img.event}</p>
-                    <p className="text-white/80 text-[11px]">{img.caption}</p>
+          {galleryImages.length > 0 ? (
+            <div className="columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-4 sm:gap-5 space-y-4 sm:space-y-5">
+              {galleryImages.map((img, i) => (
+                <button
+                  key={img.id}
+                  onClick={() => setLightboxImage(img.url)}
+                  className="break-inside-avoid block w-full group relative overflow-hidden rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300"
+                >
+                  <img
+                    src={img.url}
+                    alt={img.caption}
+                    className={`w-full object-cover group-hover:scale-105 transition duration-500 ${i % 3 === 0 ? 'h-64' : i % 3 === 1 ? 'h-48' : 'h-56'}`}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end p-5">
+                    <div>
+                      <p className="text-white text-sm font-bold">{img.event}</p>
+                      <p className="text-white/80 text-xs mt-0.5">{img.caption}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="absolute top-3 right-3 bg-white/20 backdrop-blur rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition">
-                  <Eye className="w-3.5 h-3.5 text-white" />
-                </div>
-              </button>
-            ))}
+                  <div className="absolute top-3 right-3 bg-white/20 backdrop-blur rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition">
+                    <Eye className="w-3.5 h-3.5 text-white" />
+                  </div>
+                </button>
+              ))}
             </div>
+          ) : (
+            <div className="rounded-3xl border border-brand-sand bg-white p-12 text-center shadow-sm">
+              <Image className="w-11 h-11 text-brand-clay/50 mx-auto mb-5" strokeWidth={1.5} />
+              <p className="font-semibold text-brand-navy text-lg mb-2">Nenhuma imagem publicada ainda</p>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                A galeria será preenchida automaticamente com as publicações reais do Instagram.
+              </p>
+            </div>
+          )}
           </div>
         </div>
       )}
@@ -1321,53 +1462,53 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
       {/* ===== EVENTOS ===== */}
       {activeSection === 'events' && (
         <div className="min-h-screen bg-gradient-to-br from-white via-brand-sand/10 to-brand-cream/30">
-          <div className="max-w-5xl mx-auto px-6 py-20">
+          <div className="max-w-5xl mx-auto px-6 py-24">
             <div className="text-center mb-16">
-              <p className="text-xs font-bold text-brand-clay uppercase tracking-widest mb-3">Agenda & Histórico</p>
-              <h1 className="font-serif text-5xl font-bold text-brand-navy mb-4 leading-tight">Encontros & Eventos</h1>
+              <p className="text-sm font-bold text-brand-clay uppercase tracking-widest mb-3">Agenda & Histórico</p>
+              <h1 className="font-serif text-5xl font-bold text-brand-navy mb-5 leading-tight">Encontros & Eventos</h1>
               <p className="text-slate-600 max-w-lg mx-auto text-lg leading-relaxed">
                 Nossos encontros mensais, workshops e eventos especiais para fortalecer nossa comunidade.
               </p>
             </div>
 
           {/* Upcoming */}
-          {events.filter(e => e.status === 'upcoming').length > 0 && (
-            <div className="mb-12">
-              <h2 className="font-serif text-xl font-bold text-brand-navy mb-6 flex items-center space-x-2">
+          {upcomingEvents.length > 0 && (
+            <div className="mb-14">
+              <h2 className="font-serif text-xl font-bold text-brand-navy mb-7 flex items-center space-x-2.5">
                 <Calendar className="w-5 h-5 text-brand-moss" />
                 <span>Próximos Encontros</span>
               </h2>
-              <div className="space-y-4">
-                {events.filter(e => e.status === 'upcoming').map(evt => (
+              <div className="space-y-5">
+                {upcomingEvents.map(evt => (
                   <div key={evt.id} className="bg-white rounded-2xl border border-brand-sand shadow-sm overflow-hidden hover:shadow-md transition group">
                     <div className="flex items-stretch">
-                      <div className="bg-brand-moss/10 border-r border-brand-sand px-6 flex flex-col items-center justify-center min-w-[80px]">
+                      <div className="bg-brand-moss/10 border-r border-brand-sand px-6 flex flex-col items-center justify-center min-w-[90px]">
                         <span className="text-xs font-bold text-brand-moss uppercase">
                           {new Date(evt.date).toLocaleDateString('pt-BR', { month: 'short' })}
                         </span>
-                        <span className="text-3xl font-black text-brand-moss leading-none">
+                        <span className="text-3xl font-black text-brand-moss leading-none mt-0.5">
                           {new Date(evt.date).getDate()}
                         </span>
                       </div>
-                      <div className="p-6 flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <span className="text-[10px] font-bold text-brand-clay uppercase tracking-wider bg-brand-clay/10 px-2 py-0.5 rounded-full">{evt.category}</span>
-                          <div className="flex items-center space-x-1 text-xs text-slate-400">
-                            <Users className="w-3.5 h-3.5" />
+                      <div className="p-7 flex-1">
+                        <div className="flex items-start justify-between mb-3">
+                          <span className="text-xs font-bold text-brand-clay uppercase tracking-wider bg-brand-clay/10 px-2.5 py-1 rounded-full">{evt.category}</span>
+                          <div className="flex items-center space-x-1 text-sm text-slate-400">
+                            <Users className="w-4 h-4" />
                             <span>{evt.participantsCount} inscritos</span>
                           </div>
                         </div>
-                        <h3 className="font-serif font-bold text-brand-navy text-lg mb-1">{evt.title}</h3>
-                        <p className="text-sm text-slate-500 mb-3 flex items-center space-x-3">
-                          <span className="flex items-center space-x-1"><Clock className="w-3.5 h-3.5" /><span>{evt.time}</span></span>
-                          <span className="flex items-center space-x-1"><span className="font-semibold">Com:</span><span>{evt.instructorName}</span></span>
+                        <h3 className="font-serif font-bold text-brand-navy text-lg mb-2">{evt.title}</h3>
+                        <p className="text-sm text-slate-500 mb-3 flex items-center space-x-4">
+                          <span className="flex items-center space-x-1.5"><Clock className="w-4 h-4" /><span>{evt.time}</span></span>
+                          <span className="flex items-center space-x-1.5"><span className="font-semibold">Com:</span><span>{evt.instructorName}</span></span>
                         </p>
-                        <p className="text-sm text-slate-600 line-clamp-2">{evt.description}</p>
+                        <p className="text-sm text-slate-600 leading-relaxed line-clamp-2">{evt.description}</p>
                         <button
                           onClick={onGoToLogin}
-                          className="mt-4 inline-flex items-center space-x-1.5 bg-brand-clay text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-brand-clay-dark transition"
+                          className="mt-5 inline-flex items-center space-x-1.5 bg-brand-clay text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-brand-clay-dark transition"
                         >
-                          <LogIn className="w-3.5 h-3.5" />
+                          <LogIn className="w-4 h-4" />
                           <span>Inscrever-se (Área de Membros)</span>
                         </button>
                       </div>
@@ -1379,86 +1520,69 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
           )}
 
           {/* Past events */}
-          <div className="mb-12">
-            <h2 className="font-serif text-xl font-bold text-brand-navy mb-6 flex items-center space-x-2">
+          <div className="mb-14">
+            <h2 className="font-serif text-xl font-bold text-brand-navy mb-7 flex items-center space-x-2.5">
               <Star className="w-5 h-5 text-brand-clay" />
               <span>Eventos Realizados</span>
             </h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              {PAST_EVENTS_GALLERY.map(evt => (
-                <div key={evt.id} className="bg-white rounded-2xl overflow-hidden border border-brand-sand shadow-sm hover:shadow-lg transition group">
-                  <div className="relative overflow-hidden">
-                    <img src={evt.image} alt={evt.title} className="w-full h-44 object-cover group-hover:scale-105 transition duration-500" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                    <div className="absolute bottom-3 left-4">
-                      <span className="text-white font-bold text-sm">{evt.title}</span>
+            {pastEvents.length === 0 ? (
+              <div className="rounded-2xl border border-brand-sand bg-white p-12 text-center shadow-sm">
+                <Calendar className="w-11 h-11 text-brand-clay/50 mx-auto mb-5" strokeWidth={1.5} />
+                <p className="font-semibold text-brand-navy text-lg mb-2">Nenhum evento realizado ainda</p>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  Assim que tivermos nosso primeiro encontro, os registros aparecerão aqui.
+                </p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-6">
+                {pastEvents.map(evt => (
+                  <div key={evt.id} className="bg-white rounded-2xl overflow-hidden border border-brand-sand shadow-sm hover:shadow-lg transition group">
+                    <div className="relative overflow-hidden bg-brand-navy/10 h-44 flex items-center justify-center">
+                      <div className="text-center">
+                        <Music className="w-10 h-10 text-brand-navy/40 mx-auto mb-2" strokeWidth={1.5} />
+                        <span className="text-brand-navy/60 text-sm font-semibold">{evt.category}</span>
+                      </div>
+                      <div className="absolute top-3 right-3 bg-black/40 backdrop-blur text-white text-xs px-2.5 py-1 rounded-full flex items-center space-x-1">
+                        <Users className="w-3 h-3" />
+                        <span>{evt.participantsCount} participantes</span>
+                      </div>
                     </div>
-                    <div className="absolute top-3 right-3 bg-black/50 backdrop-blur text-white text-xs px-2.5 py-1 rounded-full flex items-center space-x-1">
-                      <Users className="w-3 h-3" />
-                      <span>{evt.participants} participantes</span>
-                    </div>
-                  </div>
-                  <div className="p-5">
-                    <div className="flex items-center space-x-3 text-xs text-slate-400 mb-3">
-                      <span className="flex items-center space-x-1"><Calendar className="w-3 h-3" /><span>{evt.date}</span></span>
-                      <span className="flex items-center space-x-1"><MapPin className="w-3 h-3" /><span>{evt.location}</span></span>
-                    </div>
-                    <p className="text-sm text-slate-600 leading-relaxed mb-4">{evt.description}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {evt.highlights.map(h => (
-                        <span key={h} className="text-[11px] bg-brand-sand text-brand-clay-dark font-semibold px-2.5 py-1 rounded-full">{h}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {/* Past events from data */}
-              {events.filter(e => e.status === 'past').map(evt => (
-                <div key={evt.id} className="bg-white rounded-2xl overflow-hidden border border-brand-sand shadow-sm hover:shadow-lg transition group">
-                  <div className="relative overflow-hidden bg-brand-navy/10 h-44 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-5xl mb-2">🎙️</div>
-                      <span className="text-brand-navy/60 text-sm font-semibold">{evt.category}</span>
-                    </div>
-                    <div className="absolute top-3 right-3 bg-black/40 backdrop-blur text-white text-xs px-2.5 py-1 rounded-full flex items-center space-x-1">
-                      <Users className="w-3 h-3" />
-                      <span>{evt.participantsCount} participantes</span>
+                    <div className="p-6">
+                      <h3 className="font-serif font-bold text-brand-navy text-lg mb-2.5">{evt.title}</h3>
+                      <div className="flex items-center space-x-3 text-xs text-slate-400 mb-3">
+                        <span className="flex items-center space-x-1"><Calendar className="w-3.5 h-3.5" /><span>{new Date(evt.date).toLocaleDateString('pt-BR')}</span></span>
+                      </div>
+                      <p className="text-sm text-slate-600 leading-relaxed line-clamp-2">{evt.description}</p>
+                      {evt.recordingUrl && (
+                        <a href={evt.recordingUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center space-x-1.5 text-sm text-brand-clay font-bold hover:underline">
+                          <Play className="w-4 h-4" />
+                          <span>Assistir gravação</span>
+                        </a>
+                      )}
                     </div>
                   </div>
-                  <div className="p-5">
-                    <h3 className="font-serif font-bold text-brand-navy mb-2">{evt.title}</h3>
-                    <div className="flex items-center space-x-3 text-xs text-slate-400 mb-3">
-                      <span className="flex items-center space-x-1"><Calendar className="w-3 h-3" /><span>{new Date(evt.date).toLocaleDateString('pt-BR')}</span></span>
-                    </div>
-                    <p className="text-sm text-slate-600 leading-relaxed line-clamp-2">{evt.description}</p>
-                    {evt.recordingUrl && (
-                      <a href={evt.recordingUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center space-x-1.5 text-xs text-brand-clay font-bold hover:underline">
-                        <Play className="w-3.5 h-3.5" />
-                        <span>Assistir gravação</span>
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
             </div>
 
             {/* How it works */}
-            <div className="bg-brand-navy rounded-3xl p-10">
-            <h3 className="font-serif text-2xl font-bold text-brand-cream text-center mb-8">Como funcionamos</h3>
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="bg-brand-navy rounded-3xl p-10 sm:p-12">
+            <h3 className="font-serif text-2xl md:text-3xl font-bold text-brand-cream text-center mb-10">Como funcionamos</h3>
+            <div className="grid md:grid-cols-2 gap-9">
               {[
-                { icon: '📅', title: 'Encontros Mensais', desc: 'Um sábado por mês, período da tarde. Datas pré-definidas para facilitar a organização de todos.' },
-                { icon: '🌱', title: 'Desenvolvimento Contínuo', desc: 'Cada encontro terá um tema de desenvolvimento. O primeiro ano será uma jornada de crescimento coletivo.' },
-                { icon: '🎉', title: 'Eventos Especiais', desc: 'Agosto: Mês dos Psicólogos. Dezembro: Retiro e Confraternização Espalhe Melodias.' },
-                { icon: '📱', title: 'Plataforma Digital', desc: 'Indicações, materiais, gestão de frequência e divulgação de eventos em uma plataforma exclusiva para membros.' },
+                { icon: Calendar, title: 'Encontros Mensais', desc: 'Um sábado por mês, período da tarde. Datas pré-definidas para facilitar a organização de todos.' },
+                { icon: Sparkles, title: 'Desenvolvimento Contínuo', desc: 'Cada encontro terá um tema de desenvolvimento. O primeiro ano será uma jornada de crescimento coletivo.' },
+                { icon: Award, title: 'Eventos Especiais', desc: 'Agosto: Mês dos Psicólogos. Dezembro: Retiro e Confraternização Espalhe Melodias.' },
+                { icon: Smartphone, title: 'Plataforma Digital', desc: 'Indicações, materiais, gestão de frequência e divulgação de eventos em uma plataforma exclusiva para membros.' },
               ].map(item => (
                 <div key={item.title} className="flex items-start space-x-4">
-                  <div className="text-3xl shrink-0">{item.icon}</div>
+                  <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                    <item.icon className="w-5 h-5 text-brand-clay-light" strokeWidth={1.75} />
+                  </div>
                   <div>
-                    <h4 className="font-semibold text-brand-cream text-sm mb-1">{item.title}</h4>
-                    <p className="text-slate-400 text-xs leading-relaxed">{item.desc}</p>
+                    <h4 className="font-semibold text-brand-cream text-base mb-1.5">{item.title}</h4>
+                    <p className="text-slate-400 text-sm leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
               ))}
@@ -1468,74 +1592,78 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
         </div>
       )}
 
+      {/* ===== CONTATO ===== */}
+      {activeSection === 'contact' && (
+      <div className="min-h-screen bg-gradient-to-br from-white to-brand-cream/20">
       {/* Contact Form Section */}
-      <section className="py-20 bg-slate-50">
+      <section className="pt-20 pb-24">
         <div className="max-w-2xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="font-serif text-3xl font-bold text-brand-navy mb-3">Entre em Contato</h2>
-            <p className="text-slate-600">Envie suas dúvidas, sugestões ou propostas de parceria. Responderemos em breve!</p>
+          <div className="text-center mb-14">
+            <p className="text-sm font-bold text-brand-clay uppercase tracking-widest mb-3">Fale Conosco</p>
+            <h1 className="font-serif text-4xl md:text-5xl font-bold text-brand-navy mb-5 leading-tight">Entre em Contato</h1>
+            <p className="text-slate-600 text-lg leading-relaxed max-w-md mx-auto">Envie suas dúvidas, sugestões ou propostas de parceria. Responderemos em breve!</p>
           </div>
 
-          <form onSubmit={handleContactSubmit} className="bg-white rounded-2xl border border-slate-200 p-8 shadow-lg">
-            {/* Name */}
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Nome Completo
-              </label>
-              <input
-                type="text"
-                value={contactForm.name}
-                onChange={e => setContactForm(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Seu nome"
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-clay/50 transition"
-              />
+          <form onSubmit={handleContactSubmit} className="bg-white rounded-3xl border border-brand-sand p-8 sm:p-10 shadow-lg">
+            {/* Name + Email */}
+            <div className="grid sm:grid-cols-2 gap-5 mb-5">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Nome Completo
+                </label>
+                <input
+                  type="text"
+                  value={contactForm.name}
+                  onChange={e => setContactForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Seu nome"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-clay/50 focus:border-brand-clay/50 transition"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  E-mail
+                </label>
+                <input
+                  type="email"
+                  value={contactForm.email}
+                  onChange={e => setContactForm(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="seu.email@exemplo.com"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-clay/50 focus:border-brand-clay/50 transition"
+                />
+              </div>
             </div>
 
-            {/* Email */}
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                E-mail
-              </label>
-              <input
-                type="email"
-                value={contactForm.email}
-                onChange={e => setContactForm(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="seu.email@exemplo.com"
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-clay/50 transition"
-              />
-            </div>
-
-            {/* Phone */}
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Telefone / WhatsApp (Opcional)
-              </label>
-              <input
-                type="tel"
-                value={contactForm.phone}
-                onChange={e => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
-                placeholder="(11) 99999-9999"
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-clay/50 transition"
-              />
-            </div>
-
-            {/* Subject */}
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Assunto
-              </label>
-              <select
-                value={contactForm.subject}
-                onChange={e => setContactForm(prev => ({ ...prev, subject: e.target.value }))}
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-clay/50 transition"
-              >
-                <option value="">Selecione um assunto</option>
-                <option value="Dúvida sobre Membros">Dúvida sobre Membros</option>
-                <option value="Sugestão de Conteúdo">Sugestão de Conteúdo</option>
-                <option value="Parcerias">Parcerias Corporativas</option>
-                <option value="Feedback">Feedback do Evento</option>
-                <option value="Outro">Outro</option>
-              </select>
+            {/* Phone + Subject */}
+            <div className="grid sm:grid-cols-2 gap-5 mb-5">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Telefone / WhatsApp <span className="text-slate-400 font-normal">(opcional)</span>
+                </label>
+                <input
+                  type="tel"
+                  value={contactForm.phone}
+                  onChange={e => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="(11) 99999-9999"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-clay/50 focus:border-brand-clay/50 transition"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Assunto
+                </label>
+                <select
+                  value={contactForm.subject}
+                  onChange={e => setContactForm(prev => ({ ...prev, subject: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-clay/50 focus:border-brand-clay/50 transition appearance-none"
+                >
+                  <option value="">Selecione um assunto</option>
+                  <option value="Dúvida sobre Membros">Dúvida sobre Membros</option>
+                  <option value="Sugestão de Conteúdo">Sugestão de Conteúdo</option>
+                  <option value="Parcerias">Parcerias Corporativas</option>
+                  <option value="Feedback">Feedback do Evento</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </div>
             </div>
 
             {/* Message */}
@@ -1548,13 +1676,13 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
                 onChange={e => setContactForm(prev => ({ ...prev, message: e.target.value }))}
                 placeholder="Conte-nos mais sobre seu interesse..."
                 rows={5}
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-clay/50 transition resize-none"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-clay/50 focus:border-brand-clay/50 transition resize-none"
               />
             </div>
 
             {/* Error Message */}
             {contactError && (
-              <div className="mb-6 flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="mb-6 flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
                 <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-red-800">{contactError}</p>
               </div>
@@ -1564,7 +1692,7 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
             <button
               type="submit"
               disabled={contactLoading}
-              className="w-full px-6 py-3 bg-gradient-to-r from-brand-clay to-brand-clay-dark text-white font-bold rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+              className="w-full px-6 py-3.5 bg-gradient-to-r from-brand-clay to-brand-clay-dark text-white font-bold rounded-xl hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
             >
               {contactLoading ? (
                 <>
@@ -1579,19 +1707,19 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
               )}
             </button>
 
-            <p className="text-xs text-slate-500 mt-4 text-center">
+            <p className="text-sm text-slate-500 mt-4 text-center">
               Responderemos sua mensagem em até 48 horas.
             </p>
           </form>
         </div>
       </section>
 
-      {/* Conecte-se Section (before footer) */}
-      <section className="py-16 bg-brand-navy">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-10">
-            <h2 className="font-serif text-3xl font-bold text-white mb-3">Conecte-se com a gente</h2>
-            <p className="text-slate-300 max-w-xl mx-auto">Nos siga nas redes sociais, envie uma mensagem ou entre em contato por e-mail</p>
+      {/* Conecte-se Section */}
+      <section className="py-24 bg-brand-navy">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center mb-14">
+            <h2 className="font-serif text-3xl md:text-4xl font-bold text-white mb-4">Conecte-se com a gente</h2>
+            <p className="text-slate-300 max-w-xl mx-auto text-base leading-relaxed">Nos siga nas redes sociais, envie uma mensagem ou entre em contato por e-mail</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -1600,16 +1728,14 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
               href="https://instagram.com/espalhemelodias"
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-pink-400 to-pink-600 p-8 text-center hover:shadow-2xl transition duration-300"
+              className="group flex items-center gap-4 bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
             >
-              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition" />
-              <div className="relative z-10">
-                <Instagram className="w-12 h-12 text-white mx-auto mb-3" />
-                <h3 className="font-bold text-white text-lg mb-2">Instagram</h3>
-                <p className="text-white/90 text-sm mb-4">Acompanhe nossos stories, fotos e depoimentos</p>
-                <span className="inline-block text-white font-bold text-sm border border-white/50 rounded-full px-4 py-1.5 group-hover:border-white group-hover:bg-white/20 transition">
-                  @espalhemelodias
-                </span>
+              <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center shrink-0 group-hover:bg-brand-clay/20 transition">
+                <Instagram className="w-5 h-5 text-brand-clay-light" strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-white text-sm mb-0.5">Instagram</h3>
+                <p className="text-slate-400 text-sm truncate">@espalhemelodias</p>
               </div>
             </a>
 
@@ -1618,63 +1744,63 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
               href="https://wa.me/5515991234567"
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-400 to-green-600 p-8 text-center hover:shadow-2xl transition duration-300"
+              className="group flex items-center gap-4 bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
             >
-              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition" />
-              <div className="relative z-10">
-                <Phone className="w-12 h-12 text-white mx-auto mb-3" />
-                <h3 className="font-bold text-white text-lg mb-2">WhatsApp</h3>
-                <p className="text-white/90 text-sm mb-4">Mensagem rápida sobre eventos e dúvidas</p>
-                <span className="inline-block text-white font-bold text-sm border border-white/50 rounded-full px-4 py-1.5 group-hover:border-white group-hover:bg-white/20 transition">
-                  (15) 99123-4567
-                </span>
+              <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center shrink-0 group-hover:bg-brand-moss/20 transition">
+                <Phone className="w-5 h-5 text-brand-clay-light" strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-white text-sm mb-0.5">WhatsApp</h3>
+                <p className="text-slate-400 text-sm truncate">(15) 99123-4567</p>
               </div>
             </a>
 
             {/* Email */}
             <a
               href="mailto:contato@espalhemelodias.com.br"
-              className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-clay to-brand-clay-dark p-8 text-center hover:shadow-2xl transition duration-300"
+              className="group flex items-center gap-4 bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
             >
-              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition" />
-              <div className="relative z-10">
-                <Mail className="w-12 h-12 text-white mx-auto mb-3" />
-                <h3 className="font-bold text-white text-lg mb-2">E-mail</h3>
-                <p className="text-white/90 text-sm mb-4">Para solicitações formais e parcerias</p>
-                <span className="inline-block text-white font-bold text-sm border border-white/50 rounded-full px-4 py-1.5 group-hover:border-white group-hover:bg-white/20 transition break-all text-xs">
-                  contato@espalhemelodias.com.br
-                </span>
+              <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center shrink-0 group-hover:bg-brand-clay/20 transition">
+                <Mail className="w-5 h-5 text-brand-clay-light" strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-white text-sm mb-0.5">E-mail</h3>
+                <p className="text-slate-400 text-sm truncate">contato@espalhemelodias.com.br</p>
               </div>
             </a>
           </div>
         </div>
       </section>
+      </div>
+      )}
 
       {/* FOOTER */}
-      <footer className="bg-brand-navy-dark border-t border-white/5">
-        <div className="max-w-6xl mx-auto px-6 py-16">
-          <div className="grid md:grid-cols-4 gap-12 mb-12">
+      <footer className="bg-brand-navy-dark border-t border-white/10">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <div className="grid md:grid-cols-[1.4fr_1fr_1fr] gap-12 mb-14">
             {/* Brand */}
             <div>
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-clay to-brand-moss flex items-center justify-center">
-                  <span className="text-lg text-white font-serif font-black italic">♩Ψ</span>
-                </div>
+              <div className="flex items-center space-x-3 mb-5">
+                <img
+                  src={logoEspalheMelodias}
+                  alt="Espalhe Melodias"
+                  className="w-11 h-11 rounded-xl object-cover flex-shrink-0"
+                />
                 <div>
-                  <div className="font-serif text-base font-black text-brand-cream">Espalhe Melodias</div>
-                  <div className="text-xs text-slate-500">Conexões em Saúde Mental</div>
+                  <div className="font-serif text-lg font-black text-brand-cream">Espalhe Melodias</div>
+                  <div className="text-sm text-slate-500">Conexões em Saúde Mental</div>
                 </div>
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">Uma comunidade multidisciplinar de profissionais da saúde mental construindo cuidados mais humanos e integrados.</p>
+              <p className="text-sm text-slate-400 leading-relaxed max-w-xs">Uma comunidade multidisciplinar de profissionais da saúde mental construindo cuidados mais humanos e integrados.</p>
             </div>
 
             {/* Navigation */}
             <div>
-              <h4 className="font-semibold text-white text-sm mb-4">Navegação</h4>
-              <ul className="space-y-2">
+              <h4 className="font-semibold text-white text-sm tracking-wide uppercase mb-5">Navegação</h4>
+              <ul className="space-y-3">
                 {navLinks.map(link => (
                   <li key={link.id}>
-                    <button onClick={() => scrollTo(link.id)} className="text-xs text-slate-400 hover:text-brand-clay-light transition font-medium">
+                    <button onClick={() => scrollTo(link.id)} className="text-sm text-slate-400 hover:text-brand-clay-light transition">
                       {link.label}
                     </button>
                   </li>
@@ -1682,62 +1808,60 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, onGoT
               </ul>
             </div>
 
-            {/* Community */}
-            <div>
-              <h4 className="font-semibold text-white text-sm mb-4">Comunidade</h4>
-              <ul className="space-y-2">
-                <li><button onClick={() => scrollTo('about')} className="text-xs text-slate-400 hover:text-brand-clay-light transition font-medium">Quem Somos</button></li>
-                <li><button onClick={() => scrollTo('events')} className="text-xs text-slate-400 hover:text-brand-clay-light transition font-medium">Eventos</button></li>
-                <li><button onClick={() => scrollTo('blog')} className="text-xs text-slate-400 hover:text-brand-clay-light transition font-medium">Blog</button></li>
-                <li><button onClick={() => scrollTo('gallery')} className="text-xs text-slate-400 hover:text-brand-clay-light transition font-medium">Galeria</button></li>
-              </ul>
-            </div>
-
             {/* Social */}
             <div>
-              <h4 className="font-semibold text-white text-sm mb-4">Redes Sociais</h4>
-              <div className="flex items-center space-x-3">
-                <a
-                  href="https://instagram.com/espalhemelodias"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-slate-300 hover:text-brand-clay-light hover:bg-white/20 transition"
-                >
-                  <Instagram className="w-4.5 h-4.5" />
-                </a>
-                <a
-                  href="https://wa.me/5515991234567"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-slate-300 hover:text-brand-clay-light hover:bg-white/20 transition"
-                >
-                  <Phone className="w-4.5 h-4.5" />
-                </a>
-                <a
-                  href="mailto:contato@espalhemelodias.com.br"
-                  className="w-10 h-10 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-slate-300 hover:text-brand-clay-light hover:bg-white/20 transition"
-                >
-                  <Mail className="w-4.5 h-4.5" />
-                </a>
-              </div>
+              <h4 className="font-semibold text-white text-sm tracking-wide uppercase mb-5">Redes Sociais</h4>
+              <ul className="space-y-3">
+                <li>
+                  <a
+                    href="https://instagram.com/espalhemelodias"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2.5 text-sm text-slate-400 hover:text-brand-clay-light transition"
+                  >
+                    <Instagram className="w-4 h-4" strokeWidth={1.75} />
+                    <span>Instagram</span>
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://wa.me/5515991234567"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2.5 text-sm text-slate-400 hover:text-brand-clay-light transition"
+                  >
+                    <Phone className="w-4 h-4" strokeWidth={1.75} />
+                    <span>WhatsApp</span>
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="mailto:contato@espalhemelodias.com.br"
+                    className="flex items-center gap-2.5 text-sm text-slate-400 hover:text-brand-clay-light transition"
+                  >
+                    <Mail className="w-4 h-4" strokeWidth={1.75} />
+                    <span>E-mail</span>
+                  </a>
+                </li>
+              </ul>
             </div>
           </div>
 
           {/* Divider */}
-          <div className="border-t border-white/5 pt-8 mb-8">
+          <div className="border-t border-white/10 pt-10 mb-10">
             <div className="text-center">
-              <p className="font-script text-2xl text-brand-clay-light/60 mb-3">Cada conexão é uma nota que, junta com outras, cria uma linda melodia. ♡</p>
+              <p className="font-script text-2xl md:text-3xl text-brand-clay-light/70">Cada conexão é uma nota que, junta com outras, cria uma linda melodia. ♡</p>
             </div>
           </div>
 
           {/* Bottom */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-slate-500">© 2026 Espalhe Melodias – Conexões em Saúde Mental. Tatuí, SP. Todos os direitos reservados.</p>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-5">
+            <p className="text-sm text-slate-500 text-center md:text-left">© 2026 Espalhe Melodias – Conexões em Saúde Mental. Tatuí, SP. Todos os direitos reservados.</p>
             <button
               onClick={onGoToLogin}
-              className="flex items-center space-x-2 bg-brand-clay/20 border border-brand-clay/40 text-brand-clay-light px-4 py-2 rounded-xl text-xs font-bold hover:bg-brand-clay/30 transition"
+              className="flex items-center space-x-2 bg-brand-clay/20 border border-brand-clay/40 text-brand-clay-light px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-brand-clay/30 transition"
             >
-              <LogIn className="w-3.5 h-3.5" />
+              <LogIn className="w-4 h-4" />
               <span>Área de Membros</span>
             </button>
           </div>

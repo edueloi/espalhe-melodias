@@ -1,42 +1,31 @@
 import { useState, useEffect } from 'react';
 import {
-  BlogPost,
-  HealthEvent,
   InstagramPost,
   StoryHighlight,
+  GalleryPhoto,
   blogsApi,
   eventsApi,
   instagramApi,
   storiesApi,
+  galleryApi,
   ApiError,
 } from '../lib/api';
-import {
-  INITIAL_BLOGS,
-  INITIAL_INSTAGRAM_POSTS,
-  INITIAL_STORIES,
-} from '../mockData';
+import { BlogPost, HealthEvent } from '../types';
 
-// Helper to convert API blog posts to local format
-function convertBlogPost(api: any): BlogPost {
-  // If already in local format, return as-is
-  if (api.imageUrl && api.authorName && api.date && api.readTime) {
-    return api;
-  }
-  // Convert from API format
-  const readTimeEstimate = Math.ceil(api.content?.split(/\s+/).length / 200) || 5;
+// Normaliza o formato da API para o tipo BlogPost local (types.ts)
+export function convertBlogPost(api: any): BlogPost {
+  const readTimeEstimate = Math.ceil((api.content?.split(/\s+/).length ?? 0) / 200) || 5;
   return {
     id: api.id,
     title: api.title,
     excerpt: api.excerpt,
     content: api.content,
     category: api.category,
-    imageUrl: api.image_url || 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?q=80&w=500&auto=format&fit=crop',
-    authorName: api.author_name,
-    authorAvatar: api.author_avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop',
-    date: api.created_at || api.post_date || new Date().toISOString(),
+    imageUrl: api.image_url ?? '',
+    authorName: api.author_name ?? '',
+    authorAvatar: api.author_avatar ?? '',
+    date: api.created_at || api.post_date || '',
     readTime: api.read_time || `${readTimeEstimate} min`,
-    featured: api.featured,
-    published: api.published,
   };
 }
 
@@ -53,11 +42,11 @@ function convertHealthEvent(api: any): HealthEvent {
     id: api.id,
     title: api.title,
     instructorName: api.instructor_name || api.organizer_name || 'Espalhe Melodias',
-    instructorAvatar: api.instructor_avatar || api.organizer_avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop',
+    instructorAvatar: api.instructor_avatar || api.organizer_avatar || '',
     date: eventDate,
     time: eventTime,
     description: api.description,
-    category: api.category || api.type || 'Evento',
+    category: (api.category || api.type || 'Grupo de Apoio') as HealthEvent['category'],
     status: api.status,
     participantsCount: api.participants_count || api.enrolled_count || 0,
     isEnrolled: api.isEnrolled || false,
@@ -107,7 +96,12 @@ export interface PublicSiteData {
   storiesLoading: boolean;
   storiesError: Error | null;
 
-  // Testimonials (static, loaded separately)
+  // Gallery data
+  galleryPhotos: GalleryPhoto[];
+  galleryLoading: boolean;
+  galleryError: Error | null;
+
+  // Testimonials
   testimonials: Testimonial[];
 
   // Recent activity (computed from other data)
@@ -122,32 +116,7 @@ export interface PublicSiteData {
   refetch: () => Promise<void>;
 }
 
-const FALLBACK_TESTIMONIALS: Testimonial[] = [
-  {
-    id: 'test-1',
-    authorName: 'Dra. Carolina Silva',
-    role: 'Psicóloga Clínica',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=400&auto=format&fit=crop',
-    text: 'O Espalhe Melodias abriu portas para conexões genuínas com outros profissionais. Cada encontro nos fortalece e amplia nossas possibilidades.',
-    date: '2026-06-08'
-  },
-  {
-    id: 'test-2',
-    authorName: 'Dr. Felipe Oliveira',
-    role: 'Psiquiatra',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop',
-    text: 'Raramente encontro um espaço tão acolhedor e profissional. A qualidade das conversas é excepcional.',
-    date: '2026-06-06'
-  },
-  {
-    id: 'test-3',
-    authorName: 'Terapeuta Ana Costa',
-    role: 'Terapeuta Ocupacional',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=400&auto=format&fit=crop',
-    text: 'Multidisciplinaridade real! As perspectivas diferentes enriquecem minha prática profissional todos os dias.',
-    date: '2026-06-03'
-  }
-];
+const EMPTY_TESTIMONIALS: Testimonial[] = [];
 
 export function usePublicSiteData(): PublicSiteData {
   // Blog states
@@ -172,8 +141,12 @@ export function usePublicSiteData(): PublicSiteData {
   const [storiesLoading, setStoriesLoading] = useState(true);
   const [storiesError, setStoriesError] = useState<Error | null>(null);
 
-  // Testimonials (static)
-  const [testimonials] = useState<Testimonial[]>(FALLBACK_TESTIMONIALS);
+  // Gallery states
+  const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhoto[]>([]);
+  const [galleryLoading, setGalleryLoading] = useState(true);
+  const [galleryError, setGalleryError] = useState<Error | null>(null);
+
+  const [testimonials] = useState<Testimonial[]>(EMPTY_TESTIMONIALS);
 
   // Overall error state
   const [hasError, setHasError] = useState(false);
@@ -189,20 +162,13 @@ export function usePublicSiteData(): PublicSiteData {
       // Load blogs
       try {
         setBlogsLoading(true);
-        const blogsResult = await blogsApi.list({ published: true });
-        // Handle both array and PagedResult formats
-        const blogsList = Array.isArray(blogsResult)
-          ? blogsResult
-          : (blogsResult as any).data || INITIAL_BLOGS;
-        // Convert to local format
-        const convertedBlogs = blogsList.map(convertBlogPost);
+        const blogsResult = await blogsApi.list({ limit: 10 });
+        const convertedBlogs = blogsResult.data.map(convertBlogPost);
         setBlogs(convertedBlogs);
         setBlogsError(null);
       } catch (err) {
-        console.warn('Failed to load blogs, using mock data:', err);
-        // Fallback to mock data
-        const mockBlogs = INITIAL_BLOGS.map(convertBlogPost);
-        setBlogs(mockBlogs);
+        console.warn('Failed to load blogs:', err);
+        setBlogs([]);
         const error = err instanceof ApiError ? err : new Error(String(err));
         setBlogsError(error);
       } finally {
@@ -213,11 +179,7 @@ export function usePublicSiteData(): PublicSiteData {
       try {
         setEventsLoading(true);
         const eventsResult = await eventsApi.list();
-        const eventsList = Array.isArray(eventsResult)
-          ? eventsResult
-          : (eventsResult as any).data || [];
-        // Convert to local format
-        const convertedEvents = eventsList.map(convertHealthEvent);
+        const convertedEvents = eventsResult.data.map(convertHealthEvent);
         setEvents(convertedEvents);
 
         // Separate upcoming and past events
@@ -232,8 +194,7 @@ export function usePublicSiteData(): PublicSiteData {
         setPastEvents(past);
         setEventsError(null);
       } catch (err) {
-        console.warn('Failed to load events, using fallback:', err);
-        // Fallback - events might not be available yet
+        console.warn('Failed to load events:', err);
         setEvents([]);
         setUpcomingEvents([]);
         setPastEvents([]);
@@ -246,15 +207,12 @@ export function usePublicSiteData(): PublicSiteData {
       // Load Instagram posts
       try {
         setInstagramLoading(true);
-        const instagramResult = await instagramApi.feed();
-        const posts = Array.isArray(instagramResult)
-          ? instagramResult
-          : (instagramResult as any).data || INITIAL_INSTAGRAM_POSTS;
-        setInstagramPosts(posts.slice(0, 6)); // Show max 6
+        const posts = await instagramApi.feed({ limit: 6 });
+        setInstagramPosts(posts);
         setInstagramError(null);
       } catch (err) {
-        console.warn('Failed to load Instagram feed, using mock data:', err);
-        setInstagramPosts(INITIAL_INSTAGRAM_POSTS.slice(0, 6));
+        console.warn('Failed to load Instagram feed:', err);
+        setInstagramPosts([]);
         const error = err instanceof ApiError ? err : new Error(String(err));
         setInstagramError(error);
       } finally {
@@ -264,19 +222,31 @@ export function usePublicSiteData(): PublicSiteData {
       // Load Stories
       try {
         setStoriesLoading(true);
-        const storiesResult = await storiesApi.list();
-        const storiesList = Array.isArray(storiesResult)
-          ? storiesResult
-          : (storiesResult as any).data || INITIAL_STORIES;
+        const storiesList = await storiesApi.list();
         setStories(storiesList);
         setStoriesError(null);
       } catch (err) {
-        console.warn('Failed to load stories, using mock data:', err);
-        setStories(INITIAL_STORIES);
+        console.warn('Failed to load stories:', err);
+        setStories([]);
         const error = err instanceof ApiError ? err : new Error(String(err));
         setStoriesError(error);
       } finally {
         setStoriesLoading(false);
+      }
+
+      // Load Gallery photos
+      try {
+        setGalleryLoading(true);
+        const galleryResult = await galleryApi.list({ limit: 12 });
+        setGalleryPhotos(galleryResult.data);
+        setGalleryError(null);
+      } catch (err) {
+        console.warn('Failed to load gallery photos:', err);
+        setGalleryPhotos([]);
+        const error = err instanceof ApiError ? err : new Error(String(err));
+        setGalleryError(error);
+      } finally {
+        setGalleryLoading(false);
       }
     } catch (err) {
       // Catch-all for unexpected errors
@@ -331,11 +301,14 @@ export function usePublicSiteData(): PublicSiteData {
     stories,
     storiesLoading,
     storiesError,
+    galleryPhotos,
+    galleryLoading,
+    galleryError,
     testimonials,
     recentActivity,
     isLoading:
-      blogsLoading || eventsLoading || instagramLoading || storiesLoading,
-    hasError: Boolean(blogsError || eventsError || instagramError || storiesError),
+      blogsLoading || eventsLoading || instagramLoading || storiesLoading || galleryLoading,
+    hasError: Boolean(blogsError || eventsError || instagramError || storiesError || galleryError),
     error: globalError,
     refetch: loadData,
   };

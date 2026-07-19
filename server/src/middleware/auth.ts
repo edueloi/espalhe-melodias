@@ -7,6 +7,14 @@ export interface AuthRequest extends Request {
   user?: TokenPayload;
 }
 
+function unauthorized(res: Response, err: unknown): void {
+  const expired = err instanceof jwt.TokenExpiredError;
+  res.status(401).json({
+    success: false,
+    message: expired ? 'Token expirado.' : 'Token inválido.',
+  });
+}
+
 export function authenticate(req: AuthRequest, res: Response, next: NextFunction): void {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
@@ -20,11 +28,24 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
     req.user = payload;
     next();
   } catch (err) {
-    const expired = err instanceof jwt.TokenExpiredError;
-    res.status(401).json({
-      success: false,
-      message: expired ? 'Token expirado.' : 'Token inválido.',
-    });
+    unauthorized(res, err);
+  }
+}
+
+export function optionalAuthenticate(req: AuthRequest, res: Response, next: NextFunction): void {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) {
+    next();
+    return;
+  }
+
+  const token = header.slice(7);
+  try {
+    const payload = jwt.verify(token, config.jwt.secret) as TokenPayload;
+    req.user = payload;
+    next();
+  } catch (err) {
+    unauthorized(res, err);
   }
 }
 

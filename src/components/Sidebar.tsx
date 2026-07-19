@@ -17,9 +17,11 @@ import {
   Sparkles,
   Globe,
   Link2,
+  Image,
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { SIDEBAR_SPACING, ICON_SIZES, MARGIN, CONTENT_SPACING } from '@/src/theme';
+import logoEspalheMelodias from '../images/logo-espalhe-melodias.png';
 
 interface SidebarProps {
   currentTab: string;
@@ -31,6 +33,9 @@ interface SidebarProps {
   openHelpRequestsCount: number;
   onLogout: () => void;
   onGoToPublicSite: () => void;
+  /** Caminho do site público do próprio usuário (ex: /profissional/meu-slug), quando ele tem perfil profissional */
+  mySitePath?: string | null;
+  onGoToMySite?: () => void;
 }
 
 export default function Sidebar({
@@ -42,7 +47,9 @@ export default function Sidebar({
   pendingRequestsCount,
   openHelpRequestsCount,
   onLogout,
-  onGoToPublicSite
+  onGoToPublicSite,
+  mySitePath,
+  onGoToMySite,
 }: SidebarProps) {
   
   // Custom navigation items based on permission roles
@@ -64,7 +71,8 @@ export default function Sidebar({
   const communityTabs = [
     { id: 'preciso-ajuda', label: 'Preciso de Ajuda', icon: HeartPulse, badge: openHelpRequestsCount },
     { id: 'diretorio-membros', label: 'Diretório / Profissionais', icon: Users },
-    { id: 'encontros-eventos', label: 'Encontros & Eventos', icon: CalendarDays }
+    { id: 'encontros-eventos', label: 'Encontros & Eventos', icon: CalendarDays },
+    { id: 'galeria-site', label: 'Galeria do Site', icon: Image },
   ];
 
   const superAdminTabs = [
@@ -94,9 +102,11 @@ export default function Sidebar({
     <aside id="system-sidebar" className={`${SIDEBAR_SPACING.width} bg-brand-navy-dark text-slate-300 flex flex-col h-screen border-r border-[#1e2e42] shrink-0 sticky top-0 overflow-y-auto`}>
       {/* Brand Logo - Melodias */}
       <div className="px-3 sm:px-4 md:px-5 py-4 sm:py-5 border-b border-[#1e2e42] flex items-center justify-start gap-2 sm:gap-3 bg-brand-navy/60">
-        <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-tr from-brand-clay to-brand-moss flex items-center justify-center text-white shadow-lg shrink-0">
-          <span className="text-sm sm:text-lg font-serif font-black italic">♩Ψ</span>
-        </div>
+        <img
+          src={logoEspalheMelodias}
+          alt="Espalhe Melodias"
+          className="w-9 sm:w-10 h-9 sm:h-10 rounded-lg sm:rounded-xl object-cover shadow-lg shrink-0"
+        />
         <div className="flex flex-col justify-center min-w-0">
           <span className="font-serif text-sm sm:text-lg font-black tracking-wide text-brand-cream leading-none truncate">Espalhe</span>
           <span className="font-script text-lg sm:text-2xl text-brand-clay-light font-normal leading-none -mt-0.5 sm:-mt-1.5 pl-0.5 truncate">Melodias</span>
@@ -226,11 +236,19 @@ export default function Sidebar({
       {/* User Session Info */}
       <div className="p-3 sm:p-4 border-t border-[#1e2e42] bg-[#0c141e] shrink-0 space-y-2.5 sm:space-y-3">
         <div className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 bg-brand-navy-light/30 border border-[#1e2e42] rounded-lg sm:rounded-xl">
-          <img
-            src={userAvatar}
-            alt={userName}
-            className="w-9 sm:w-10 h-9 sm:h-10 rounded-lg object-cover border-2 border-brand-clay/70 shadow-inner shrink-0"
-          />
+          {userAvatar ? (
+            <img
+              src={userAvatar}
+              alt={userName}
+              className="w-9 sm:w-10 h-9 sm:h-10 rounded-lg object-cover border-2 border-brand-clay/70 shadow-inner shrink-0"
+            />
+          ) : (
+            <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-lg bg-brand-clay/20 border-2 border-brand-clay/70 shadow-inner shrink-0 flex items-center justify-center">
+              <span className="text-xs sm:text-sm font-bold text-brand-clay-light">
+                {userName.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+              </span>
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold text-slate-200 truncate">{userName}</p>
             <p className="text-[9px] sm:text-[10px] font-semibold text-brand-clay-light truncate tracking-wide">{getRoleLabel(userRole)}</p>

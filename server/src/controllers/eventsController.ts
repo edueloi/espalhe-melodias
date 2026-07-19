@@ -29,11 +29,47 @@ export async function listEvents(req: AuthRequest, res: Response): Promise<void>
     [...params, limit, offset],
   );
 
+  const eventIds = rows.map(r => r.id as string);
+
+  // Itens de divisão (café/contribuição) + quem já escolheu cada um
+  const itemsByEvent = new Map<string, Array<{ id: string; name: string; takers: string[] }>>();
+  const presentsByEvent = new Map<string, number>();
+
+  if (eventIds.length > 0) {
+    const placeholders = eventIds.map(() => '?').join(',');
+
+    const items = await query<{ id: string; event_id: string; name: string }>(
+      `SELECT id, event_id, name FROM event_items WHERE event_id IN (${placeholders}) ORDER BY created_at ASC`,
+      eventIds,
+    );
+    const rsvpsWithItem = await query<{ event_id: string; item_id: string; name: string }>(
+      `SELECT event_id, item_id, name FROM event_rsvps WHERE event_id IN (${placeholders}) AND item_id IS NOT NULL`,
+      eventIds,
+    );
+    items.forEach(item => {
+      const list = itemsByEvent.get(item.event_id) ?? [];
+      list.push({
+        id: item.id,
+        name: item.name,
+        takers: rsvpsWithItem.filter(r => r.item_id === item.id).map(r => r.name),
+      });
+      itemsByEvent.set(item.event_id, list);
+    });
+
+    const presentsRows = await query<{ event_id: string; total: number }>(
+      `SELECT event_id, COUNT(*) AS total FROM event_rsvps WHERE event_id IN (${placeholders}) AND attendance = 'present' GROUP BY event_id`,
+      eventIds,
+    );
+    presentsRows.forEach(r => presentsByEvent.set(r.event_id, r.total));
+  }
+
   const userId = req.user?.userId;
   const data = rows.map(e => ({
     ...e,
     enrolledUserIds: parseJson<string[]>(e.enrolled_user_ids, []),
     isEnrolled: userId ? parseJson<string[]>(e.enrolled_user_ids, []).includes(userId) : false,
+    division_items: itemsByEvent.get(e.id as string) ?? [],
+    presents_count: presentsByEvent.get(e.id as string) ?? 0,
   }));
 
   res.json({ success: true, data, meta: buildMeta(countRow?.total ?? 0, { page, limit, offset }) });
@@ -48,9 +84,13 @@ export async function getEvent(req: AuthRequest, res: Response): Promise<void> {
   const userId = req.user?.userId;
   const enrolled = parseJson<string[]>(row.enrolled_user_ids, []);
 
+  const items = await query<{ id: string; name: string }>(
+    'SELECT id, name FROM event_items WHERE event_id = ? ORDER BY created_at ASC', [req.params.id],
+  );
+
   res.json({
     success: true,
-    data: { ...row, enrolledUserIds: enrolled, isEnrolled: userId ? enrolled.includes(userId) : false },
+    data: { ...row, enrolledUserIds: enrolled, isEnrolled: userId ? enrolled.includes(userId) : false, items },
   });
 }
 
@@ -120,8 +160,10 @@ export async function updateEvent(req: AuthRequest, res: Response): Promise<void
     throw new AppError('Acesso negado.', 403);
   }
 
-  const { title, date, time, description, category, status, recordingUrl } =
-    req.body as Record<string, unknown>;
+  const {
+    title, date, time, description, category, status,
+    location, mapLink, coverUrl, rsvpEnabled, allowGuests,
+  } = req.body as Record<string, unknown>;
 
   await execute(
     `UPDATE health_events SET
@@ -131,11 +173,20 @@ export async function updateEvent(req: AuthRequest, res: Response): Promise<void
        description     = COALESCE(?, description),
        category        = COALESCE(?, category),
        status          = COALESCE(?, status),
-       recording_url   = COALESCE(?, recording_url),
+       location        = COALESCE(?, location),
+       map_link        = COALESCE(?, map_link),
+       cover_url       = COALESCE(?, cover_url),
+       rsvp_enabled    = COALESCE(?, rsvp_enabled),
+       allow_guests    = COALESCE(?, allow_guests),
        updated_at      = ?
      WHERE id = ?`,
-    [title ?? null, date ?? null, time ?? null, description ?? null, category ?? null,
-     status ?? null, recordingUrl ?? null, nowISO(), id],
+    [
+      title ?? null, date ?? null, time ?? null, description ?? null, category ?? null,
+      status ?? null, location ?? null, mapLink ?? null, coverUrl ?? null,
+      rsvpEnabled !== undefined ? (rsvpEnabled ? 1 : 0) : null,
+      allowGuests !== undefined ? (allowGuests ? 1 : 0) : null,
+      nowISO(), id,
+    ],
   );
 
   res.json({ success: true, message: 'Evento atualizado.' });
