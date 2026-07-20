@@ -35,6 +35,10 @@ import {
   Smile,
   Smartphone,
   AlertCircle,
+  Frown,
+  ShieldCheck,
+  HeartHandshake,
+  Check,
 } from 'lucide-react';
 import { BlogPost, HealthEvent } from '../types';
 import { memberRequestsApi, newsletterApi, contactApi, resolveUploadUrl, blogsApi } from '../lib/api';
@@ -773,6 +777,74 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
             </div>
           </section>
 
+          {/* Por que existimos — dores do profissional x resposta do Espalhe Melodias */}
+          <section className="py-24 max-w-6xl mx-auto px-6">
+            <div className="text-center mb-14">
+              <p className="text-sm font-bold text-brand-clay uppercase tracking-widest mb-2">Motivações do coletivo</p>
+              <h2 className="font-serif text-3xl md:text-4xl font-bold text-brand-navy mb-4">O que nos motiva a estarmos aqui</h2>
+              <p className="text-slate-600 max-w-xl mx-auto text-base leading-relaxed">
+                As dores reais enfrentadas por quem cuida da saúde mental — e a resposta que construímos juntos.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-7">
+              {[
+                {
+                  icon: Frown,
+                  problem: 'Tendência ao isolamento',
+                  problemDesc: 'O trabalho em consultório costuma isolar, sem o calor humano e as trocas sinceras do dia a dia.',
+                  answer: 'Ponto de encontro mensal',
+                },
+                {
+                  icon: AlertCircle,
+                  problem: 'Sobrecarga e esgotamento',
+                  problemDesc: 'Ouvir relatos difíceis semana após semana, sem uma rede madura de apoio profissional, adoece.',
+                  answer: 'Rede solidária e rodas de apoio',
+                },
+                {
+                  icon: ShieldCheck,
+                  problem: 'Concorrência fria',
+                  problemDesc: 'A lógica de mercado induz a ver outros profissionais como rivais, minando indicações e parcerias.',
+                  answer: 'Sinergia coletiva e ética',
+                },
+              ].map(item => (
+                <div key={item.problem} className="bg-white rounded-2xl p-7 border border-brand-sand shadow-sm hover:shadow-md transition-shadow">
+                  <div className="w-12 h-12 rounded-xl bg-brand-clay/10 flex items-center justify-center mb-5">
+                    <item.icon className="w-5.5 h-5.5 text-brand-clay" strokeWidth={1.75} />
+                  </div>
+                  <h3 className="font-serif text-lg font-bold text-brand-navy mb-2">{item.problem}</h3>
+                  <p className="text-slate-500 text-sm leading-relaxed mb-5">{item.problemDesc}</p>
+                  <div className="flex items-center gap-2 pt-4 border-t border-brand-sand/70">
+                    <span className="w-5 h-5 rounded-full bg-brand-moss/15 flex items-center justify-center shrink-0">
+                      <Check className="w-3 h-3 text-brand-moss" strokeWidth={3} />
+                    </span>
+                    <span className="text-sm font-bold text-brand-moss">{item.answer}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Gênese / propósito resumido, com link para Quem Somos */}
+          <section className="py-20 bg-brand-cream/40 border-y border-brand-sand/60">
+            <div className="max-w-4xl mx-auto px-6 text-center">
+              <HeartHandshake className="w-9 h-9 text-brand-moss mx-auto mb-6" strokeWidth={1.5} />
+              <p className="font-serif text-2xl md:text-3xl font-bold text-brand-navy leading-snug mb-6">
+                O Espalhe Melodias nasceu do compromisso ético de conectar terapeutas e aproximar caminhos sadios de escuta.
+              </p>
+              <p className="text-slate-600 text-base leading-relaxed max-w-2xl mx-auto mb-8">
+                Acreditamos que a saúde mental não deve ser construída em solidão ou competição, mas como uma sinfonia coletiva de presenças sintonizadas — onde cada profissional encontra escuta, apoio e crescimento real.
+              </p>
+              <button
+                onClick={() => scrollTo('about')}
+                className="inline-flex items-center gap-2 text-brand-moss font-bold text-sm hover:underline"
+              >
+                <span>Conhecer nossa história completa</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </section>
+
           {/* Values strip */}
           <section className="bg-brand-navy py-20">
             <div className="max-w-6xl mx-auto px-6">
@@ -1220,6 +1292,38 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
               </p>
             </div>
 
+          {/* Nossa Gênese */}
+          <div className="grid md:grid-cols-2 gap-10 items-center mb-20 bg-white border border-brand-sand rounded-3xl p-9 sm:p-12 shadow-sm">
+            <div>
+              <p className="text-sm font-bold text-brand-moss uppercase tracking-widest mb-3">Nossa Gênese</p>
+              <h2 className="font-serif text-2xl md:text-3xl font-bold text-brand-navy leading-snug mb-5">
+                Fortalecer e crescer juntos em saúde mental
+              </h2>
+              <p className="text-slate-600 text-base leading-relaxed mb-4">
+                O Espalhe Melodias surgiu do compromisso ético de conectar terapeutas e aproximar caminhos sadios de escuta. Acreditamos que a saúde mental não deve ser construída em solidão ou competição egoica, mas como uma sinfonia coletiva de presenças sintonizadas.
+              </p>
+              <div className="border-l-2 border-brand-clay pl-5 py-1">
+                <p className="text-slate-700 italic text-sm leading-relaxed">
+                  "Cada melodia de cuidado só se torna verdadeiramente livre e potente quando reverbera em harmonia com outros saberes."
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-5">
+              {[
+                { icon: Users, title: 'Presença Ativa', desc: 'Conexões reais que ultrapassam os limites herméticos das clínicas tradicionais.' },
+                { icon: ShieldCheck, title: 'Cuidado Seguro', desc: 'Triagens de urgência e um diretório transparente de profissionais certificados.' },
+                { icon: TrendingUp, title: 'Crescimento Intelectual', desc: 'Troca de ensinamentos clínicos, materiais éticos e resoluções de desafios coletivos.' },
+                { icon: HeartHandshake, title: 'Canto de Apoio', desc: 'Redes de sustentabilidade emocional contra o esgotamento dos atendimentos.' },
+              ].map(item => (
+                <div key={item.title} className="bg-brand-cream/40 rounded-xl p-4">
+                  <item.icon className="w-4.5 h-4.5 text-brand-moss mb-2.5" strokeWidth={1.75} />
+                  <p className="font-bold text-brand-navy text-sm mb-1">{item.title}</p>
+                  <p className="text-slate-500 text-xs leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Founders */}
           <div className="grid md:grid-cols-2 gap-8 mb-20">
             {[
@@ -1310,6 +1414,51 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
                 <p className="text-slate-600 text-sm leading-relaxed">{item.text}</p>
               </div>
             ))}
+          </div>
+
+          {/* Ciranda de valores */}
+          <div className="mb-14">
+            <div className="text-center mb-10">
+              <p className="text-sm font-bold text-brand-clay uppercase tracking-widest mb-2">Sabor do Cuidado Integrado</p>
+              <h3 className="font-serif text-2xl md:text-3xl font-bold text-brand-navy">Formando uma sinfonia saudável de trocas</h3>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-5">
+              {[
+                { title: 'Escuta Sensível', tag: 'Atenção & Empatia', desc: 'Escutar com atenção plena e empatia genuína. O silêncio qualificado acolhe a dor e resgata as melodias internas de quem compartilha.' },
+                { title: 'Respeito Descondicionado', tag: 'Singularidades valorizadas', desc: 'Reconhecimento das histórias singulares e das barreiras individuais. Uma rede saudável respeita a ética e a liberdade de cada profissional.' },
+                { title: 'Troca Recíproca', tag: 'Troca que inspira', desc: 'Transmissão livre de saberes práticos, materiais clínicos e referências sem medo de concorrência. Quanto mais compartilhamos, mais nos completamos.' },
+                { title: 'Conexões Reais', tag: 'Vínculos sadios e duradouros', desc: 'Transparência nas relações, gerando novas possibilidades clínicas, parcerias intelectuais e indicações confiáveis.' },
+                { title: 'Apoio Múltiplo', tag: 'Sustentação mútua', desc: 'Suporte clínico e existencial para lidar com o peso e o isolamento técnico da atuação solitária no consultório.' },
+              ].map((v, i) => (
+                <div key={v.title} className="bg-white border border-brand-sand rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-brand-clay/10 text-brand-clay text-xs font-black mb-4">{i + 1}</span>
+                  <h4 className="font-serif text-base font-bold text-brand-navy mb-1.5">{v.title}</h4>
+                  <span className="inline-block text-[11px] font-bold text-brand-moss bg-brand-moss/10 px-2.5 py-1 rounded-full mb-3">{v.tag}</span>
+                  <p className="text-slate-500 text-xs leading-relaxed">{v.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Ganhos reais */}
+          <div className="grid sm:grid-cols-2 gap-5 mb-14">
+            <div className="bg-white border border-brand-sand rounded-2xl p-7 shadow-sm">
+              <p className="text-sm font-bold text-brand-navy uppercase tracking-widest mb-4">Ganhos reais</p>
+              <ul className="space-y-3">
+                {['Troca transparente de ensinamentos', 'Integração de abordagens terapêuticas', 'Prevenção de burnout clínico', 'Sinergia de parcerias e projetos'].map(g => (
+                  <li key={g} className="flex items-start gap-2.5 text-sm text-slate-600 leading-relaxed">
+                    <Check className="w-4 h-4 text-brand-moss shrink-0 mt-0.5" strokeWidth={2.5} />
+                    <span>{g}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-white border border-brand-sand rounded-2xl p-7 shadow-sm">
+              <p className="text-sm font-bold text-brand-navy uppercase tracking-widest mb-4">Nossa visão de futuro</p>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                Ser a maior rede de amparo multidisciplinar de psicologia interiorana, rompendo o isolamento profissional através de soluções digitais lúdicas e éticas — construindo, encontro após encontro, uma comunidade cada vez mais forte.
+              </p>
+            </div>
           </div>
 
           {/* Values list */}
