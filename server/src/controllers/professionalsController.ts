@@ -202,7 +202,7 @@ export async function upsertProfessional(req: AuthRequest, res: Response): Promi
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         id, req.user.userId, cleanSlug ?? null,
-        crp, JSON.stringify(specialties), bio, pricePerSession,
+        crp, JSON.stringify(specialties), bio, pricePerSession ?? 0,
         contactWhatsapp ?? null, JSON.stringify(services), JSON.stringify(schedule),
         location, accentColor ?? null, theme ?? null, JSON.stringify(languages),
         instagram ?? null, linkedin ?? null, facebook ?? null,
