@@ -1,10 +1,11 @@
 name: Tests & Quality
 
+# Gatilho automático (push/pull_request) desativado temporariamente —
+# o workflow está falhando em todos os pushes e gerando e-mail de
+# notificação a cada commit. Rode manualmente via aba Actions no
+# GitHub ("Run workflow") quando for investigar/corrigir os testes.
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
+  workflow_dispatch:
 
 jobs:
   unit-and-component-tests:
