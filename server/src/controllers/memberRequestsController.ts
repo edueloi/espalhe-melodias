@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { query, queryOne, execute } from '../config/db';
 import { AppError } from '../middleware/errorHandler';
 import { newId, nowISO } from '../utils/helpers';
@@ -136,16 +137,24 @@ export async function approveMemberRequest(req: AuthRequest, res: Response): Pro
   const existingUser = await queryOne<{ id: string }>('SELECT id FROM users WHERE email = ?', [mr.email]);
   if (existingUser) throw new AppError('Este e-mail já possui uma conta ativa.', 409);
 
-  const DEFAULT_PASSWORD = 'Melodias@2025';
-  const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 12);
+  // Senha inicial aleatória (nunca comunicada) — o membro define a própria senha via e-mail
+  const randomPassword = crypto.randomBytes(24).toString('hex');
+  const passwordHash = await bcrypt.hash(randomPassword, 12);
   const userId = newId();
   const now = nowISO();
 
-  // Cria o usuário
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const tokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+
+  // Cria o usuário já com o token de definição de senha
   await execute(
-    `INSERT INTO users (id, name, email, password_hash, role, specialty, whatsapp, gender, approval_status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 'member', ?, ?, ?, 'approved', ?, ?)`,
-    [userId, mr.name, mr.email, passwordHash, mr.specialty ?? null, mr.phone ?? null, mr.gender ?? null, now, now],
+    `INSERT INTO users (id, name, email, password_hash, role, specialty, whatsapp, gender, approval_status, reset_token, reset_token_expires, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 'member', ?, ?, ?, 'approved', ?, ?, ?, ?)`,
+    [
+      userId, mr.name, mr.email, passwordHash, mr.specialty ?? null, mr.phone ?? null, mr.gender ?? null,
+      tokenHash, tokenExpiresAt.toISOString().slice(0, 19).replace('T', ' '), now, now,
+    ],
   );
 
   // Cria preferências padrão
@@ -173,7 +182,13 @@ export async function approveMemberRequest(req: AuthRequest, res: Response): Pro
     ['approved', now, id],
   );
 
-  res.json({ success: true, message: 'Membro aprovado com sucesso.' });
+  res.json({ success: true, message: 'Membro aprovado! Um e-mail foi enviado para ele definir a senha.' });
+
+  const setPasswordLink = `${config.appUrl}/redefinir-senha?token=${rawToken}`;
+  const template = EmailTemplates.memberApproved(mr.name, setPasswordLink);
+  sendEmail({ to: mr.email, subject: template.subject, html: template.html, text: template.text }).catch(err =>
+    console.error('[member-requests] Falha ao enviar e-mail de aprovação:', err),
+  );
 }
 
 // ─── Reject (superAdminOnly) ──────────────────────────────────────────────────

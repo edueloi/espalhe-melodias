@@ -380,6 +380,67 @@ export class EmailTemplates {
   }
 
   /**
+   * Aviso de cadastro aprovado, com link para o membro definir sua própria senha
+   */
+  static memberApproved(name: string, setPasswordLink: string) {
+    const firstName = name.trim().split(' ')[0];
+    return {
+      subject: `🎉 ${firstName}, seu cadastro foi aprovado — Espalhe Melodias!`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0; padding:0; background-color:#f5efe6; font-family: Georgia, 'Times New Roman', serif;">
+          <div style="max-width: 560px; margin: 0 auto; padding: 40px 20px;">
+            <div style="background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 24px rgba(107,66,38,0.08);">
+
+              <div style="background: linear-gradient(135deg, #3d4a2e, #2d3a1e); padding: 32px 32px 28px; text-align: center;">
+                <p style="color:#e8c9a8; font-family: 'Brush Script MT', cursive; font-size: 26px; margin:0 0 4px;">Espalhe Melodias</p>
+                <p style="color:#c9d4b8; font-family: Arial, sans-serif; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; margin:0;">Conexões em Saúde Mental</p>
+              </div>
+
+              <div style="padding: 36px 32px;">
+                <h1 style="color:#3d2b1f; font-size: 22px; margin: 0 0 16px;">Seu cadastro foi aprovado! 🎉</h1>
+
+                <p style="color:#5c4a3d; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.7; margin: 0 0 8px;">
+                  Olá, ${this.escapeHtml(firstName)}!
+                </p>
+                <p style="color:#5c4a3d; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.7; margin: 0 0 28px;">
+                  Que alegria! Sua solicitação para fazer parte da comunidade Espalhe Melodias foi aprovada. Para acessar sua conta pela primeira vez, clique no botão abaixo e crie sua própria senha — o link é válido por <strong>1 hora</strong>.
+                </p>
+
+                <div style="text-align:center; margin-bottom: 28px;">
+                  <a href="${setPasswordLink}" style="background: linear-gradient(135deg, #b5571a, #8f451a); color: #ffffff; font-family: Arial, sans-serif; font-weight: bold; font-size: 14px; padding: 14px 32px; text-decoration: none; border-radius: 12px; display: inline-block;">
+                    Criar minha senha e entrar
+                  </a>
+                </div>
+
+                <p style="color:#9a8a7c; font-family: Arial, sans-serif; font-size: 12px; line-height: 1.6; margin: 0 0 4px;">
+                  Se o link expirar, você pode solicitar um novo através da opção "Esqueci minha senha" na tela de login.
+                </p>
+                <p style="color:#c2b8ad; font-family: Arial, sans-serif; font-size: 11px; line-height: 1.6; margin: 16px 0 0; word-break: break-all;">
+                  Ou copie e cole este link no navegador: ${setPasswordLink}
+                </p>
+              </div>
+
+              <div style="background-color:#f5efe6; padding: 20px 32px; text-align:center;">
+                <p style="color:#b0a08f; font-family: Arial, sans-serif; font-size: 11px; margin:0;">
+                  © 2026 Espalhe Melodias — Conexões em Saúde Mental
+                </p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `Olá, ${firstName}!\n\nSua solicitação para fazer parte da comunidade Espalhe Melodias foi aprovada!\n\nCrie sua senha e acesse sua conta (link válido por 1 hora):\n${setPasswordLink}\n\nSe expirar, use "Esqueci minha senha" na tela de login.\n\nEspalhe Melodias`,
+    };
+  }
+
+  /**
    * Convite nominal para se juntar à comunidade
    */
   static inviteEmail(invitedName: string, inviterName: string, roleLabel: string, inviteLink: string, validityDays: number) {

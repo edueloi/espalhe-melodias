@@ -93,7 +93,7 @@ function SolicitacoesView() {
     setActioning(mr.id);
     try {
       await memberRequestsApi.approve(mr.id);
-      toast.success('Membro aprovado! Senha padrão: Melodias@2025');
+      toast.success('Membro aprovado! Um e-mail foi enviado para ele definir a senha.');
       setPending(prev => prev.filter(x => x.id !== mr.id));
       setApproved(prev => [{ ...mr, status: 'approved' }, ...prev]);
     } catch (err: unknown) {

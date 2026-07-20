@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './lib/auth';
-import { tokenStore, professionalsApi } from './lib/api';
+import { tokenStore, professionalsApi, memberRequestsApi, peerHelpApi } from './lib/api';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import DashboardView from './components/DashboardView';
@@ -126,6 +126,27 @@ function AppInner() {
   const [autoOpenProfile, setAutoOpenProfile] = useState(false);
   const [mySitePath,   setMySitePath]   = useState<string | null>(null);
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [openHelpRequestsCount, setOpenHelpRequestsCount] = useState(0);
+
+  // Busca contagens de notificação do menu (solicitações pendentes, pedidos de ajuda em aberto)
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const loadCounts = () => {
+      if (user.role === 'super-admin') {
+        memberRequestsApi.list({ status: 'pending' })
+          .then(res => { if (!cancelled) setPendingRequestsCount(res.meta.total); })
+          .catch(() => {});
+      }
+      peerHelpApi.list({ status: 'aberto' })
+        .then(res => { if (!cancelled) setOpenHelpRequestsCount(res.meta.total); })
+        .catch(() => {});
+    };
+    loadCounts();
+    const interval = setInterval(loadCounts, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [user]);
 
   // Descobre a URL do site público do próprio usuário (quando ele tem perfil profissional)
   useEffect(() => {
@@ -343,8 +364,8 @@ function AppInner() {
           userRole={user.role}
           userName={user.name}
           userAvatar={user.avatar}
-          pendingRequestsCount={0}
-          openHelpRequestsCount={0}
+          pendingRequestsCount={pendingRequestsCount}
+          openHelpRequestsCount={openHelpRequestsCount}
           onLogout={handleLogout}
           onGoToPublicSite={() => {
             setAppView('public');
