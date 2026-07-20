@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { query, queryOne, execute } from '../config/db';
 import { AppError } from '../middleware/errorHandler';
-import { newId, nowISO, parseJson } from '../utils/helpers';
+import { newId, nowISO, parseJson, isDateBeforeToday } from '../utils/helpers';
 import { getPagination, buildMeta } from '../utils/paginate';
 import type { AuthRequest } from '../middleware/auth';
 
@@ -216,7 +216,7 @@ export async function createEvent(req: AuthRequest, res: Response): Promise<void
   const id = newId();
   const now = nowISO();
   const generatedSlug = slug || `${title.toLowerCase().replace(/\s+/g, '-')}-${id.substring(0, 8)}`;
-  const isPast = new Date(date) < new Date();
+  const isPast = isDateBeforeToday(date);
   const status = status_enum === 'draft' ? 'upcoming' : isPast ? 'past' : 'upcoming';
 
   await execute(
@@ -313,7 +313,7 @@ export async function updateEvent(req: AuthRequest, res: Response): Promise<void
   if (status_enum === 'upcoming' || status_enum === 'past') {
     statusUpdate = status_enum;
   } else if (date) {
-    statusUpdate = new Date(date as string) < new Date() ? 'past' : 'upcoming';
+    statusUpdate = isDateBeforeToday(date as string) ? 'past' : 'upcoming';
   }
 
   await execute(

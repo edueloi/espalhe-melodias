@@ -23,6 +23,17 @@ import { StatCard } from './ui';
 // ─── Alias local para o tipo vindo do api.ts ─────────────────────────────────
 type ItemList = EventItemList;
 
+/**
+ * Faz parse de uma data "ingênua" (sem timezone) vinda da API, evitando o
+ * deslocamento de ±1 dia que `new Date(stringISO)` sofre ao converter para o
+ * timezone local do browser. Aceita "YYYY-MM-DD" ou "YYYY-MM-DDTHH:MM:SS...".
+ */
+function parseLocalDate(value: string | Date): Date {
+  const iso = typeof value === 'string' && value.includes('T') ? value.split('T')[0] : String(value);
+  const [y, m, day] = iso.split('-').map(Number);
+  return new Date(y, m - 1, day);
+}
+
 // ─── Tipos locais para RSVP ───────────────────────────────────────────────────
 
 interface RsvpRow {
@@ -995,7 +1006,7 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
             <span className="flex items-center gap-1">
               <Calendar size={11} />
               {event.event_date
-                ? new Date(event.event_date).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' })
+                ? parseLocalDate(event.event_date).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' })
                 : '—'}
             </span>
             <span className="flex items-center gap-1">
@@ -1092,52 +1103,52 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
                   return (
                     <div
                       key={rsvp.id}
-                      className="flex items-start gap-3 p-3 rounded-xl border border-zinc-100 bg-white hover:bg-zinc-50 transition"
+                      className="flex flex-col sm:flex-row sm:items-start gap-3 p-3 rounded-xl border border-zinc-100 bg-white hover:bg-zinc-50 transition"
                     >
-                      {/* Avatar inicial */}
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-clay/20 to-brand-moss/20 flex items-center justify-center shrink-0 mt-0.5">
-                        <span className="text-xs font-black text-brand-navy">
-                          {rsvp.name?.charAt(0).toUpperCase() ?? '?'}
-                        </span>
-                      </div>
-
-                      {/* Nome + dados */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs font-bold text-zinc-800">{rsvp.name || '—'}</span>
-                          {isExternal && (
-                            <span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Ext.</span>
-                          )}
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        {/* Avatar inicial */}
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-clay/20 to-brand-moss/20 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="text-xs font-black text-brand-navy">
+                            {rsvp.name?.charAt(0).toUpperCase() ?? '?'}
+                          </span>
                         </div>
-                        {phone && (
-                          <p className="text-[10px] text-zinc-400 mt-0.5">{rsvp.phone}</p>
-                        )}
-                        {rsvp.item_name && (
-                          <div className="flex items-center gap-1 mt-1">
-                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full">
-                              🧺 {rsvp.item_name}
+
+                        {/* Nome + dados */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs font-bold text-zinc-800">{rsvp.name || '—'}</span>
+                            {isExternal && (
+                              <span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full shrink-0">Ext.</span>
+                            )}
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                              isPresent ? 'bg-emerald-100 text-emerald-700' :
+                              isAbsent  ? 'bg-red-100 text-red-600' :
+                                          'bg-zinc-100 text-zinc-500'
+                            }`}>
+                              {isPresent ? 'Presente' : isAbsent ? 'Falta' : 'Confirmado'}
                             </span>
                           </div>
-                        )}
-                        {rsvp.guests > 0 && (
-                          <p className="text-[10px] text-violet-600 font-semibold mt-0.5">+{rsvp.guests} acompanhante{rsvp.guests > 1 ? 's' : ''}</p>
-                        )}
-                        {rsvp.observation && (
-                          <p className="text-[10px] text-zinc-400 italic mt-0.5">"{rsvp.observation}"</p>
-                        )}
+                          {phone && (
+                            <p className="text-[10px] text-zinc-400 mt-0.5">{rsvp.phone}</p>
+                          )}
+                          {rsvp.item_name && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full">
+                                🧺 {rsvp.item_name}
+                              </span>
+                            </div>
+                          )}
+                          {rsvp.guests > 0 && (
+                            <p className="text-[10px] text-violet-600 font-semibold mt-0.5">+{rsvp.guests} acompanhante{rsvp.guests > 1 ? 's' : ''}</p>
+                          )}
+                          {rsvp.observation && (
+                            <p className="text-[10px] text-zinc-400 italic mt-0.5">"{rsvp.observation}"</p>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Status badge */}
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                        isPresent ? 'bg-emerald-100 text-emerald-700' :
-                        isAbsent  ? 'bg-red-100 text-red-600' :
-                                    'bg-zinc-100 text-zinc-500'
-                      }`}>
-                        {isPresent ? 'Presente' : isAbsent ? 'Falta' : 'Confirmado'}
-                      </span>
-
                       {/* Ações */}
-                      <div className="flex gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-start">
                         {phone && (
                           <IconButton
                             size="sm"
@@ -1153,7 +1164,7 @@ function EventManageModal({ isOpen, onClose, event, onDeleted, onUpdated }: Even
                           onClick={() => toggleAttendance(rsvp)}
                           disabled={togglingId === rsvp.id}
                           title={isPresent ? 'Marcar falta' : 'Marcar presente'}
-                          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition disabled:opacity-50 ${
+                          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition disabled:opacity-50 whitespace-nowrap ${
                             isPresent
                               ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
                               : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
@@ -1422,13 +1433,13 @@ export default function EventsView() {
 
   // ── Anos únicos dos eventos passados ──
   const pastYears = Array.from(new Set(
-    past.map(e => e.event_date ? new Date(e.event_date).getFullYear().toString() : null).filter(Boolean) as string[]
+    past.map(e => e.event_date ? parseLocalDate(e.event_date).getFullYear().toString() : null).filter(Boolean) as string[]
   )).sort((a, b) => Number(b) - Number(a));
 
   // ── Eventos passados filtrados ──
   const filteredPast = past.filter(e => {
     const matchSearch = !pastSearch || e.title.toLowerCase().includes(pastSearch.toLowerCase());
-    const matchYear   = !pastYear || (e.event_date && new Date(e.event_date).getFullYear().toString() === pastYear);
+    const matchYear   = !pastYear || (e.event_date && parseLocalDate(e.event_date).getFullYear().toString() === pastYear);
     return matchSearch && matchYear;
   });
 

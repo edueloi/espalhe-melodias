@@ -10,6 +10,11 @@ export const pool = mysql.createPool({
   connectionLimit:    config.db.connectionLimit,
   charset:            'utf8mb4',
   timezone:           '+00:00',
+  // Colunas DATE/DATETIME/TIMESTAMP voltam como string "YYYY-MM-DD[ HH:MM:SS]"
+  // em vez de objeto Date do JS. Evita que o driver aplique conversão de timezone
+  // ao ler datas "ingênuas" do banco (ex: event_date), que causava deslocamento
+  // de ±1 dia ao serializar para JSON e depois fazer `new Date(str)` no frontend.
+  dateStrings:        true,
   waitForConnections: true,
   queueLimit:         0,
 });

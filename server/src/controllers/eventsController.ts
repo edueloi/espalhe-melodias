@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { query, queryOne, execute } from '../config/db';
 import { AppError } from '../middleware/errorHandler';
-import { newId, nowISO, parseJson } from '../utils/helpers';
+import { newId, nowISO, parseJson, isDateBeforeToday } from '../utils/helpers';
 import { getPagination, buildMeta } from '../utils/paginate';
 import type { AuthRequest } from '../middleware/auth';
 
@@ -114,7 +114,7 @@ export async function createEvent(req: AuthRequest, res: Response): Promise<void
 
   const id = newId();
   const now = nowISO();
-  const isPast = new Date(date) < new Date();
+  const isPast = isDateBeforeToday(date);
 
   await execute(
     `INSERT INTO health_events
