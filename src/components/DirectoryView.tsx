@@ -306,7 +306,6 @@ export default function DirectoryView({ autoOpenOwnProfile }: DirectoryViewProps
   const [eCrp, setECrp]               = useState('');
   const [eBio, setEBio]               = useState('');
   const [eAvatar, setEAvatar]         = useState('');
-  const [ePrice, setEPrice]           = useState(140);
   const [eLocation, setELocation]     = useState('');
   const [eWhatsapp, setEWhatsapp]     = useState('');
   const [eColor, setEColor]           = useState('#a75a35');
@@ -425,7 +424,6 @@ export default function DirectoryView({ autoOpenOwnProfile }: DirectoryViewProps
     setECrp(rawNum);
     setEBio(prof.bio);
     setEAvatar(prof.avatar ?? '');
-    setEPrice(toNumericValue(prof.price_per_session, 140));
     setELocation(prof.location);
     setEWhatsapp(maskPhone(prof.contact_whatsapp ?? ''));
     // Popula endereço — location salvo como "Cidade/UF" simples ou endereço completo
@@ -485,7 +483,7 @@ export default function DirectoryView({ autoOpenOwnProfile }: DirectoryViewProps
         name: eName, crp: fullCrp, bio: eBio,
         avatar: finalAvatar,
         slug: eSlug || undefined,
-        price_per_session: ePrice, location: builtLocation,
+        location: builtLocation,
         contact_whatsapp: unmaskedPhone(eWhatsapp), accent_color: eColor, theme: eTheme as import('../lib/api').ProfTheme,
         specialties: eSpecialties, services: eServices,
         languages: eLanguages,

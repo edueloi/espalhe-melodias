@@ -349,7 +349,7 @@ export default function ThemeMinimal({ professional }: Props) {
             <div>
               <SectionLabel accent={accent}>Sobre</SectionLabel>
               <h2 className="mt-4 max-w-sm text-4xl font-black leading-tight tracking-[-0.055em] text-slate-950 md:text-5xl">
-                Cuidado profissional com presença e leveza.
+                {firstName}
               </h2>
             </div>
 
