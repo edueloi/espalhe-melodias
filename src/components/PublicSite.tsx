@@ -52,6 +52,17 @@ import fotoJessica from '../images/jessica.jpg';
 import fotoKaren from '../images/karen_gomes.jpg';
 import logoPsiflux from '../images/logo-psiflux.png';
 
+/**
+ * Faz parse de uma data "ingênua" (sem timezone) vinda da API, evitando o
+ * deslocamento de ±1 dia que `new Date(stringISO)` sofre ao converter para o
+ * timezone local do browser. Aceita "YYYY-MM-DD" ou "YYYY-MM-DDTHH:MM:SS...".
+ */
+function parseLocalDate(value: string): Date {
+  const iso = value.includes('T') ? value.split('T')[0] : value;
+  const [y, m, day] = iso.split('-').map(Number);
+  return new Date(y, m - 1, day);
+}
+
 type PublicSection = 'home' | 'blog' | 'gallery' | 'events' | 'about' | 'contact';
 
 const PUBLIC_SECTION_PATHS: Record<PublicSection, string> = {
@@ -951,8 +962,8 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
                 {upcomingEvents.slice(0, 2).map(evt => (
                   <div key={evt.id} className="bg-white rounded-2xl p-7 border border-brand-sand shadow-sm flex items-start space-x-5 hover:shadow-md transition">
                     <div className="w-16 h-16 bg-brand-moss/10 rounded-xl flex flex-col items-center justify-center shrink-0">
-                      <span className="text-xs font-bold text-brand-moss">{new Date(evt.date).toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase()}</span>
-                      <span className="text-2xl font-black text-brand-moss leading-none mt-0.5">{new Date(evt.date).getDate()}</span>
+                      <span className="text-xs font-bold text-brand-moss">{parseLocalDate(evt.date).toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase()}</span>
+                      <span className="text-2xl font-black text-brand-moss leading-none mt-0.5">{parseLocalDate(evt.date).getDate()}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-xs font-bold text-brand-clay uppercase tracking-wider">{evt.category}</span>
@@ -1483,10 +1494,10 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
                     <div className="flex items-stretch">
                       <div className="bg-brand-moss/10 border-r border-brand-sand px-6 flex flex-col items-center justify-center min-w-[90px]">
                         <span className="text-xs font-bold text-brand-moss uppercase">
-                          {new Date(evt.date).toLocaleDateString('pt-BR', { month: 'short' })}
+                          {parseLocalDate(evt.date).toLocaleDateString('pt-BR', { month: 'short' })}
                         </span>
                         <span className="text-3xl font-black text-brand-moss leading-none mt-0.5">
-                          {new Date(evt.date).getDate()}
+                          {parseLocalDate(evt.date).getDate()}
                         </span>
                       </div>
                       <div className="p-7 flex-1">
@@ -1549,7 +1560,7 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
                     <div className="p-6">
                       <h3 className="font-serif font-bold text-brand-navy text-lg mb-2.5">{evt.title}</h3>
                       <div className="flex items-center space-x-3 text-xs text-slate-400 mb-3">
-                        <span className="flex items-center space-x-1"><Calendar className="w-3.5 h-3.5" /><span>{new Date(evt.date).toLocaleDateString('pt-BR')}</span></span>
+                        <span className="flex items-center space-x-1"><Calendar className="w-3.5 h-3.5" /><span>{parseLocalDate(evt.date).toLocaleDateString('pt-BR')}</span></span>
                       </div>
                       <p className="text-sm text-slate-600 leading-relaxed line-clamp-2">{evt.description}</p>
                       {evt.recordingUrl && (
