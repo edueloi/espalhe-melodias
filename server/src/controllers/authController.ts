@@ -73,6 +73,26 @@ export async function register(req: Request, res: Response): Promise<void> {
   });
 }
 
+// ─── Onboarding ───────────────────────────────────────────────────────────────
+
+/**
+ * Todo usuário da plataforma é, na prática, um profissional de saúde mental —
+ * o "role" é só nível de acesso administrativo, não um tipo de pessoa. Por isso
+ * o onboarding de completar perfil (especialidade + CRP em professional_profiles)
+ * vale para qualquer role, a menos que o usuário já tenha preenchido ou optado
+ * por pular.
+ */
+async function isProfileCompleted(user: { id: string; onboarding_skipped?: number }): Promise<boolean> {
+  if (user.onboarding_skipped) return true;
+  const profile = await queryOne<{ crp: string | null; specialties: string | null }>(
+    'SELECT crp, specialties FROM professional_profiles WHERE user_id = ?',
+    [user.id],
+  );
+  if (!profile) return false;
+  const hasSpecialties = Boolean(profile.specialties && profile.specialties !== '[]');
+  return Boolean(profile.crp?.trim() && hasSpecialties);
+}
+
 // ─── Login ────────────────────────────────────────────────────────────────────
 
 export async function login(req: Request, res: Response): Promise<void> {
@@ -81,8 +101,9 @@ export async function login(req: Request, res: Response): Promise<void> {
   const user = await queryOne<{
     id: string; name: string; email: string; password_hash: string;
     role: string; approval_status: string; avatar: string | null;
+    onboarding_skipped: number;
   }>(
-    'SELECT id, name, email, password_hash, role, approval_status, avatar FROM users WHERE email = ?',
+    'SELECT id, name, email, password_hash, role, approval_status, avatar, onboarding_skipped FROM users WHERE email = ?',
     [email],
   );
 
@@ -129,6 +150,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         role: user.role,
         avatar: user.avatar,
         permissions: ROLE_PERMISSIONS[user.role as keyof typeof ROLE_PERMISSIONS] ?? [],
+        profileCompleted: await isProfileCompleted(user),
       },
     },
   });
@@ -179,7 +201,11 @@ export async function logout(req: Request, res: Response): Promise<void> {
 export async function me(req: AuthRequest, res: Response): Promise<void> {
   if (!req.user) throw new AppError('Não autenticado.', 401);
 
-  const user = await queryOne<Record<string, unknown>>(
+  const user = await queryOne<{
+    id: string; role: string; onboarding_skipped: number;
+    password_hash?: string; reset_token?: string | null; reset_token_expires?: string | null;
+    [key: string]: unknown;
+  }>(
     'SELECT * FROM users WHERE id = ?',
     [req.user.userId],
   );
@@ -190,6 +216,7 @@ export async function me(req: AuthRequest, res: Response): Promise<void> {
     data: {
       ...sanitizeUser(user),
       permissions: ROLE_PERMISSIONS[req.user.role] ?? [],
+      profileCompleted: await isProfileCompleted(user),
     },
   });
 }

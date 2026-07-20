@@ -464,7 +464,7 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
                     {post.category}
                   </span>
                   {canManage(post) && (
-                    <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition">
+                    <div className="absolute top-3 right-3 flex gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition">
                       <button
                         onClick={e => { e.stopPropagation(); openEditForm(post); }}
                         className="p-1.5 rounded-lg bg-white/90 backdrop-blur text-slate-600 hover:text-brand-clay shadow-sm transition"

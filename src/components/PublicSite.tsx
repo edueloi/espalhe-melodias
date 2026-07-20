@@ -42,7 +42,8 @@ import { usePublicSiteData, convertBlogPost } from '../hooks/usePublicSiteData';
 import { InstagramStories } from './InstagramStories';
 import { GoogleMap } from './ui/GoogleMap';
 import { useToast } from './ui';
-import logoEspalheMelodias from '../images/logo-espalhe-melodias.png';
+import logoFundoClaro from '../images/logo-para-fundo-claro.png';
+import logoFundoEscuro from '../images/logo-para-fundo-escuro.png';
 import espalheMelodias01 from '../images/espalhe-melodias-01.png';
 import espalheMelodias02 from '../images/espalhe-melodias-02.png';
 import espalheMelodias03 from '../images/espalhe-melodias-03.png';
@@ -361,16 +362,12 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
         {/* NAVBAR (simplificada, reaproveitando o mesmo logo) */}
         <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-100 shadow-sm">
           <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-            <button onClick={() => scrollTo('home')} className="flex items-center space-x-3 group">
+            <button onClick={() => scrollTo('home')} className="flex items-center group">
               <img
-                src={logoEspalheMelodias}
+                src={logoFundoClaro}
                 alt="Espalhe Melodias"
-                className="w-10 h-10 rounded-xl object-cover shadow-md group-hover:shadow-lg transition"
+                className="h-11 w-auto object-contain"
               />
-              <div>
-                <span className="font-serif text-base font-black text-brand-navy tracking-wide leading-none block">Espalhe</span>
-                <span className="font-script text-xl text-brand-clay leading-none -mt-1 block">Melodias</span>
-              </div>
             </button>
             <button
               onClick={onGoToLogin}
@@ -434,17 +431,11 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
             <div className="grid md:grid-cols-[1.4fr_1fr_1fr] gap-12 mb-14">
               {/* Brand */}
               <div>
-                <div className="flex items-center space-x-3 mb-5">
-                  <img
-                    src={logoEspalheMelodias}
-                    alt="Espalhe Melodias"
-                    className="w-11 h-11 rounded-xl object-cover flex-shrink-0"
-                  />
-                  <div>
-                    <div className="font-serif text-lg font-black text-brand-cream">Espalhe Melodias</div>
-                    <div className="text-sm text-slate-500">Conexões em Saúde Mental</div>
-                  </div>
-                </div>
+                <img
+                  src={logoFundoEscuro}
+                  alt="Espalhe Melodias"
+                  className="h-14 w-auto object-contain mb-5"
+                />
                 <p className="text-sm text-slate-400 leading-relaxed max-w-xs">Uma comunidade multidisciplinar de profissionais da saúde mental construindo cuidados mais humanos e integrados.</p>
               </div>
 
@@ -533,16 +524,12 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
       <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-100 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
-          <button onClick={() => scrollTo('home')} className="flex items-center space-x-3 group">
+          <button onClick={() => scrollTo('home')} className="flex items-center group">
             <img
-              src={logoEspalheMelodias}
+              src={logoFundoClaro}
               alt="Espalhe Melodias"
-              className="w-10 h-10 rounded-xl object-cover shadow-md group-hover:shadow-lg transition"
+              className="h-11 w-auto object-contain"
             />
-            <div>
-              <span className="font-serif text-base font-black text-brand-navy tracking-wide leading-none block">Espalhe</span>
-              <span className="font-script text-xl text-brand-clay leading-none -mt-1 block">Melodias</span>
-            </div>
           </button>
 
           {/* Desktop nav */}
@@ -608,16 +595,12 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
           {/* Painel */}
           <div className="md:hidden fixed inset-y-0 right-0 z-50 w-[82%] max-w-xs bg-white shadow-2xl flex flex-col drawer-panel">
             <div className="flex items-center justify-between px-5 h-16 border-b border-slate-100">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center">
                 <img
-                  src={logoEspalheMelodias}
+                  src={logoFundoClaro}
                   alt="Espalhe Melodias"
-                  className="w-9 h-9 rounded-xl object-cover shadow-md"
+                  className="h-9 w-auto object-contain"
                 />
-                <div>
-                  <span className="font-serif text-sm font-black text-brand-navy tracking-wide leading-none block">Espalhe</span>
-                  <span className="font-script text-lg text-brand-clay leading-none -mt-1 block">Melodias</span>
-                </div>
               </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}
@@ -1781,17 +1764,11 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
           <div className="grid md:grid-cols-[1.4fr_1fr_1fr] gap-12 mb-14">
             {/* Brand */}
             <div>
-              <div className="flex items-center space-x-3 mb-5">
-                <img
-                  src={logoEspalheMelodias}
-                  alt="Espalhe Melodias"
-                  className="w-11 h-11 rounded-xl object-cover flex-shrink-0"
-                />
-                <div>
-                  <div className="font-serif text-lg font-black text-brand-cream">Espalhe Melodias</div>
-                  <div className="text-sm text-slate-500">Conexões em Saúde Mental</div>
-                </div>
-              </div>
+              <img
+                src={logoFundoEscuro}
+                alt="Espalhe Melodias"
+                className="h-14 w-auto object-contain mb-5"
+              />
               <p className="text-sm text-slate-400 leading-relaxed max-w-xs">Uma comunidade multidisciplinar de profissionais da saúde mental construindo cuidados mais humanos e integrados.</p>
             </div>
 

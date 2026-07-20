@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, Globe, Users, Heart, Sprout, AlertCircle, CheckCircle2, X, Loader2 } from 'lucide-react';
 import { ApiError, authApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import logoEspalheMelodias from '../images/logo-espalhe-melodias.png';
+import logoFundoEscuro from '../images/logo-para-fundo-escuro.png';
+import logoFundoClaro from '../images/logo-para-fundo-claro.png';
 
 function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState('');
@@ -114,12 +115,8 @@ export default function LoginView({ onLoginSuccess, onGoToPublicSite }: LoginVie
         </div>
         <div className="absolute inset-0 bg-gradient-to-br from-brand-navy-dark via-brand-navy to-[#1a2d20] opacity-90" />
         <div className="relative z-10 text-center">
-          <div className="flex items-center justify-center space-x-4 mb-10">
-            <img src={logoEspalheMelodias} alt="Espalhe Melodias" className="w-16 h-16 rounded-2xl object-cover shadow-2xl" />
-            <div>
-              <div className="font-serif text-3xl font-black text-brand-cream tracking-wide leading-none">Espalhe</div>
-              <div className="font-script text-4xl text-brand-clay-light leading-none -mt-1">Melodias</div>
-            </div>
+          <div className="flex items-center justify-center mb-10">
+            <img src={logoFundoEscuro} alt="Espalhe Melodias" className="h-24 w-auto object-contain" />
           </div>
           <div className="w-16 h-0.5 bg-brand-clay/50 mx-auto mb-8" />
           <h2 className="font-serif text-3xl font-bold text-brand-cream mb-4 leading-tight">
@@ -143,12 +140,8 @@ export default function LoginView({ onLoginSuccess, onGoToPublicSite }: LoginVie
       {/* Right login panel */}
       <div className="flex-1 flex flex-col items-center justify-center p-8 lg:p-16">
         <div className="w-full max-w-md">
-          <div className="flex lg:hidden items-center justify-center space-x-3 mb-8">
-            <img src={logoEspalheMelodias} alt="Espalhe Melodias" className="w-12 h-12 rounded-xl object-cover shadow-lg" />
-            <div>
-              <div className="font-serif text-xl font-black text-brand-navy tracking-wide leading-none">Espalhe</div>
-              <div className="font-script text-2xl text-brand-clay leading-none -mt-1">Melodias</div>
-            </div>
+          <div className="flex lg:hidden items-center justify-center mb-8">
+            <img src={logoFundoClaro} alt="Espalhe Melodias" className="h-16 w-auto object-contain" />
           </div>
 
           <div className="mb-8">

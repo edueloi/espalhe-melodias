@@ -1845,7 +1845,7 @@ function UpcomingEventCard({
           </div>
           {/* Ações admin sobre imagem */}
           {isAdmin && (
-            <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute bottom-2 right-2 flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
               <IconButton size="xs" variant="ghost" title="Gestão" onClick={onManage} className="bg-white/90 border-0 hover:bg-white">
                 <BarChart2 size={11} />
               </IconButton>
@@ -1879,7 +1879,7 @@ function UpcomingEventCard({
           </div>
           {/* Ações admin no hero sem capa */}
           {isAdmin && (
-            <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute bottom-2 right-2 flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
               <IconButton size="xs" variant="ghost" title="Gestão" onClick={onManage} className="bg-white/20 border-0 text-white hover:bg-white/30">
                 <BarChart2 size={11} />
               </IconButton>
@@ -2028,7 +2028,7 @@ function PastEventCard({ evt, isAdmin, onManage, onDelete, onCopyLink }: PastEve
             <h3 className="text-sm font-black text-white leading-snug line-clamp-2">{evt.title}</h3>
           </div>
           {isAdmin && (
-            <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex gap-1 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
               <IconButton size="xs" variant="ghost" title="Gestão" onClick={onManage} className="bg-white/20 border-0 text-white hover:bg-white/30">
                 <BarChart2 size={11} />
               </IconButton>

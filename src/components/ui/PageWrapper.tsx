@@ -1,6 +1,5 @@
 import React from "react";
 import { cn } from "@/src/lib/utils";
-import { CONTENT_SPACING } from "@/src/theme/spacing";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PageWrapper — Design System
@@ -25,8 +24,8 @@ export function PageWrapper({
     <div
       className={cn(
         "w-full max-w-none min-w-0",
-        "px-2.5 sm:px-3.5 md:px-4 lg:px-5 xl:px-6",
-        "pt-2.5 sm:pt-3 md:pt-4 lg:pt-4",
+        "px-4 md:px-6 lg:px-8",
+        "pt-4",
         mobileBottomPad ? "pb-20 sm:pb-6 md:pb-8 lg:pb-8" : "pb-0",
         className
       )}
@@ -144,9 +143,9 @@ export function ContentCard({
 }: ContentCardProps) {
   const paddingMap = {
     none: "",
-    sm: "p-2 sm:p-2.5 md:p-3",
-    md: "p-2.5 sm:p-3 md:p-4 lg:p-5",
-    lg: "p-3 sm:p-4 md:p-5 lg:p-6",
+    sm: "p-3 sm:p-3 md:p-3.5",
+    md: "p-4 sm:p-4 md:p-5 lg:p-6",
+    lg: "p-4 sm:p-5 md:p-6 lg:p-7",
   };
 
   return (

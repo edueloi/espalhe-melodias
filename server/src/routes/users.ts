@@ -12,6 +12,7 @@ router.get('/',          authenticate, requireRole('super-admin', 'professional'
 router.get('/stats',     authenticate, superAdminOnly, asyncHandler(ctrl.getStats));
 router.get('/:id',       authenticate, asyncHandler(ctrl.getUser));
 router.put('/:id',       authenticate, asyncHandler(ctrl.updateUser));
+router.post('/me/skip-onboarding', authenticate, asyncHandler(ctrl.skipOnboarding));
 
 // Super-admin
 router.post(

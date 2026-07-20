@@ -26,7 +26,7 @@ const now   = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
 // ─── Usuários ─────────────────────────────────────────────────────────────────
 
 const USERS = [
-  { name: 'Karen Gomes',        email: 'karen.l.s.gomes@gmail.com',  password: 'Bibia.0110',   role: 'super-admin',  status: 'approved', specialty: 'Administração',              crp: null },
+  { name: 'Karen Gomes',        email: 'psikarengomes.tcc@gmail.com',  password: 'Bibia.0110',   role: 'super-admin',  status: 'approved', specialty: 'Administração',              crp: null },
   { name: 'Dra. Eliana Costa',  email: 'dra.eliana@melodias.com.br', password: 'eliana2026',   role: 'professional', status: 'approved', specialty: 'Psicóloga Clínica',          crp: 'CRP 06/12345' },
   { name: 'Dr. Marcos Pereira', email: 'dr.marcos@melodias.com.br',  password: 'marcos2026',   role: 'professional', status: 'approved', specialty: 'Psicólogo Comportamental',   crp: 'CRP 06/54321' },
   { name: 'Gabriel Souza',      email: 'gabriel.souza@gmail.com',    password: 'gabriel2026',  role: 'member',       status: 'approved', specialty: null, crp: null },
@@ -290,7 +290,7 @@ async function main() {
     await seedSuggestions(ids);
     await seedBlogs(ids);
     console.log('\n🎉  Seed concluído com sucesso!\n');
-    console.log('   Admin: karen.l.s.gomes@gmail.com / Bibia.0110\n');
+    console.log('   Admin: psikarengomes.tcc@gmail.com / Bibia.0110\n');
   } catch (err) {
     console.error('\n❌  Erro no seed:', err.message);
     process.exit(1);

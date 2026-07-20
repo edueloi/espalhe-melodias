@@ -18,7 +18,7 @@ const now   = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
 
 const users = [
   // Admin real — credenciais definitivas de produção
-  { id: newId(), name: 'Karen Gomes', email: 'karen.l.s.gomes@gmail.com', password: 'Bibia.0110', role: 'super-admin', approval_status: 'approved', specialty: 'Administração', crp: null, avatar: null },
+  { id: newId(), name: 'Karen Gomes', email: 'psikarengomes.tcc@gmail.com', password: 'Bibia.0110', role: 'super-admin', approval_status: 'approved', specialty: 'Administração', crp: null, avatar: null },
   // Profissionais de exemplo
   { id: newId(), name: 'Dra. Eliana Costa',  email: 'dra.eliana@melodias.com.br', password: 'eliana2026',  role: 'professional', approval_status: 'approved', specialty: 'Psicóloga Clínica',          crp: 'CRP 06/12345', avatar: null },
   { id: newId(), name: 'Dr. Marcos Pereira', email: 'dr.marcos@melodias.com.br',  password: 'marcos2026',  role: 'professional', approval_status: 'approved', specialty: 'Psicólogo Comportamental',   crp: 'CRP 06/54321', avatar: null },

@@ -53,8 +53,11 @@ async function requestResponse<T>(
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
-  // Token expirado → tenta refresh automático
-  if (res.status === 401 && retry) {
+  // Token expirado → tenta refresh automático. Só se aplica quando havia um token
+  // sendo usado nesta requisição — um 401 de login/registro (credenciais inválidas)
+  // não é uma sessão expirando, é erro de autenticação normal, e deve mostrar a
+  // mensagem real do backend em vez de "Sessão expirada".
+  if (res.status === 401 && retry && token) {
     const refreshed = await tryRefresh();
     if (refreshed) return requestResponse<T>(path, options, false);
     tokenStore.clear();
@@ -178,8 +181,13 @@ export interface AuthUser {
   email: string;
   role: 'super-admin' | 'professional' | 'member';
   avatar?: string;
+  specialty?: string;
+  crp?: string;
+  whatsapp?: string;
+  gender?: string;
   permissions: string[];
   approvalStatus?: string;
+  profileCompleted?: boolean;
 }
 
 export const authApi = {
@@ -206,6 +214,8 @@ export interface User {
   avatar?: string;
   specialty?: string;
   crp?: string;
+  whatsapp?: string;
+  gender?: string;
   approval_status: 'approved' | 'pending' | 'rejected';
   created_at: string;
   updated_at: string;
@@ -234,6 +244,7 @@ export const usersApi = {
   changeRole: (id: string, role: string) =>
     patch<void>(`/users/${id}/role`, { role }),
   delete: (id: string) => del<void>(`/users/${id}`),
+  skipOnboarding: () => post<void>('/users/me/skip-onboarding', {}),
 };
 
 // ─── Preferences ──────────────────────────────────────────────────────────────

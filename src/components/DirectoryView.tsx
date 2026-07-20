@@ -362,16 +362,16 @@ export default function DirectoryView({ autoOpenOwnProfile }: DirectoryViewProps
 
   useEffect(() => { load(); }, [search, specialty]);
 
-  // Vindo do menu de perfil do Header: abre direto a edição do próprio perfil
+  // Vindo do menu de perfil do Header ou do onboarding: abre direto a edição do próprio perfil
   useEffect(() => {
     if (!autoOpenOwnProfile || loading) return;
     const own = professionals.find(p => p.user_id === user?.id);
     if (own) openEdit(own);
+    else setView('edit');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoOpenOwnProfile, loading]);
 
   const isOwn = (prof: Professional) => prof.user_id === user?.id;
-  const isPro = user?.role === 'professional' || user?.role === 'super-admin';
   const topRatedCount = professionals.filter(p => toNumericValue(p.rating) >= 4.8).length;
 
   const LANGUAGES_OPTIONS = ['Português', 'Inglês', 'Espanhol', 'Francês', 'Italiano', 'Alemão'];
@@ -529,12 +529,10 @@ export default function DirectoryView({ autoOpenOwnProfile }: DirectoryViewProps
               <button onClick={load} className="p-2 text-slate-400 hover:text-brand-clay rounded-lg transition">
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               </button>
-              {isPro && (
-                <button onClick={() => { const own = professionals.find(p => p.user_id === user?.id); if (own) openEdit(own); else setView('edit'); }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-brand-clay hover:bg-brand-clay-dark text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md transition">
-                  <Edit3 className="w-4 h-4" />Meu Perfil
-                </button>
-              )}
+              <button onClick={() => { const own = professionals.find(p => p.user_id === user?.id); if (own) openEdit(own); else setView('edit'); }}
+                className="flex items-center gap-2 px-4 py-2.5 bg-brand-clay hover:bg-brand-clay-dark text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md transition">
+                <Edit3 className="w-4 h-4" />Meu Perfil
+              </button>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 mt-5 pt-5 border-t border-brand-sand/60">

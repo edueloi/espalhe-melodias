@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { SIDEBAR_SPACING, ICON_SIZES, MARGIN, CONTENT_SPACING } from '@/src/theme';
-import logoEspalheMelodias from '../images/logo-espalhe-melodias.png';
+import logoFundoEscuro from '../images/logo-para-fundo-escuro.png';
 
 interface SidebarProps {
   currentTab: string;
@@ -101,16 +101,12 @@ export default function Sidebar({
   return (
     <aside id="system-sidebar" className={`${SIDEBAR_SPACING.width} bg-brand-navy-dark text-slate-300 flex flex-col h-screen border-r border-[#1e2e42] shrink-0 sticky top-0 overflow-y-auto`}>
       {/* Brand Logo - Melodias */}
-      <div className="px-3 sm:px-4 md:px-5 py-4 sm:py-5 border-b border-[#1e2e42] flex items-center justify-start gap-2 sm:gap-3 bg-brand-navy/60">
+      <div className="px-3 sm:px-4 md:px-5 py-4 sm:py-5 border-b border-[#1e2e42] flex items-center justify-center bg-brand-navy/60">
         <img
-          src={logoEspalheMelodias}
+          src={logoFundoEscuro}
           alt="Espalhe Melodias"
-          className="w-9 sm:w-10 h-9 sm:h-10 rounded-lg sm:rounded-xl object-cover shadow-lg shrink-0"
+          className="h-10 sm:h-12 w-auto object-contain"
         />
-        <div className="flex flex-col justify-center min-w-0">
-          <span className="font-serif text-sm sm:text-lg font-black tracking-wide text-brand-cream leading-none truncate">Espalhe</span>
-          <span className="font-script text-lg sm:text-2xl text-brand-clay-light font-normal leading-none -mt-0.5 sm:-mt-1.5 pl-0.5 truncate">Melodias</span>
-        </div>
       </div>
 
       {/* Nav Link Groups */}

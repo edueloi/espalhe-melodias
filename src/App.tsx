@@ -22,6 +22,7 @@ import InviteRegisterView from './components/InviteRegisterView';
 import ResetPasswordView from './components/ResetPasswordView';
 import EventPublicView from './components/EventPublicView';
 import ProfessionalPublicPage from './components/ProfessionalPublicPage';
+import WelcomeOnboardingModal from './components/WelcomeOnboardingModal';
 import { ToastProvider } from './components/ui';
 import { LayoutProvider } from './components/layouts';
 
@@ -124,6 +125,7 @@ function AppInner() {
   const [sidebarOpen,  setSidebarOpen]  = useState(false);
   const [autoOpenProfile, setAutoOpenProfile] = useState(false);
   const [mySitePath,   setMySitePath]   = useState<string | null>(null);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
 
   // Descobre a URL do site público do próprio usuário (quando ele tem perfil profissional)
   useEffect(() => {
@@ -310,8 +312,22 @@ function AppInner() {
     approvalStatus: (user.approvalStatus as 'approved' | 'pending' | 'rejected') ?? 'approved',
   };
 
+  const showOnboarding = !onboardingDismissed && user.profileCompleted === false;
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans select-none" id="melodias-root-container">
+
+      {showOnboarding && (
+        <WelcomeOnboardingModal
+          userName={user.name}
+          onCompleteProfile={() => {
+            setOnboardingDismissed(true);
+            setAutoOpenProfile(true);
+            setCurrentTab('diretorio-membros');
+          }}
+          onSkipped={() => setOnboardingDismissed(true)}
+        />
+      )}
 
       {sidebarOpen && (
         <div

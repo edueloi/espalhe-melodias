@@ -68,11 +68,19 @@ export async function updateUser(req: AuthRequest, res: Response): Promise<void>
     throw new AppError('Acesso negado.', 403);
   }
 
-  const { name, avatar, specialty, crp } = req.body as Record<string, string | undefined>;
+  const { name, avatar, specialty, crp, whatsapp, gender } = req.body as Record<string, string | undefined>;
 
   await execute(
-    'UPDATE users SET name = COALESCE(?, name), avatar = COALESCE(?, avatar), specialty = COALESCE(?, specialty), crp = COALESCE(?, crp), updated_at = ? WHERE id = ?',
-    [name ?? null, avatar ?? null, specialty ?? null, crp ?? null, nowISO(), id],
+    `UPDATE users SET
+       name      = COALESCE(?, name),
+       avatar    = COALESCE(?, avatar),
+       specialty = COALESCE(?, specialty),
+       crp       = COALESCE(?, crp),
+       whatsapp  = COALESCE(?, whatsapp),
+       gender    = COALESCE(?, gender),
+       updated_at = ?
+     WHERE id = ?`,
+    [name ?? null, avatar ?? null, specialty ?? null, crp ?? null, whatsapp ?? null, gender ?? null, nowISO(), id],
   );
 
   const updated = await queryOne<Record<string, unknown>>('SELECT * FROM users WHERE id = ?', [id]);
@@ -168,6 +176,19 @@ export async function createUser(req: AuthRequest, res: Response): Promise<void>
   );
 
   res.status(201).json({ success: true, data: { id, name, email, role, approvalStatus: 'approved' } });
+}
+
+// ─── Onboarding: pular ──────────────────────────────────────────────────────
+
+export async function skipOnboarding(req: AuthRequest, res: Response): Promise<void> {
+  if (!req.user) throw new AppError('Não autenticado.', 401);
+
+  await execute(
+    'UPDATE users SET onboarding_skipped = 1, updated_at = ? WHERE id = ?',
+    [nowISO(), req.user.userId],
+  );
+
+  res.json({ success: true, message: 'Onboarding adiado.' });
 }
 
 // ─── Stats ────────────────────────────────────────────────────────────────────

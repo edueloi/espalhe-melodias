@@ -486,6 +486,8 @@ async function migrate() {
       { table: 'users', column: 'gender',   def: "ENUM('masculino','feminino','nao_declarado')" },
       { table: 'users', column: 'reset_token',         def: 'VARCHAR(255)' },
       { table: 'users', column: 'reset_token_expires', def: 'DATETIME' },
+      { table: 'users', column: 'profile_completed_at', def: 'DATETIME' },
+      { table: 'users', column: 'onboarding_skipped',   def: 'TINYINT(1) NOT NULL DEFAULT 0' },
       // health_events
       { table: 'health_events', column: 'location',      def: 'VARCHAR(300)' },
       { table: 'health_events', column: 'map_link',      def: 'TEXT' },
