@@ -6,6 +6,9 @@ import { newId, nowISO } from '../utils/helpers';
 import { getPagination, buildMeta } from '../utils/paginate';
 import type { AuthRequest } from '../middleware/auth';
 import { DEFAULT_PREFERENCES } from '../types/domain';
+import { sendEmail } from '../services/emailService';
+import { EmailTemplates } from '../services/emailTemplates';
+import { config } from '../config';
 
 // ─── Create (público) ─────────────────────────────────────────────────────────
 
@@ -56,6 +59,20 @@ export async function createMemberRequest(req: Request, res: Response): Promise<
   );
 
   res.status(201).json({ success: true, data: { id } });
+
+  const adminEmail = config.contact.adminEmails;
+  if (adminEmail) {
+    const { subject, html, text } = EmailTemplates.memberRequestAdminNotification(
+      name.trim(),
+      email.toLowerCase().trim(),
+      phone?.trim() || null,
+      specialty?.trim() || null,
+      observation?.trim() || null,
+    );
+    sendEmail({ to: adminEmail, subject, html, text }).catch(err =>
+      console.error('[member-requests] Falha ao notificar admin por e-mail:', err),
+    );
+  }
 }
 
 // ─── List (superAdminOnly) ────────────────────────────────────────────────────

@@ -162,8 +162,8 @@ export class EmailTemplates {
             </div>
 
             <p style="margin-top: 30px;">
-              <a href="https://espalhe-melodias.com/admin/contact/${messageId}" style="background-color: #7c3aed; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                Ver na Dashboard
+              <a href="https://espalhemelodias.com.br" style="background-color: #7c3aed; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                Acessar Área de Membros
               </a>
             </p>
 
@@ -175,6 +175,54 @@ export class EmailTemplates {
         </html>
       `,
       text: `Nova Mensagem de Contato\n\nDe: ${senderName}\nEmail: ${senderEmail}\n${senderPhone ? `Telefone: ${senderPhone}\n` : ''}Assunto: ${subject}\nID: ${messageId}\n\nMensagem:\n${message}`,
+    };
+  }
+
+  /**
+   * Notificação ao admin sobre nova solicitação de ingresso na comunidade
+   */
+  static memberRequestAdminNotification(
+    name: string,
+    email: string,
+    phone: string | null,
+    specialty: string | null,
+    observation: string | null,
+  ) {
+    return {
+      subject: `🌱 Nova solicitação de ingresso: ${name}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 20px; border-radius: 8px;">
+            <h2 style="color: #7c3aed;">🌱 Nova Solicitação de Ingresso</h2>
+
+            <div style="background-color: #fff; border-left: 4px solid #7c3aed; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <p><strong>Nome:</strong> ${this.escapeHtml(name)}</p>
+              <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
+              ${phone ? `<p><strong>WhatsApp/Telefone:</strong> ${this.escapeHtml(phone)}</p>` : ''}
+              ${specialty ? `<p><strong>Especialidade:</strong> ${this.escapeHtml(specialty)}</p>` : ''}
+            </div>
+
+            ${observation ? `
+            <div style="background-color: #f9f9f9; border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin: 20px 0; white-space: pre-wrap; word-wrap: break-word;">
+              ${this.escapeHtml(observation)}
+            </div>` : ''}
+
+            <p>Acesse o painel de Solicitações para aprovar ou rejeitar este pedido.</p>
+
+            <footer style="text-align: center; margin-top: 40px; color: #999; font-size: 12px; border-top: 1px solid #ddd; padding-top: 20px;">
+              <p>Sistema Espalhe Melodias</p>
+            </footer>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `Nova Solicitação de Ingresso\n\nNome: ${name}\nEmail: ${email}\n${phone ? `Telefone: ${phone}\n` : ''}${specialty ? `Especialidade: ${specialty}\n` : ''}${observation ? `\nMensagem:\n${observation}\n` : ''}\nAcesse o painel de Solicitações para aprovar ou rejeitar.`,
     };
   }
 

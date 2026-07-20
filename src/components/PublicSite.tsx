@@ -1283,39 +1283,39 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
       {/* ===== QUEM SOMOS ===== */}
       {activeSection === 'about' && (
         <div className="min-h-screen bg-gradient-to-br from-white via-brand-cream/30 to-brand-sand/20">
-          <div className="max-w-5xl mx-auto px-6 py-24">
-            <div className="text-center mb-20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
+            <div className="text-center mb-12 sm:mb-16">
               <p className="text-sm font-bold text-brand-clay uppercase tracking-widest mb-3">Nossa História</p>
-              <h1 className="font-serif text-5xl font-bold text-brand-navy mb-5 leading-tight">Quem Somos</h1>
-              <p className="text-slate-600 max-w-xl mx-auto text-lg leading-relaxed">
+              <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold text-brand-navy mb-4 leading-tight">Quem Somos</h1>
+              <p className="text-slate-600 max-w-xl mx-auto text-base sm:text-lg leading-relaxed">
                 As idealizadoras do Espalhe Melodias e a história de um projeto que nasceu do desejo de fortalecer conexões entre profissionais de saúde mental.
               </p>
             </div>
 
           {/* Nossa Gênese */}
-          <div className="grid md:grid-cols-2 gap-10 items-center mb-20 bg-white border border-brand-sand rounded-3xl p-9 sm:p-12 shadow-sm">
-            <div>
+          <div className="mb-12 sm:mb-14 bg-white border border-brand-sand rounded-3xl p-6 sm:p-9 lg:p-12 shadow-sm">
+            <div className="mb-8">
               <p className="text-sm font-bold text-brand-moss uppercase tracking-widest mb-3">Nossa Gênese</p>
               <h2 className="font-serif text-2xl md:text-3xl font-bold text-brand-navy leading-snug mb-5">
                 Fortalecer e crescer juntos em saúde mental
               </h2>
-              <p className="text-slate-600 text-base leading-relaxed mb-4">
+              <p className="text-slate-600 text-base leading-relaxed mb-4 max-w-3xl">
                 O Espalhe Melodias surgiu do compromisso ético de conectar terapeutas e aproximar caminhos sadios de escuta. Acreditamos que a saúde mental não deve ser construída em solidão ou competição egoica, mas como uma sinfonia coletiva de presenças sintonizadas.
               </p>
-              <div className="border-l-2 border-brand-clay pl-5 py-1">
+              <div className="border-l-2 border-brand-clay pl-5 py-1 max-w-2xl">
                 <p className="text-slate-700 italic text-sm leading-relaxed">
                   "Cada melodia de cuidado só se torna verdadeiramente livre e potente quando reverbera em harmonia com outros saberes."
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-5">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 { icon: Users, title: 'Presença Ativa', desc: 'Conexões reais que ultrapassam os limites herméticos das clínicas tradicionais.' },
                 { icon: ShieldCheck, title: 'Cuidado Seguro', desc: 'Triagens de urgência e um diretório transparente de profissionais certificados.' },
                 { icon: TrendingUp, title: 'Crescimento Intelectual', desc: 'Troca de ensinamentos clínicos, materiais éticos e resoluções de desafios coletivos.' },
                 { icon: HeartHandshake, title: 'Canto de Apoio', desc: 'Redes de sustentabilidade emocional contra o esgotamento dos atendimentos.' },
               ].map(item => (
-                <div key={item.title} className="bg-brand-cream/40 rounded-xl p-4">
+                <div key={item.title} className="bg-brand-cream/40 rounded-xl p-4 flex flex-col">
                   <item.icon className="w-4.5 h-4.5 text-brand-moss mb-2.5" strokeWidth={1.75} />
                   <p className="font-bold text-brand-navy text-sm mb-1">{item.title}</p>
                   <p className="text-slate-500 text-xs leading-relaxed">{item.desc}</p>
@@ -1325,7 +1325,7 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
           </div>
 
           {/* Founders */}
-          <div className="grid md:grid-cols-2 gap-8 mb-20">
+          <div className="grid md:grid-cols-2 gap-6 sm:gap-8 mb-12 sm:mb-14">
             {[
               {
                 name: 'Jéssica Muhamed',
@@ -1350,9 +1350,9 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
                 dot: 'bg-brand-moss',
               }
             ].map(founder => (
-              <div key={founder.name} className="bg-white rounded-3xl p-9 border border-brand-sand shadow-sm hover:shadow-lg transition-shadow duration-300">
-                <div className="flex flex-col items-center text-center mb-7">
-                  <img src={founder.avatar} alt={founder.name} className="w-28 h-28 rounded-full object-cover shadow-md ring-4 ring-brand-sand mb-5" />
+              <div key={founder.name} className="bg-white rounded-3xl p-6 sm:p-9 border border-brand-sand shadow-sm hover:shadow-lg transition-shadow duration-300">
+                <div className="flex flex-col items-center text-center mb-6">
+                  <img src={founder.avatar} alt={founder.name} className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover shadow-md ring-4 ring-brand-sand mb-4" />
                   <h3 className="font-serif text-xl font-bold text-brand-navy">{founder.name}</h3>
                   <p className={`${founder.textAccent} text-sm font-semibold mt-1`}>{founder.role}</p>
                   <a
@@ -1417,23 +1417,25 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
           </div>
 
           {/* Ciranda de valores */}
-          <div className="mb-14">
-            <div className="text-center mb-10">
+          <div className="mb-12 sm:mb-14">
+            <div className="text-center mb-8 sm:mb-10">
               <p className="text-sm font-bold text-brand-clay uppercase tracking-widest mb-2">Sabor do Cuidado Integrado</p>
-              <h3 className="font-serif text-2xl md:text-3xl font-bold text-brand-navy">Formando uma sinfonia saudável de trocas</h3>
+              <h3 className="font-serif text-xl sm:text-2xl md:text-3xl font-bold text-brand-navy">Formando uma sinfonia saudável de trocas</h3>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5">
               {[
-                { title: 'Escuta Sensível', tag: 'Atenção & Empatia', desc: 'Escutar com atenção plena e empatia genuína. O silêncio qualificado acolhe a dor e resgata as melodias internas de quem compartilha.' },
-                { title: 'Respeito Descondicionado', tag: 'Singularidades valorizadas', desc: 'Reconhecimento das histórias singulares e das barreiras individuais. Uma rede saudável respeita a ética e a liberdade de cada profissional.' },
-                { title: 'Troca Recíproca', tag: 'Troca que inspira', desc: 'Transmissão livre de saberes práticos, materiais clínicos e referências sem medo de concorrência. Quanto mais compartilhamos, mais nos completamos.' },
-                { title: 'Conexões Reais', tag: 'Vínculos sadios e duradouros', desc: 'Transparência nas relações, gerando novas possibilidades clínicas, parcerias intelectuais e indicações confiáveis.' },
-                { title: 'Apoio Múltiplo', tag: 'Sustentação mútua', desc: 'Suporte clínico e existencial para lidar com o peso e o isolamento técnico da atuação solitária no consultório.' },
+                { title: 'Escuta Sensível', tag: 'Atenção & Empatia', desc: 'Escutar com atenção plena e empatia genuína, acolhendo a dor de quem compartilha.', accent: 'from-brand-moss to-brand-moss-dark' },
+                { title: 'Respeito Descondicionado', tag: 'Singularidades valorizadas', desc: 'Reconhecimento das histórias singulares e da ética e liberdade de cada profissional.', accent: 'from-brand-clay to-brand-clay-dark' },
+                { title: 'Troca Recíproca', tag: 'Troca que inspira', desc: 'Transmissão livre de saberes e materiais clínicos, sem medo de concorrência.', accent: 'from-brand-navy to-brand-navy-dark' },
+                { title: 'Conexões Reais', tag: 'Vínculos duradouros', desc: 'Transparência nas relações, gerando parcerias e indicações confiáveis.', accent: 'from-brand-moss to-brand-moss-dark' },
+                { title: 'Apoio Múltiplo', tag: 'Sustentação mútua', desc: 'Suporte clínico e existencial contra o isolamento da atuação solitária.', accent: 'from-brand-clay to-brand-clay-dark' },
               ].map((v, i) => (
-                <div key={v.title} className="bg-white border border-brand-sand rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
-                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-brand-clay/10 text-brand-clay text-xs font-black mb-4">{i + 1}</span>
-                  <h4 className="font-serif text-base font-bold text-brand-navy mb-1.5">{v.title}</h4>
-                  <span className="inline-block text-[11px] font-bold text-brand-moss bg-brand-moss/10 px-2.5 py-1 rounded-full mb-3">{v.tag}</span>
+                <div key={v.title} className="relative bg-white border border-brand-sand rounded-2xl p-5 pt-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col">
+                  <div className={`absolute top-0 left-5 -translate-y-1/2 w-8 h-8 rounded-full bg-gradient-to-br ${v.accent} flex items-center justify-center text-white text-xs font-black shadow-sm`}>
+                    {i + 1}
+                  </div>
+                  <h4 className="font-serif text-base font-bold text-brand-navy leading-snug min-h-[2.5rem]">{v.title}</h4>
+                  <span className="inline-block text-[10px] font-bold text-brand-moss bg-brand-moss/10 px-2.5 py-1 rounded-full mt-2 mb-3 self-start">{v.tag}</span>
                   <p className="text-slate-500 text-xs leading-relaxed">{v.desc}</p>
                 </div>
               ))}
@@ -1441,8 +1443,8 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
           </div>
 
           {/* Ganhos reais */}
-          <div className="grid sm:grid-cols-2 gap-5 mb-14">
-            <div className="bg-white border border-brand-sand rounded-2xl p-7 shadow-sm">
+          <div className="grid sm:grid-cols-2 gap-5 mb-14 items-stretch">
+            <div className="bg-white border border-brand-sand rounded-2xl p-7 shadow-sm flex flex-col">
               <p className="text-sm font-bold text-brand-navy uppercase tracking-widest mb-4">Ganhos reais</p>
               <ul className="space-y-3">
                 {['Troca transparente de ensinamentos', 'Integração de abordagens terapêuticas', 'Prevenção de burnout clínico', 'Sinergia de parcerias e projetos'].map(g => (
@@ -1453,7 +1455,7 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
                 ))}
               </ul>
             </div>
-            <div className="bg-white border border-brand-sand rounded-2xl p-7 shadow-sm">
+            <div className="bg-white border border-brand-sand rounded-2xl p-7 shadow-sm flex flex-col">
               <p className="text-sm font-bold text-brand-navy uppercase tracking-widest mb-4">Nossa visão de futuro</p>
               <p className="text-slate-600 text-sm leading-relaxed">
                 Ser a maior rede de amparo multidisciplinar de psicologia interiorana, rompendo o isolamento profissional através de soluções digitais lúdicas e éticas — construindo, encontro após encontro, uma comunidade cada vez mais forte.
@@ -1462,35 +1464,44 @@ export default function PublicSite({ blogs: blogsProp, events: eventsProp, initi
           </div>
 
           {/* Values list */}
-          <div className="bg-gradient-to-br from-brand-navy via-brand-navy to-brand-navy-dark rounded-3xl p-10 sm:p-14 text-center border border-white/5 shadow-lg">
-            <h3 className="font-serif text-3xl font-bold text-white mb-9">Nossos Valores</h3>
-            <div className="flex flex-wrap justify-center gap-3 mb-11">
-              {['Ética', 'Acolhimento', 'Escuta Sensível', 'Respeito às Singularidades', 'Cooperação', 'Humanidade', 'Construção Coletiva'].map(v => (
-                <span key={v} className="flex items-center space-x-1.5 bg-white/10 border border-white/20 text-slate-200 px-4 py-2.5 rounded-full text-sm font-semibold hover:bg-white/15 transition">
-                  <Heart className="w-3.5 h-3.5 text-brand-clay-light" />
+          <div className="bg-gradient-to-br from-brand-navy via-brand-navy to-brand-navy-dark rounded-3xl p-6 sm:p-10 lg:p-14 text-center border border-white/5 shadow-lg">
+            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-white mb-7 sm:mb-9">Nossos Valores</h3>
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:justify-center gap-2.5 sm:gap-3 mb-9 sm:mb-11">
+              {['Ética', 'Acolhimento', 'Escuta Sensível', 'Respeito às Singularidades', 'Cooperação', 'Humanidade', 'Construção Coletiva'].map((v, i, arr) => (
+                <span
+                  key={v}
+                  className={`flex items-center justify-center gap-1.5 bg-white/10 border border-white/20 text-slate-200 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold hover:bg-white/15 transition text-center ${i === arr.length - 1 ? 'col-span-2 sm:col-span-1' : ''}`}
+                >
+                  <Heart className="w-3.5 h-3.5 text-brand-clay-light shrink-0" />
                   <span>{v}</span>
                 </span>
               ))}
             </div>
-            <div className="border-t border-white/10 pt-9">
-              <p className="font-script text-4xl text-brand-clay-light mb-3">Cada conexão é uma nota que,</p>
-              <p className="font-script text-2xl text-slate-300">junta com outras, cria uma linda melodia. ♡</p>
+            <div className="border-t border-white/10 pt-7 sm:pt-9">
+              <p className="font-script text-2xl sm:text-3xl md:text-4xl text-brand-clay-light mb-3">Cada conexão é uma nota que,</p>
+              <p className="font-script text-lg sm:text-xl md:text-2xl text-slate-300">junta com outras, cria uma linda melodia. ♡</p>
             </div>
           </div>
 
           {/* Apoio */}
           <div className="mt-14">
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-5 text-center">Apoio</p>
+            <div className="text-center mb-6">
+              <p className="text-sm font-bold text-brand-clay uppercase tracking-widest mb-2">Quem apoia essa jornada</p>
+              <h3 className="font-serif text-xl md:text-2xl font-bold text-brand-navy">Apoio</h3>
+            </div>
             <a
               href="https://psiflux.com.br/"
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex flex-col sm:flex-row items-center gap-6 bg-white border border-brand-sand rounded-3xl p-7 sm:p-8 max-w-2xl mx-auto shadow-sm hover:shadow-lg transition-shadow"
+              className="group relative flex flex-col sm:flex-row items-center gap-6 sm:gap-7 bg-white border border-brand-sand rounded-3xl p-6 sm:p-8 max-w-2xl mx-auto shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all overflow-hidden"
             >
-              <img src={logoPsiflux} alt="PsiFlux" className="h-14 w-14 rounded-2xl object-contain shrink-0" />
-              <div className="text-center sm:text-left">
+              <div className="absolute top-0 right-0 w-28 h-28 rounded-full bg-brand-clay/5 -translate-y-1/3 translate-x-1/3" />
+              <div className="w-16 h-16 rounded-2xl bg-brand-cream/60 border border-brand-sand flex items-center justify-center shrink-0 relative z-10">
+                <img src={logoPsiflux} alt="PsiFlux" className="h-10 w-10 object-contain" />
+              </div>
+              <div className="text-center sm:text-left relative z-10 min-w-0">
                 <p className="font-serif text-lg font-bold text-brand-navy group-hover:text-brand-clay transition">PsiFlux</p>
-                <p className="text-sm text-slate-500 leading-relaxed mt-1">
+                <p className="text-sm text-slate-500 leading-relaxed mt-1.5">
                   O sistema criado com psicólogos, para psicólogos. Agenda, prontuário, teleconsulta, financeiro e IA — tudo em uma plataforma pensada para a rotina clínica.
                 </p>
                 <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-clay mt-3">

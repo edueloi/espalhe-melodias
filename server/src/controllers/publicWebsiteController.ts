@@ -4,6 +4,9 @@ import type { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { newId, nowISO, parseJson } from '../utils/helpers';
 import { getPagination, buildMeta } from '../utils/paginate';
+import { sendEmail } from '../services/emailService';
+import { EmailTemplates } from '../services/emailTemplates';
+import { config } from '../config';
 
 function normalizeEmail(value: unknown): string {
   return String(value ?? '').trim().toLowerCase();
@@ -130,6 +133,16 @@ export async function createContactMessage(req: Request, res: Response): Promise
     message: successMessage,
     data: { id, message: successMessage },
   });
+
+  const adminEmail = config.contact.adminEmails;
+  if (adminEmail) {
+    const { subject: emailSubject, html, text } = EmailTemplates.contactFormAdminNotification(
+      name, email, phone || null, subject, messageBody, id,
+    );
+    sendEmail({ to: adminEmail, subject: emailSubject, html, text }).catch(err =>
+      console.error('[contact] Falha ao notificar admin por e-mail:', err),
+    );
+  }
 }
 
 export async function getMessage(req: AuthRequest, res: Response): Promise<void> {
