@@ -65,12 +65,9 @@ export async function getBlogCategoryBySlug(req: AuthRequest, res: Response): Pr
   });
 }
 
-/** Criar nova categoria (admin only) */
+/** Criar nova categoria (professional ou super-admin — permite criação inline no editor de posts) */
 export async function createBlogCategory(req: AuthRequest, res: Response): Promise<void> {
   if (!req.user) throw new AppError('Não autenticado.', 401);
-  if (req.user.role !== 'super-admin') {
-    throw new AppError('Acesso negado. Apenas admins podem criar categorias.', 403);
-  }
 
   const {
     name,
@@ -88,9 +85,12 @@ export async function createBlogCategory(req: AuthRequest, res: Response): Promi
     order_rank?: number;
   };
 
-  if (!name || !slug) {
+  if (!name?.trim() || !slug?.trim()) {
     throw new AppError('Nome e slug são obrigatórios.', 400);
   }
+
+  const existing = await queryOne('SELECT id FROM blog_categories WHERE slug = ? OR name = ?', [slug, name]);
+  if (existing) throw new AppError('Já existe uma categoria com este nome.', 409);
 
   const id = newId();
   const now = nowISO();
@@ -179,7 +179,7 @@ export async function deleteBlogCategory(req: AuthRequest, res: Response): Promi
     [id],
   );
 
-  if (countResult?.count ?? 0 > 0) {
+  if ((countResult?.count ?? 0) > 0) {
     throw new AppError('Não é possível deletar uma categoria com posts associados.', 400);
   }
 

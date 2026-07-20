@@ -294,6 +294,23 @@ CREATE TABLE IF NOT EXISTS peer_help_replies (
   CONSTRAINT fk_peer_reply_author  FOREIGN KEY (author_id)  REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ── Blog Categories ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS blog_categories (
+  id          CHAR(36)     NOT NULL PRIMARY KEY,
+  name        VARCHAR(100) NOT NULL UNIQUE,
+  slug        VARCHAR(100) NOT NULL UNIQUE,
+  description TEXT,
+  icon        VARCHAR(50),
+  color       VARCHAR(20),
+  order_rank  INT          DEFAULT 0,
+  post_count  INT          DEFAULT 0,
+  created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  INDEX idx_cat_slug  (slug),
+  INDEX idx_cat_order (order_rank)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ── Blog Posts ────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS blog_posts (
   id            CHAR(36)     NOT NULL PRIMARY KEY,
@@ -514,6 +531,18 @@ async function migrate() {
       { table: 'professional_profiles', column: 'twitter',       def: 'VARCHAR(200)' },
       { table: 'professional_profiles', column: 'website',       def: 'VARCHAR(300)' },
       { table: 'professional_profiles', column: 'slug',          def: 'VARCHAR(100) UNIQUE' },
+      // blog_posts — slug, categoria estruturada, SEO, destaque, views
+      { table: 'blog_posts', column: 'slug',            def: 'VARCHAR(300)' },
+      { table: 'blog_posts', column: 'category_id',      def: 'CHAR(36)' },
+      { table: 'blog_posts', column: 'status',           def: "ENUM('draft','published','archived') NOT NULL DEFAULT 'draft'" },
+      { table: 'blog_posts', column: 'seo_title',        def: 'VARCHAR(160)' },
+      { table: 'blog_posts', column: 'seo_description',  def: 'VARCHAR(160)' },
+      { table: 'blog_posts', column: 'seo_keywords',     def: 'VARCHAR(300)' },
+      { table: 'blog_posts', column: 'og_image_url',     def: 'TEXT' },
+      { table: 'blog_posts', column: 'featured',         def: 'TINYINT(1) NOT NULL DEFAULT 0' },
+      { table: 'blog_posts', column: 'featured_until',   def: 'DATETIME' },
+      { table: 'blog_posts', column: 'views_count',      def: 'INT NOT NULL DEFAULT 0' },
+      { table: 'blog_posts', column: 'published_at',     def: 'DATETIME' },
     ];
     for (const { table, column, def } of extraCols) {
       const [rows] = await conn.query(
@@ -532,6 +561,90 @@ async function migrate() {
     // Garante que cover_url suporte base64 de imagens (MEDIUMTEXT = até 16MB)
     await conn.query('ALTER TABLE health_events MODIFY COLUMN cover_url MEDIUMTEXT');
     console.log('✅  health_events.cover_url → MEDIUMTEXT');
+
+    // ── Backfill de blog_posts: slug, status, published_at ──────────────────────
+    await conn.query(
+      "UPDATE blog_posts SET status = 'published' WHERE published = 1 AND status = 'draft'",
+    );
+    await conn.query(
+      'UPDATE blog_posts SET published_at = post_date WHERE published = 1 AND published_at IS NULL',
+    );
+
+    const [postsWithoutSlug] = await conn.query(
+      'SELECT id, title FROM blog_posts WHERE slug IS NULL ORDER BY post_date ASC',
+    );
+    if (postsWithoutSlug.length > 0) {
+      const slugify = (title) =>
+        title
+          .normalize('NFD').replace(/[̀-ͯ]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .trim()
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .slice(0, 280);
+
+      const [existingSlugs] = await conn.query('SELECT slug FROM blog_posts WHERE slug IS NOT NULL');
+      const seen = new Set(existingSlugs.map(r => r.slug));
+
+      for (const post of postsWithoutSlug) {
+        let base = slugify(post.title) || 'post';
+        let candidate = base;
+        let n = 2;
+        while (seen.has(candidate)) {
+          candidate = `${base}-${n}`;
+          n++;
+        }
+        seen.add(candidate);
+        await conn.query('UPDATE blog_posts SET slug = ? WHERE id = ?', [candidate, post.id]);
+      }
+      console.log(`✅  Slug gerado para ${postsWithoutSlug.length} post(s) de blog existente(s)`);
+    }
+
+    // Índice único de slug — só depois do backfill garantir que não há NULL/duplicado
+    const [slugIdx] = await conn.query(
+      `SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.STATISTICS
+       WHERE TABLE_SCHEMA = 'espalhe_melodias' AND TABLE_NAME = 'blog_posts' AND INDEX_NAME = 'idx_blog_slug'`,
+    );
+    if (slugIdx[0].cnt === 0) {
+      await conn.query('ALTER TABLE blog_posts MODIFY COLUMN slug VARCHAR(300) NOT NULL');
+      await conn.query('ALTER TABLE blog_posts ADD UNIQUE INDEX idx_blog_slug (slug)');
+      console.log('✅  Índice único blog_posts.slug criado');
+    }
+
+    // FK de blog_posts.category_id → blog_categories.id
+    const [catFk] = await conn.query(
+      `SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+       WHERE TABLE_SCHEMA = 'espalhe_melodias' AND TABLE_NAME = 'blog_posts' AND CONSTRAINT_NAME = 'fk_blog_category'`,
+    );
+    if (catFk[0].cnt === 0) {
+      await conn.query(
+        'ALTER TABLE blog_posts ADD CONSTRAINT fk_blog_category FOREIGN KEY (category_id) REFERENCES blog_categories(id) ON DELETE SET NULL',
+      );
+      await conn.query('ALTER TABLE blog_posts ADD INDEX idx_blog_category_id (category_id)');
+      await conn.query('ALTER TABLE blog_posts ADD INDEX idx_blog_featured (featured, featured_until)');
+      console.log('✅  FK blog_posts.category_id + índices criados');
+    }
+
+    // Seed de categorias iniciais de blog
+    const seedCategories = [
+      { name: 'Informação',        icon: '📰', color: '#3d4a2e' },
+      { name: 'Estilo de Vida',    icon: '🌿', color: '#814324' },
+      { name: 'Autoconhecimento',  icon: '🧠', color: '#1e2d4a' },
+      { name: 'Curiosidades',      icon: '✨', color: '#b5571a' },
+      { name: 'Saúde Mental',      icon: '💚', color: '#4a5530' },
+    ];
+    for (const [i, c] of seedCategories.entries()) {
+      const slug = c.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const [existing] = await conn.query('SELECT id FROM blog_categories WHERE slug = ?', [slug]);
+      if (existing.length === 0) {
+        await conn.query(
+          'INSERT INTO blog_categories (id, name, slug, icon, color, order_rank) VALUES (UUID(), ?, ?, ?, ?, ?)',
+          [c.name, slug, c.icon, c.color, i],
+        );
+      }
+    }
+    console.log('✅  Categorias de blog (seed) OK');
 
     console.log('\n🎉  Migration concluída com sucesso!\n');
     console.log('   Próximo passo: npm run seed  (para dados iniciais)\n');

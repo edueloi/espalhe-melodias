@@ -287,7 +287,7 @@ export default function DashboardView({ currentUser, onsetTab }: DashboardViewPr
                               <Heart className="w-3 h-3" /> {post.likes ?? 0}
                             </span>
                             <span className="flex items-center gap-0.5 text-[10px] text-slate-400">
-                              <Eye className="w-3 h-3" /> {post.views ?? 0}
+                              <Eye className="w-3 h-3" /> {post.views_count ?? 0}
                             </span>
                             {post.author_name && (
                               <span className="text-[10px] text-slate-400 ml-auto truncate max-w-[80px]">{post.author_name}</span>

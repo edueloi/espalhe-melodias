@@ -12,6 +12,7 @@ import type { AuthRequest } from '../middleware/auth';
 export const UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'avatars');
 export const GALLERY_UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'gallery');
 export const MATERIALS_UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'materials');
+export const BLOG_UPLOADS_DIR = path.join(process.cwd(), 'uploads', 'blog');
 
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -21,6 +22,9 @@ if (!fs.existsSync(GALLERY_UPLOADS_DIR)) {
 }
 if (!fs.existsSync(MATERIALS_UPLOADS_DIR)) {
   fs.mkdirSync(MATERIALS_UPLOADS_DIR, { recursive: true });
+}
+if (!fs.existsSync(BLOG_UPLOADS_DIR)) {
+  fs.mkdirSync(BLOG_UPLOADS_DIR, { recursive: true });
 }
 
 // ─── Multer config ─────────────────────────────────────────────────────────────
@@ -56,6 +60,17 @@ const galleryStorage = multer.diskStorage({
 
 export const uploadGallery = multer({
   storage: galleryStorage,
+  fileFilter,
+  limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB
+});
+
+const blogStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, BLOG_UPLOADS_DIR),
+  filename: (_req, file, cb) => cb(null, makeUniqueFilename(file.originalname)),
+});
+
+export const uploadBlogCover = multer({
+  storage: blogStorage,
   fileFilter,
   limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB
 });
@@ -153,6 +168,15 @@ export async function uploadGalleryPhoto(req: AuthRequest, res: Response): Promi
 
 export function deleteGalleryFileIfLocal(imageUrl: string | undefined | null): void {
   deleteFileIfLocal(imageUrl);
+}
+
+// ─── POST /upload/blog-cover ───────────────────────────────────────────────────
+
+export async function uploadBlogCoverImage(req: AuthRequest, res: Response): Promise<void> {
+  if (!req.file) throw new AppError('Nenhum arquivo enviado.', 400);
+
+  const imageUrl = `/uploads/blog/${req.file.filename}`;
+  res.json({ success: true, data: { imageUrl } });
 }
 
 // ─── POST /upload/material ─────────────────────────────────────────────────────

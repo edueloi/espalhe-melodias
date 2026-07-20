@@ -9,14 +9,16 @@ import {
   storiesApi,
   galleryApi,
   ApiError,
+  type BlogPost,
 } from '../lib/api';
-import { BlogPost, HealthEvent } from '../types';
+import { PublicBlogPost, HealthEvent } from '../types';
 
-// Normaliza o formato da API para o tipo BlogPost local (types.ts)
-export function convertBlogPost(api: any): BlogPost {
+// Converte o BlogPost da API (api.ts) para o formato achatado usado no site público (types.ts)
+export function convertBlogPost(api: BlogPost): PublicBlogPost {
   const readTimeEstimate = Math.ceil((api.content?.split(/\s+/).length ?? 0) / 200) || 5;
   return {
     id: api.id,
+    slug: api.slug || api.id,
     title: api.title,
     excerpt: api.excerpt,
     content: api.content,
@@ -24,7 +26,7 @@ export function convertBlogPost(api: any): BlogPost {
     imageUrl: api.image_url ?? '',
     authorName: api.author_name ?? '',
     authorAvatar: api.author_avatar ?? '',
-    date: api.created_at || api.post_date || '',
+    date: api.published_at || api.post_date || '',
     readTime: api.read_time || `${readTimeEstimate} min`,
   };
 }
@@ -75,7 +77,7 @@ export interface ActivityItem {
 
 export interface PublicSiteData {
   // Blog data
-  blogs: BlogPost[];
+  blogs: PublicBlogPost[];
   blogsLoading: boolean;
   blogsError: Error | null;
 
@@ -120,7 +122,7 @@ const EMPTY_TESTIMONIALS: Testimonial[] = [];
 
 export function usePublicSiteData(): PublicSiteData {
   // Blog states
-  const [blogs, setBlogs] = useState<BlogPost[]>([]);
+  const [blogs, setBlogs] = useState<PublicBlogPost[]>([]);
   const [blogsLoading, setBlogsLoading] = useState(true);
   const [blogsError, setBlogsError] = useState<Error | null>(null);
 

@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   BookMarked, Search, Clock, ArrowLeft, PenTool,
   Share2, CheckCircle, FileText, Image,
-  Layers, Heart, X, Pencil, Trash2
+  Layers, Heart, X, Pencil, Trash2, Link2, Check, Loader2, Upload,
 } from 'lucide-react';
 import { AppUser } from '../types';
-import { PageWrapper, ContentCard, ConfirmModal, useToast } from './ui';
-import { blogsApi, type BlogPost } from '../lib/api';
+import { PageWrapper, ContentCard, ConfirmModal, useToast, Input, Textarea, Combobox, Switch, RichTextEditor } from './ui';
+import type { ComboboxOption } from './ui/Combobox';
+import { blogsApi, blogCategoriesApi, uploadApi, type BlogPost, type BlogCategory } from '../lib/api';
 
 interface LearningsViewProps {
   currentUser: AppUser;
@@ -20,14 +21,23 @@ const PRESET_IMAGES = [
   { url: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=700&auto=format&fit=crop', label: 'Natureza' },
 ];
 
-const CATEGORIES = ['todos', 'Informação', 'Estilo de Vida', 'Autoconhecimento', 'Curiosidades'];
-
 const CAT_COLORS: Record<string, string> = {
   'Informação': 'bg-rose-50 text-rose-700 border-rose-100',
   'Estilo de Vida': 'bg-emerald-50 text-emerald-700 border-emerald-100',
   'Autoconhecimento': 'bg-violet-50 text-violet-700 border-violet-100',
   'Curiosidades': 'bg-amber-50 text-amber-700 border-amber-100',
 };
+
+function slugify(title: string): string {
+  return title
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 280);
+}
 
 export default function LearningsView({ currentUser }: LearningsViewProps) {
   const { show: showToast } = useToast();
@@ -43,11 +53,23 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
   const [newExcerpt, setNewExcerpt] = useState('');
   const [newContent, setNewContent] = useState('');
   const [newCategory, setNewCategory] = useState('Autoconhecimento');
+  const [newCategoryId, setNewCategoryId] = useState<string | undefined>(undefined);
   const [presetImg, setPresetImg] = useState(PRESET_IMAGES[0].url);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [newSlug, setNewSlug] = useState('');
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const [slugReason, setSlugReason] = useState('');
+  const [newPublished, setNewPublished] = useState(true);
+  const [seoTitle, setSeoTitle] = useState('');
+  const [seoDescription, setSeoDescription] = useState('');
+  const [seoKeywords, setSeoKeywords] = useState('');
+  const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [publishing, setPublishing] = useState(false);
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [deletingPost, setDeletingPost] = useState<BlogPost | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const loadBlogs = (cat?: string, q?: string) => {
     setLoading(true);
@@ -59,6 +81,29 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
 
   useEffect(() => { loadBlogs(); }, []);
   useEffect(() => { loadBlogs(activeCategory, searchQuery); }, [activeCategory, searchQuery]);
+  useEffect(() => {
+    blogCategoriesApi.list().then(setCategories).catch(() => setCategories([]));
+  }, []);
+
+  // Auto-preenche o slug a partir do título, enquanto o usuário não editar manualmente
+  useEffect(() => {
+    if (!slugTouched && showAddForm) setNewSlug(slugify(newTitle));
+  }, [newTitle, slugTouched, showAddForm]);
+
+  // Checa disponibilidade do slug com debounce
+  useEffect(() => {
+    if (!newSlug || !showAddForm) { setSlugStatus('idle'); return; }
+    setSlugStatus('checking');
+    const timer = setTimeout(() => {
+      blogsApi.checkSlug(newSlug, editingId ?? undefined)
+        .then(res => {
+          setSlugStatus(res.available ? 'available' : 'taken');
+          setSlugReason(res.reason ?? '');
+        })
+        .catch(() => setSlugStatus('idle'));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [newSlug, editingId, showAddForm]);
 
   const openBlog = async (id: string) => {
     setSelectedBlogId(id);
@@ -82,7 +127,11 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
 
   const resetForm = () => {
     setNewTitle(''); setNewExcerpt(''); setNewContent('');
-    setNewCategory('Autoconhecimento'); setPresetImg(PRESET_IMAGES[0].url);
+    setNewCategory('Autoconhecimento'); setNewCategoryId(undefined);
+    setPresetImg(PRESET_IMAGES[0].url);
+    setNewSlug(''); setSlugTouched(false); setSlugStatus('idle'); setSlugReason('');
+    setNewPublished(true);
+    setSeoTitle(''); setSeoDescription(''); setSeoKeywords('');
     setEditingId(null);
   };
 
@@ -97,24 +146,72 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
     setNewExcerpt(post.excerpt);
     setNewContent(post.content);
     setNewCategory(post.category);
+    setNewCategoryId(post.category_id);
     setPresetImg(post.image_url || PRESET_IMAGES[0].url);
+    setNewSlug(post.slug || '');
+    setSlugTouched(true);
+    setNewPublished(post.status === 'published');
+    setSeoTitle(post.seo_title || '');
+    setSeoDescription(post.seo_description || '');
+    setSeoKeywords(post.seo_keywords || '');
     setShowAddForm(true);
+  };
+
+  const handleCoverUpload = async (file: File) => {
+    setUploadingCover(true);
+    try {
+      const { imageUrl } = await uploadApi.uploadBlogCover(file);
+      setPresetImg(imageUrl);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erro ao enviar imagem.', 'error');
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
+  const handleCategoryChange = async (value: string | string[]) => {
+    const val = Array.isArray(value) ? value[0] : value;
+    const existing = categories.find(c => c.id === val || c.name === val);
+    if (existing) {
+      setNewCategory(existing.name);
+      setNewCategoryId(existing.id);
+    } else {
+      setNewCategory(val);
+      setNewCategoryId(undefined);
+    }
+  };
+
+  const handleCustomCategory = async (name: string) => {
+    try {
+      const created = await blogCategoriesApi.create({ name, slug: slugify(name) });
+      setCategories(prev => [...prev, { ...created, order_rank: prev.length, post_count: 0 }]);
+      setNewCategory(created.name);
+      setNewCategoryId(created.id);
+    } catch {
+      setNewCategory(name);
+      setNewCategoryId(undefined);
+    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newExcerpt.trim() || !newContent.trim()) return;
+    if (slugStatus === 'taken') { showToast('Escolha outro endereço (slug) — este já está em uso.', 'error'); return; }
     setPublishing(true);
     try {
+      const payload = {
+        title: newTitle, excerpt: newExcerpt, content: newContent,
+        category: newCategory, category_id: newCategoryId,
+        slug: newSlug || undefined, imageUrl: presetImg,
+        status: (newPublished ? 'published' : 'draft') as 'published' | 'draft',
+        seoTitle: seoTitle || undefined, seoDescription: seoDescription || undefined, seoKeywords: seoKeywords || undefined,
+      };
       if (editingId) {
-        await blogsApi.update(editingId, {
-          title: newTitle, excerpt: newExcerpt, content: newContent,
-          category: newCategory, imageUrl: presetImg,
-        });
+        await blogsApi.update(editingId, payload);
         showToast('Artigo atualizado!', 'success');
       } else {
-        await blogsApi.create({ title: newTitle, excerpt: newExcerpt, content: newContent, category: newCategory, imageUrl: presetImg, readTime: '5 min' });
-        showToast('Artigo publicado!', 'success');
+        await blogsApi.create({ ...payload, readTime: '5 min' });
+        showToast(newPublished ? 'Artigo publicado!' : 'Rascunho salvo!', 'success');
       }
       resetForm();
       setShowAddForm(false);
@@ -278,58 +375,143 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
                 {/* Form */}
-                <form id="blog-create-form" onSubmit={handleCreate} className="lg:col-span-7 space-y-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="sm:col-span-2 space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                        <FileText className="w-3 h-3 text-brand-moss" /> Título do Artigo
-                      </label>
-                      <input id="blog-title-input" type="text" required placeholder="Ex: A sinfonia do sono..."
-                        value={newTitle} onChange={e => setNewTitle(e.target.value)}
-                        className="w-full text-xs text-brand-navy bg-brand-cream border border-brand-sand px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/30 transition" />
+                <form id="blog-create-form" onSubmit={handleCreate} className="lg:col-span-7 space-y-6">
+                  <div className="space-y-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                          <FileText className="w-3 h-3 text-brand-moss" /> Título do Artigo
+                        </label>
+                        <Input id="blog-title-input" required placeholder="Ex: A sinfonia do sono..."
+                          value={newTitle} onChange={e => setNewTitle(e.target.value)} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                          <Layers className="w-3 h-3 text-brand-moss" /> Categoria
+                        </label>
+                        <Combobox
+                          options={categories.map((c): ComboboxOption => ({ value: c.id, label: c.name }))}
+                          value={newCategoryId ?? newCategory}
+                          onChange={handleCategoryChange}
+                          allowCustom
+                          onCustomAdd={handleCustomCategory}
+                          placeholder="Selecionar ou criar..."
+                          size="sm"
+                        />
+                      </div>
                     </div>
+
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                        <Layers className="w-3 h-3 text-brand-moss" /> Categoria
+                        <Link2 className="w-3 h-3 text-brand-moss" /> Endereço do artigo (slug)
                       </label>
-                      <select id="blog-category-select" value={newCategory} onChange={e => setNewCategory(e.target.value)}
-                        className="w-full text-xs text-brand-navy bg-brand-cream border border-brand-sand px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/30 transition">
-                        {CATEGORIES.filter(c => c !== 'todos').map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
+                      <Input
+                        id="blog-slug-input"
+                        value={newSlug}
+                        onChange={e => { setNewSlug(e.target.value.toLowerCase()); setSlugTouched(true); }}
+                        placeholder="a-sinfonia-do-sono"
+                        iconRight={
+                          slugStatus === 'checking' ? <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" /> :
+                          slugStatus === 'available' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> :
+                          slugStatus === 'taken' ? <X className="w-3.5 h-3.5 text-red-500" /> : undefined
+                        }
+                      />
+                      <p className={`text-[10px] ${slugStatus === 'taken' ? 'text-red-500' : 'text-slate-400'}`}>
+                        {slugStatus === 'taken' ? slugReason : `espalhemelodias.com.br/blog/${newSlug || '...'}`}
+                      </p>
                     </div>
-                  </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Resumo (Chamada de Capa)</label>
-                    <input id="blog-excerpt-input" type="text" required placeholder="Frase marcante que chame o leitor..."
-                      value={newExcerpt} onChange={e => setNewExcerpt(e.target.value)}
-                      className="w-full text-xs text-brand-navy bg-brand-cream border border-brand-sand px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/30 transition" />
-                  </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Resumo (Chamada de Capa)</label>
+                      <Input id="blog-excerpt-input" required placeholder="Frase marcante que chame o leitor..."
+                        value={newExcerpt} onChange={e => setNewExcerpt(e.target.value)} />
+                    </div>
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                      <Image className="w-3 h-3 text-brand-moss" /> Imagem de Capa
-                    </label>
-                    <div className="grid grid-cols-5 gap-2">
-                      {PRESET_IMAGES.map((img, i) => (
-                        <button key={i} type="button" id={`preset-img-${i}`}
-                          onClick={() => setPresetImg(img.url)}
-                          className={`relative rounded-xl overflow-hidden h-14 border-2 transition-all ${presetImg === img.url ? 'border-brand-clay scale-[1.04] shadow-md' : 'border-transparent opacity-60 hover:opacity-100'}`}>
-                          <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                        <Image className="w-3 h-3 text-brand-moss" /> Imagem de Capa
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => coverInputRef.current?.click()}
+                          disabled={uploadingCover}
+                          className="flex items-center gap-2 px-4 py-2.5 border border-dashed border-brand-sand hover:border-brand-clay rounded-xl text-xs font-bold text-brand-navy transition disabled:opacity-50"
+                        >
+                          {uploadingCover ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                          {uploadingCover ? 'Enviando...' : 'Enviar imagem'}
                         </button>
-                      ))}
+                        <input
+                          ref={coverInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="hidden"
+                          onChange={e => { const f = e.target.files?.[0]; if (f) void handleCoverUpload(f); e.target.value = ''; }}
+                        />
+                        <span className="text-[10px] text-slate-400">ou escolha uma sugestão abaixo</span>
+                      </div>
+                      <div className="grid grid-cols-5 gap-2">
+                        {PRESET_IMAGES.map((img, i) => (
+                          <button key={i} type="button" id={`preset-img-${i}`}
+                            onClick={() => setPresetImg(img.url)}
+                            className={`relative rounded-xl overflow-hidden h-14 border-2 transition-all ${presetImg === img.url ? 'border-brand-clay scale-[1.04] shadow-md' : 'border-transparent opacity-60 hover:opacity-100'}`}>
+                            <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Corpo do Artigo</label>
+                      <RichTextEditor
+                        value={newContent}
+                        onChange={setNewContent}
+                        minHeight={280}
+                        placeholder="Digite o artigo completo com insights e referências clínicas..."
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-brand-cream/60 border border-brand-sand rounded-xl">
+                      <div>
+                        <p className="text-xs font-bold text-brand-navy">Publicar imediatamente</p>
+                        <p className="text-[10px] text-slate-400">Desative para salvar como rascunho</p>
+                      </div>
+                      <Switch checked={newPublished} onCheckedChange={setNewPublished} />
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Corpo do Artigo</label>
-                    <textarea id="blog-content-textarea" rows={10} required
-                      placeholder="Digite o artigo completo com insights e referências clínicas..."
-                      value={newContent} onChange={e => setNewContent(e.target.value)}
-                      className="w-full text-xs text-brand-navy bg-brand-cream border border-brand-sand px-3 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-clay/30 transition leading-relaxed resize-none" />
-                  </div>
+                  {/* SEO & Compartilhamento */}
+                  <ContentCard padding="md">
+                    <p className="text-[10px] font-bold text-brand-clay uppercase tracking-widest mb-4">SEO & Compartilhamento</p>
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Título para o Google</label>
+                          <span className="text-[10px] text-slate-400">{seoTitle.length}/60</span>
+                        </div>
+                        <Input value={seoTitle} onChange={e => setSeoTitle(e.target.value.slice(0, 60))} placeholder={newTitle || 'Título do artigo'} />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Descrição para o Google</label>
+                          <span className="text-[10px] text-slate-400">{seoDescription.length}/160</span>
+                        </div>
+                        <Textarea rows={2} value={seoDescription} onChange={e => setSeoDescription(e.target.value.slice(0, 160))} placeholder={newExcerpt || 'Resumo do artigo'} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Palavras-chave (separadas por vírgula)</label>
+                        <Input value={seoKeywords} onChange={e => setSeoKeywords(e.target.value)} placeholder="saúde mental, autocuidado, ansiedade" />
+                      </div>
+
+                      {/* Preview Google */}
+                      <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                        <p className="text-[9px] text-slate-400 mb-1">Pré-visualização no Google</p>
+                        <p className="text-[13px] text-[#1a0dab] leading-tight truncate">{seoTitle || newTitle || 'Título do artigo'}</p>
+                        <p className="text-[11px] text-emerald-700 leading-tight">espalhemelodias.com.br/blog/{newSlug || 'artigo'}</p>
+                        <p className="text-[11px] text-slate-500 leading-snug line-clamp-2 mt-0.5">{seoDescription || newExcerpt || 'Descrição do artigo aparecerá aqui...'}</p>
+                      </div>
+                    </div>
+                  </ContentCard>
 
                   <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-brand-sand/50">
                     <button type="button" onClick={() => { setShowAddForm(false); resetForm(); }}
@@ -338,7 +520,7 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
                     </button>
                     <button id="btn-publish-blog" type="submit"
                       className="px-5 py-2.5 bg-brand-moss hover:bg-brand-moss-dark text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md transition">
-                      {editingId ? 'Salvar Alterações' : 'Publicar no Melodias'}
+                      {editingId ? 'Salvar Alterações' : newPublished ? 'Publicar no Melodias' : 'Salvar Rascunho'}
                     </button>
                   </div>
                 </form>
@@ -415,7 +597,7 @@ export default function LearningsView({ currentUser }: LearningsViewProps) {
         {/* Filters */}
         <div id="blog-filters" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5">
-            {CATEGORIES.map(cat => (
+            {['todos', ...categories.map(c => c.name)].map(cat => (
               <button key={cat} id={`filter-cat-${cat}`}
                 onClick={() => setActiveCategory(cat)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap ${

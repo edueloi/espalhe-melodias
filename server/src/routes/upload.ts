@@ -5,6 +5,7 @@ import {
   upload, uploadAvatar, deleteAvatar,
   uploadGallery, uploadGalleryPhoto,
   uploadMaterial, uploadMaterialFile,
+  uploadBlogCover, uploadBlogCoverImage,
 } from '../controllers/uploadController';
 
 const router = Router();
@@ -15,5 +16,7 @@ router.delete('/avatar', authenticate, asyncHandler(deleteAvatar));
 router.post('/gallery-photo', authenticate, professionalOrAdmin, uploadGallery.single('photo'), asyncHandler(uploadGalleryPhoto));
 
 router.post('/material', authenticate, professionalOrAdmin, uploadMaterial.single('file'), asyncHandler(uploadMaterialFile));
+
+router.post('/blog-cover', authenticate, professionalOrAdmin, uploadBlogCover.single('cover'), asyncHandler(uploadBlogCoverImage));
 
 export default router;

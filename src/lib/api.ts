@@ -143,7 +143,14 @@ export interface PagedResult<T> {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function get<T>(path: string) { return request<T>(path); }
+function buildQs(params?: Record<string, string | number | undefined>): string {
+  if (!params) return '';
+  const entries = Object.entries(params).filter(([, v]) => v !== undefined);
+  return entries.length ? '?' + entries.map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&') : '';
+}
+function get<T>(path: string, params?: Record<string, string | number | undefined>) {
+  return request<T>(`${path}${buildQs(params)}`);
+}
 function post<T>(path: string, body: unknown) {
   return request<T>(path, { method: 'POST', body: JSON.stringify(body) });
 }
@@ -156,10 +163,7 @@ function patch<T>(path: string, body: unknown) {
 function del<T>(path: string) { return request<T>(path, { method: 'DELETE' }); }
 
 async function getPaged<T>(path: string, params?: Record<string, string | number | undefined>): Promise<PagedResult<T>> {
-  const qs = params
-    ? '?' + Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&')
-    : '';
-  const body = await requestResponse<T[]>(`${path}${qs}`);
+  const body = await requestResponse<T[]>(`${path}${buildQs(params)}`);
   return {
     data: body.data ?? [],
     meta: body.meta ?? { total: 0, page: 1, limit: 20, totalPages: 0 },
@@ -783,35 +787,82 @@ export const emailInvitesApi = {
 
 // ─── Blogs ────────────────────────────────────────────────────────────────────
 
+export interface BlogCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  order_rank: number;
+  post_count: number;
+}
+
 export interface BlogPost {
   id: string;
   title: string;
+  slug: string;
   excerpt: string;
   content: string;
   category: string;
+  category_id?: string;
   image_url?: string;
   author_id: string;
   author_name: string;
   author_avatar?: string;
   read_time: string;
   likes: number;
-  views?: number;
+  views_count: number;
   likedBy?: string[];
+  status: 'draft' | 'published' | 'archived';
   published: number;
+  featured: boolean;
+  featured_until?: string;
+  seo_title?: string;
+  seo_description?: string;
+  seo_keywords?: string;
+  og_image_url?: string;
   post_date: string;
+  published_at?: string;
   updated_at: string;
 }
 
+export interface CreateBlogPostInput {
+  title: string;
+  excerpt: string;
+  content: string;
+  category: string;
+  category_id?: string;
+  slug?: string;
+  imageUrl?: string;
+  readTime?: string;
+  status?: 'draft' | 'published' | 'archived';
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string;
+  ogImageUrl?: string;
+  featured?: boolean;
+}
+
 export const blogsApi = {
-  list: (params?: { category?: string; search?: string; page?: number; limit?: number }) =>
+  list: (params?: { category?: string; category_id?: string; search?: string; page?: number; limit?: number; status?: 'all' | BlogPost['status'] }) =>
     getPaged<BlogPost>('/blogs', params),
   get: (id: string) => get<BlogPost>(`/blogs/${id}`),
-  create: (data: { title: string; excerpt: string; content: string; category: string; imageUrl?: string; readTime?: string; published?: boolean }) =>
-    post<{ id: string }>('/blogs', data),
-  update: (id: string, data: { title?: string; excerpt?: string; content?: string; category?: string; imageUrl?: string; readTime?: string; published?: boolean }) =>
-    put<void>(`/blogs/${id}`, data),
+  getBySlug: (slug: string) => get<BlogPost>(`/blogs/slug/${slug}`),
+  checkSlug: (slug: string, excludeId?: string) =>
+    get<{ available: boolean; slug?: string; reason?: string }>('/blogs/slug-check', { slug, excludeId }),
+  featured: (limit?: number) => get<BlogPost[]>('/blogs/featured', { limit }),
+  popular: (limit?: number, days?: number) => get<BlogPost[]>('/blogs/popular', { limit, days }),
+  create: (data: CreateBlogPostInput) => post<{ id: string; slug: string }>('/blogs', data),
+  update: (id: string, data: Partial<CreateBlogPostInput>) => put<void>(`/blogs/${id}`, data),
   delete: (id: string) => del<void>(`/blogs/${id}`),
   like: (id: string) => post<{ likes: number; liked: boolean }>(`/blogs/${id}/like`, {}),
+};
+
+export const blogCategoriesApi = {
+  list: () => get<BlogCategory[]>('/blogs/categories'),
+  create: (data: { name: string; slug: string; description?: string; icon?: string; color?: string }) =>
+    post<{ id: string; name: string; slug: string }>('/blogs/categories', data),
 };
 
 // ─── Gallery ──────────────────────────────────────────────────────────────────
@@ -853,6 +904,19 @@ export const uploadApi = {
     return body.data!;
   },
   deleteAvatar: () => del<void>('/upload/avatar'),
+  uploadBlogCover: async (file: File): Promise<{ imageUrl: string }> => {
+    const token = tokenStore.get();
+    const form = new FormData();
+    form.append('cover', file);
+    const res = await fetch(`${BASE_URL}/upload/blog-cover`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    const body = await res.json().catch(() => ({})) as ApiResponse<{ imageUrl: string }>;
+    if (!res.ok) throw new ApiError(body.message ?? `Erro ${res.status}`, res.status);
+    return body.data!;
+  },
   uploadGalleryPhoto: async (file: File): Promise<{ imageUrl: string }> => {
     const token = tokenStore.get();
     const form = new FormData();
@@ -926,26 +990,6 @@ export const contactApi = {
 };
 
 // ─── Blog Posts - Expansão ────────────────────────────────────────────────
-
-export interface BlogPostAPI {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt: string;
-  content: string;
-  author_id: string;
-  author_name: string;
-  author_avatar?: string;
-  category: string;
-  featured?: boolean;
-  published: boolean;
-  image_url?: string;
-  likes: number;
-  views: number;
-  created_at: string;
-  updated_at: string;
-}
-
 
 // ─── Instagram Integration ────────────────────────────────────────────────
 

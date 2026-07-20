@@ -108,8 +108,10 @@ export interface SuggestionIdea {
   likes: number;
 }
 
-export interface BlogPost {
+/** Formato "achatado" do post de blog usado pelo site público (ver convertBlogPost em usePublicSiteData.ts). */
+export interface PublicBlogPost {
   id: string;
+  slug: string;
   title: string;
   excerpt: string;
   content: string;

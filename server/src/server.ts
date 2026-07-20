@@ -6,7 +6,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 
 import { config } from './config';
-import { testConnection } from './config/db';
+import { testConnection, query } from './config/db';
 import { errorHandler, notFound } from './middleware/errorHandler';
 
 import authRoutes          from './routes/auth';
@@ -28,6 +28,7 @@ import uploadRoutes            from './routes/upload';
 import publicWebsiteRoutes     from './routes/publicWebsite';
 import instagramRoutes         from './routes/instagram';
 import galleryRoutes           from './routes/gallery';
+import blogSeoRoutes           from './routes/blogSeo';
 
 const app = express();
 
@@ -53,6 +54,26 @@ app.use(morgan(config.isDev ? 'dev' : 'combined'));
 
 // Serve arquivos de upload (avatars, etc.)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+// ─── Sitemap (antes do rate limiter — acessado com frequência por bots) ───────
+
+app.get('/sitemap.xml', async (_req, res) => {
+  const base = config.appUrl.replace(/\/$/, '');
+  const staticPaths = ['/', '/quem-somos', '/blog', '/galeria', '/eventos', '/contato'];
+
+  const posts = await query<{ slug: string; updated_at: string }>(
+    "SELECT slug, updated_at FROM blog_posts WHERE status = 'published' AND slug IS NOT NULL",
+  ).catch(() => []);
+
+  const urls = [
+    ...staticPaths.map(p => `  <url><loc>${base}${p}</loc></url>`),
+    ...posts.map(p => `  <url><loc>${base}/blog/${p.slug}</loc><lastmod>${new Date(p.updated_at).toISOString()}</lastmod></url>`),
+  ].join('\n');
+
+  res.setHeader('Content-Type', 'application/xml');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`);
+});
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 
@@ -101,6 +122,11 @@ app.use('/api', publicWebsiteRoutes);
 
 // ─── Instagram Integration Routes ─────────────────────────────────────────────
 app.use('/api/instagram', instagramRoutes);
+
+// ─── Rota pública do blog (SEO para bots, transparente para navegadores) ──────
+// Deve ficar ANTES do notFound para interceptar /blog/:slug
+
+app.use('/blog', blogSeoRoutes);
 
 // ─── Rota pública do profissional (SEO, sem autenticação) ─────────────────────
 // Deve ficar ANTES do notFound para interceptar /profissional/:id
