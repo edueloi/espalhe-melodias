@@ -157,7 +157,7 @@ export default function DashboardView({ currentUser, onsetTab }: DashboardViewPr
             <StatCard title="Membros Ativos"  value={loadingStats ? '—' : approved} icon={UserCheck}    color="success"
               trend={{ value: activeRate, isUp: true }} description={`${activeRate}% aprovados`} delay={0.05} />
             <StatCard title="Profissionais"   value={loadingStats ? '—' : (stats?.professionals ?? 0)} icon={GraduationCap} color="purple"
-              description="Psicólogos credenciados" delay={0.1} />
+              description="Profissionais credenciados" delay={0.1} />
             <StatCard title="Aguardando"      value={loadingStats ? '—' : pending}  icon={Bell}         color="danger"
               description={pending > 0 ? 'Clique para aprovar' : 'Nenhum pendente'} delay={0.15} />
           </StatGrid>
@@ -183,7 +183,7 @@ export default function DashboardView({ currentUser, onsetTab }: DashboardViewPr
                     : { tab: 'preciso-ajuda',      icon: HeartPulse, color: 'bg-red-50 text-red-500',        label: 'Preciso de Ajuda',         sub: 'Falar com um profissional' },
                   currentUser.role !== 'member'
                     ? { tab: 'admin-materiais',   icon: BookOpen,   color: 'bg-brand-navy/5 text-brand-navy', label: 'Inserir Material',        sub: 'Publicar e-book ou áudio' }
-                    : { tab: 'diretorio-membros', icon: Users,      color: 'bg-teal-50 text-teal-600',        label: 'Buscar Psicólogo',         sub: 'Ver diretório e perfis' },
+                    : { tab: 'diretorio-membros', icon: Users,      color: 'bg-teal-50 text-teal-600',        label: 'Buscar Profissional',      sub: 'Ver diretório e perfis' },
                 ].map(item => (
                   <button
                     key={item.tab}

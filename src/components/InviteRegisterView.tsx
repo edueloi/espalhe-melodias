@@ -2,16 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Lock, Mail, User, Phone, ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Stethoscope, ChevronDown } from 'lucide-react';
 import { inviteLinksApi, emailInvitesApi, usersApi, authApi, tokenStore, API_ORIGIN } from '../lib/api';
 import { ApiError } from '../lib/api';
-
-const ESPECIALIDADES = [
-  { value: 'Psicólogo(a)',           label: 'Psicólogo(a)' },
-  { value: 'Psicopedagogo(a)',       label: 'Psicopedagogo(a)' },
-  { value: 'Pediatra',              label: 'Pediatra' },
-  { value: 'Psiquiatra',            label: 'Psiquiatra' },
-  { value: 'Terapeuta Ocupacional', label: 'Terapeuta Ocupacional' },
-  { value: 'Médico(a)',             label: 'Médico(a)' },
-  { value: 'outro',                 label: 'Outro' },
-];
+import { PROFESSION_TYPES as ESPECIALIDADES } from '../lib/professionTypes';
 
 interface Props {
   token: string;

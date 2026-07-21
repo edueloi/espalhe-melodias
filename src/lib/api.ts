@@ -632,6 +632,7 @@ export interface Professional {
   email: string;
   avatar?: string;
   crp: string;
+  profession_type?: string;
   specialties: string[];
   bio: string;
   price_per_session: number;
@@ -681,6 +682,7 @@ export const professionalsApi = {
       name: data.name,
       slug: data.slug,
       crp: data.crp,
+      professionType: data.profession_type,
       specialties: data.specialties,
       bio: data.bio,
       pricePerSession: data.price_per_session,

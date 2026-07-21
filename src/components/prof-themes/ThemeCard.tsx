@@ -183,7 +183,7 @@ export default function ThemeCard({ professional }: Props) {
           {whatsappUrl && (
             <div className="rounded-3xl p-6 text-center" style={{ background: `linear-gradient(135deg, ${accent}ee, ${accent}bb)` }}>
               <p className="text-white font-black text-lg mb-1">Pronto para começar?</p>
-              <p className="text-white/70 text-sm mb-4">Entre em contato e marque sua primeira sessão.</p>
+              <p className="text-white/70 text-sm mb-4">Entre em contato para saber mais.</p>
               <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-white rounded-2xl text-sm font-black shadow-lg transition hover:-translate-y-0.5"
                 style={{ color: accent }}>

@@ -336,7 +336,7 @@ export default function ThemeMinimal({ professional }: Props) {
                   </div>
 
                   <div className="grid gap-2">
-                    {price > 0 && <MiniInfo label="Sessão" value={formatCurrency(price)} accent={accent} />}
+                    {price > 0 && <MiniInfo label="Valor" value={formatCurrency(price)} accent={accent} />}
                     {professional.services?.length > 0 && <MiniInfo label="Serviços" value={`${professional.services.length} opções`} accent={accent} />}
                     {professional.languages?.length > 0 && <MiniInfo label="Idiomas" value={professional.languages.join(', ')} accent={accent} />}
                   </div>
@@ -527,7 +527,7 @@ function MiniInfo({ label, value, accent }: { label: string; value: string; acce
   return (
     <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-900/[0.06] bg-slate-50 px-4 py-3">
       <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{label}</span>
-      <span className="max-w-[55%] truncate text-sm font-black text-slate-900" style={{ color: label === 'Sessão' ? accent : undefined }}>
+      <span className="max-w-[55%] truncate text-sm font-black text-slate-900" style={{ color: label === 'Valor' ? accent : undefined }}>
         {value}
       </span>
     </div>

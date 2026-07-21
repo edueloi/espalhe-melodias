@@ -543,6 +543,8 @@ async function migrate() {
       { table: 'blog_posts', column: 'featured_until',   def: 'DATETIME' },
       { table: 'blog_posts', column: 'views_count',      def: 'INT NOT NULL DEFAULT 0' },
       { table: 'blog_posts', column: 'published_at',     def: 'DATETIME' },
+      // professional_profiles — tipo de profissional persistido (não mais inferido via regex no client)
+      { table: 'professional_profiles', column: 'profession_type', def: 'VARCHAR(100)' },
     ];
     for (const { table, column, def } of extraCols) {
       const [rows] = await conn.query(
@@ -645,6 +647,36 @@ async function migrate() {
       }
     }
     console.log('✅  Categorias de blog (seed) OK');
+
+    // ── Backfill de professional_profiles.profession_type ───────────────────────
+    // Antes desta coluna existir, o "tipo de profissional" era inferido no
+    // client via regex sobre o prefixo salvo em `crp` (ex: "CRM SP 123456").
+    // Replica a mesma heurística aqui, uma única vez, para não regredir
+    // perfis já cadastrados (ex: psicólogos continuam marcados como tal).
+    const COUNCIL_TO_TYPE = [
+      { council: 'CRP',     type: 'Psicólogo' },
+      { council: 'CREFITO', type: 'Fisioterapeuta' },
+      { council: 'CFFA',    type: 'Fonoaudiólogo' },
+      { council: 'CFN',     type: 'Nutricionista' },
+      { council: 'COFFITO', type: 'Terapeuta Ocupacional' },
+      { council: 'CRESS',   type: 'Assistente Social' },
+      { council: 'CREF',    type: 'Educador Físico' },
+      { council: 'ABPP',    type: 'Psicopedagogo' },
+    ];
+    const [profilesWithoutType] = await conn.query(
+      'SELECT id, crp FROM professional_profiles WHERE profession_type IS NULL',
+    );
+    for (const profile of profilesWithoutType) {
+      const crpUpper = (profile.crp ?? '').toUpperCase();
+      let detected = COUNCIL_TO_TYPE.find(c => crpUpper.startsWith(c.council + ' '))?.type;
+      if (!detected && /^\d{2}\//.test(profile.crp ?? '')) detected = 'Psicólogo';
+      if (!detected && /^CRM\s/.test(crpUpper)) detected = 'Médico';
+      if (!detected) detected = 'Psicólogo'; // mesmo fallback que já existia no client
+      await conn.query('UPDATE professional_profiles SET profession_type = ? WHERE id = ?', [detected, profile.id]);
+    }
+    if (profilesWithoutType.length > 0) {
+      console.log(`✅  profession_type backfillado para ${profilesWithoutType.length} perfil(is) existente(s)`);
+    }
 
     console.log('\n🎉  Migration concluída com sucesso!\n');
     console.log('   Próximo passo: npm run seed  (para dados iniciais)\n');

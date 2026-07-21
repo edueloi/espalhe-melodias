@@ -364,6 +364,7 @@ function AppInner() {
           userRole={user.role}
           userName={user.name}
           userAvatar={user.avatar}
+          userSpecialty={user.specialty}
           pendingRequestsCount={pendingRequestsCount}
           openHelpRequestsCount={openHelpRequestsCount}
           onLogout={handleLogout}

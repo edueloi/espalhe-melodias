@@ -29,6 +29,7 @@ interface SidebarProps {
   userRole: UserRole;
   userName: string;
   userAvatar: string;
+  userSpecialty?: string;
   pendingRequestsCount: number;
   openHelpRequestsCount: number;
   onLogout: () => void;
@@ -44,6 +45,7 @@ export default function Sidebar({
   userRole,
   userName,
   userAvatar,
+  userSpecialty,
   pendingRequestsCount,
   openHelpRequestsCount,
   onLogout,
@@ -92,7 +94,7 @@ export default function Sidebar({
   const getRoleLabel = (role: UserRole) => {
     switch (role) {
       case 'super-admin': return '👑 SUPER ADMIN';
-      case 'professional': return '🩺 PSICÓLOGO / PROF';
+      case 'professional': return `🩺 ${(userSpecialty || 'PROFISSIONAL').toUpperCase()}`;
       case 'member': return '👥 ASSOC. MEMBRO';
       default: return 'USUÁRIO';
     }

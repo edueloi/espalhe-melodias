@@ -32,10 +32,10 @@ const notifications: Array<{ id: number; text: string; time: string; unread: boo
 
 const unreadCount = notifications.filter(n => n.unread).length;
 
-function getRoleBadge(role: UserRole) {
+function getRoleBadge(role: UserRole, specialty?: string) {
   switch (role) {
     case 'super-admin': return { label: 'Super Admin', cls: 'bg-[#581a2e]/90 text-pink-100' };
-    case 'professional': return { label: 'Psicólogo', cls: 'bg-cyan-800 text-cyan-100' };
+    case 'professional': return { label: specialty || 'Profissional', cls: 'bg-cyan-800 text-cyan-100' };
     case 'member': return { label: 'Membro', cls: 'bg-emerald-800 text-emerald-100' };
   }
 }
@@ -80,7 +80,7 @@ export default function Header({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const roleBadge = getRoleBadge(currentUser.role);
+  const roleBadge = getRoleBadge(currentUser.role, currentUser.specialty);
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100/80 shadow-[0_1px_12px_0_rgba(0,0,0,0.06)]">
@@ -136,7 +136,7 @@ export default function Header({
             >
               {availableUsers.map(user => (
                 <option key={user.id} value={user.id}>
-                  {user.name} ({user.role === 'super-admin' ? 'Admin' : user.role === 'professional' ? 'Psicólogo' : 'Membro'})
+                  {user.name} ({user.role === 'super-admin' ? 'Admin' : user.role === 'professional' ? (user.specialty || 'Profissional') : 'Membro'})
                 </option>
                 ))}
               </select>
@@ -254,7 +254,7 @@ export default function Header({
                   >
                     {availableUsers.map(user => (
                       <option key={user.id} value={user.id}>
-                        {user.name} ({user.role === 'super-admin' ? 'Admin' : user.role === 'professional' ? 'Psicólogo' : 'Membro'})
+                        {user.name} ({user.role === 'super-admin' ? 'Admin' : user.role === 'professional' ? (user.specialty || 'Profissional') : 'Membro'})
                       </option>
                       ))}
                   </select>

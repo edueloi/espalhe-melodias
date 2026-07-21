@@ -6,6 +6,7 @@ import {
   PhoneCall, Briefcase, MessageSquare, User as UserIcon, Trash2,
 } from 'lucide-react';
 import { usersApi, memberRequestsApi, type User, type MemberRequest } from '../lib/api';
+import { PROFESSION_TYPES } from '../lib/professionTypes';
 
 type UserRole = 'super-admin' | 'professional' | 'member';
 import { useAuth } from '../lib/auth';
@@ -367,15 +368,7 @@ function SolicitacoesView() {
 }
 
 // ── ESPECIALIDADES ────────────────────────────────────────────────────────────
-const ESPECIALIDADES = [
-  { value: 'psicologo', label: 'Psicólogo(a)' },
-  { value: 'psicopedagogo', label: 'Psicopedagogo(a)' },
-  { value: 'pediatra', label: 'Pediatra' },
-  { value: 'psiquiatra', label: 'Psiquiatra' },
-  { value: 'terapeuta_ocupacional', label: 'Terapeuta Ocupacional' },
-  { value: 'medico', label: 'Médico(a)' },
-  { value: 'outro', label: 'Outro' },
-];
+const ESPECIALIDADES = PROFESSION_TYPES;
 
 interface NovoUsuarioForm {
   name: string;

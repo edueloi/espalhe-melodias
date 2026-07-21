@@ -113,11 +113,11 @@ export async function upsertProfessional(req: AuthRequest, res: Response): Promi
   if (!req.user) throw new AppError('Não autenticado.', 401);
 
   const {
-    name, crp, specialties, bio, pricePerSession, contactWhatsapp,
+    name, crp, professionType, specialties, bio, pricePerSession, contactWhatsapp,
     services, schedule, location, accentColor, theme, languages,
     instagram, linkedin, facebook, tiktok, twitter, website, extraLinks, slug,
   } = req.body as {
-    name?: string; crp: string; specialties: string[]; bio: string; pricePerSession: number;
+    name?: string; crp: string; professionType?: string; specialties: string[]; bio: string; pricePerSession: number;
     contactWhatsapp?: string; services: string[]; schedule: unknown[];
     location: string; accentColor?: string; theme?: string; languages: string[];
     instagram?: string; linkedin?: string; facebook?: string;
@@ -157,6 +157,7 @@ export async function upsertProfessional(req: AuthRequest, res: Response): Promi
       `UPDATE professional_profiles SET
          slug              = COALESCE(?, slug),
          crp               = COALESCE(?, crp),
+         profession_type   = COALESCE(?, profession_type),
          specialties       = COALESCE(?, specialties),
          bio               = COALESCE(?, bio),
          price_per_session = COALESCE(?, price_per_session),
@@ -178,7 +179,7 @@ export async function upsertProfessional(req: AuthRequest, res: Response): Promi
        WHERE user_id = ?`,
       [
         cleanSlug ?? null,
-        crp ?? null, specialties ? JSON.stringify(specialties) : null, bio ?? null,
+        crp ?? null, professionType ?? null, specialties ? JSON.stringify(specialties) : null, bio ?? null,
         pricePerSession ?? null, contactWhatsapp ?? null,
         services ? JSON.stringify(services) : null,
         schedule ? JSON.stringify(schedule) : null,
@@ -195,14 +196,14 @@ export async function upsertProfessional(req: AuthRequest, res: Response): Promi
     const id = newId();
     await execute(
       `INSERT INTO professional_profiles
-       (id, user_id, slug, crp, specialties, bio, price_per_session, contact_whatsapp,
+       (id, user_id, slug, crp, profession_type, specialties, bio, price_per_session, contact_whatsapp,
         services, schedule, location, accent_color, theme, languages,
         instagram, linkedin, facebook, tiktok, twitter, website, extra_links,
         created_at, updated_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         id, req.user.userId, cleanSlug ?? null,
-        crp, JSON.stringify(specialties), bio, pricePerSession ?? 0,
+        crp, professionType ?? null, JSON.stringify(specialties), bio, pricePerSession ?? 0,
         contactWhatsapp ?? null, JSON.stringify(services), JSON.stringify(schedule),
         location, accentColor ?? null, theme ?? null, JSON.stringify(languages),
         instagram ?? null, linkedin ?? null, facebook ?? null,

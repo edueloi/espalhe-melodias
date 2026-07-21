@@ -117,9 +117,9 @@ const PROF_TYPES: Array<{
     mask: v => v,
   },
   {
-    label: 'Outro',
+    label: 'Outra área',
     council: '',
-    placeholder: 'Número do registro',
+    placeholder: 'Registro profissional (opcional)',
     mask: v => v,
   },
 ];
@@ -182,8 +182,8 @@ const SPEC_GROUPS_BY_TYPE: Record<string, SpecGroup[]> = {
     { label: 'Atuação', items: ['Educação Infantil', 'Alfabetização', 'Reforço Escolar', 'Orientação Educacional', 'Educação Especial', 'Pedagogia Hospitalar', 'EJA', 'Pedagogia Empresarial'] },
     { label: 'Público', items: ['Bebês', 'Crianças', 'Adolescentes', 'Adultos'] },
   ],
-  Outro: [
-    { label: 'Áreas', items: ['Saúde Mental', 'Bem-estar', 'Desenvolvimento Pessoal', 'Ansiedade', 'Depressão', 'Qualidade de Vida'] },
+  'Outra área': [
+    { label: 'Formatos', items: ['Atendimento Online', 'Atendimento Presencial', 'Consultoria', 'Projetos Personalizados', 'Acompanhamento Contínuo'] },
   ],
 };
 
@@ -303,6 +303,7 @@ export default function DirectoryView({ autoOpenOwnProfile }: DirectoryViewProps
   // edit form
   const [eName, setEName]             = useState('');
   const [eProfType, setEProfType]     = useState('Psicólogo');
+  const [eCustomProfType, setECustomProfType] = useState('');
   const [eCrp, setECrp]               = useState('');
   const [eBio, setEBio]               = useState('');
   const [eAvatar, setEAvatar]         = useState('');
@@ -410,16 +411,22 @@ export default function DirectoryView({ autoOpenOwnProfile }: DirectoryViewProps
 
   const openEdit = (prof: Professional) => {
     setEName(prof.name);
-    // Detecta tipo pelo prefixo do registro salvo
-    const crpUpper = (prof.crp ?? '').toUpperCase();
-    const detectedType = PROF_TYPES.find(t =>
-      t.council && crpUpper.startsWith(t.council + ' ') ||
-      (t.council === 'CRP' && /^\d{2}\//.test(prof.crp ?? '')) ||
-      (t.council === 'CRM' && /^[A-Z]{2}\s/.test(crpUpper))
-    )?.label ?? 'Psicólogo';
-    setEProfType(detectedType);
+    // profession_type é persistido no backend; só recorre à heurística antiga
+    // (inferir pelo prefixo do registro) para perfis salvos antes dessa coluna existir
+    let detectedType = prof.profession_type;
+    if (!detectedType) {
+      const crpUpper = (prof.crp ?? '').toUpperCase();
+      detectedType = PROF_TYPES.find(t =>
+        t.council && crpUpper.startsWith(t.council + ' ') ||
+        (t.council === 'CRP' && /^\d{2}\//.test(prof.crp ?? '')) ||
+        (t.council === 'CRM' && /^[A-Z]{2}\s/.test(crpUpper))
+      )?.label ?? 'Psicólogo';
+    }
+    const isKnownType = PROF_TYPES.some(t => t.label === detectedType);
+    setEProfType(isKnownType ? detectedType : 'Outra área');
+    setECustomProfType(isKnownType ? '' : detectedType);
     // Remove o prefixo do conselho do número salvo (se tiver)
-    const council = PROF_TYPES.find(t => t.label === detectedType)?.council ?? '';
+    const council = PROF_TYPES.find(t => t.label === (isKnownType ? detectedType : 'Outra área'))?.council ?? '';
     const rawNum = prof.crp?.replace(new RegExp(`^${council}\\s*`, 'i'), '') ?? '';
     setECrp(rawNum);
     setEBio(prof.bio);
@@ -474,13 +481,15 @@ export default function DirectoryView({ autoOpenOwnProfile }: DirectoryViewProps
       const profTypeObj = PROF_TYPES.find(t => t.label === eProfType);
       const council = profTypeObj?.council ?? '';
       const fullCrp = eCrp ? (council ? `${council} ${eCrp}` : eCrp) : '';
+      // Quando "Outra área" é escolhida, o profession_type salvo é o texto livre digitado
+      const finalProfessionType = eProfType === 'Outra área' ? (eCustomProfType.trim() || 'Outra área') : eProfType;
 
       // Monta location a partir dos campos de endereço
       const locationParts = [eStreet && eNumber ? `${eStreet}, ${eNumber}` : eStreet, eComplement, eNeighborhood, eCity && eState ? `${eCity}/${eState}` : eCity].filter(Boolean);
       const builtLocation = locationParts.join(' — ') || eLocation;
 
       await professionalsApi.updateMe({
-        name: eName, crp: fullCrp, bio: eBio,
+        name: eName, crp: fullCrp, profession_type: finalProfessionType, bio: eBio,
         avatar: finalAvatar,
         slug: eSlug || undefined,
         location: builtLocation,
@@ -709,6 +718,14 @@ export default function DirectoryView({ autoOpenOwnProfile }: DirectoryViewProps
                         </button>
                       ))}
                     </div>
+                    {eProfType === 'Outra área' && (
+                      <Input
+                        wrapperClassName="mt-2"
+                        value={eCustomProfType}
+                        onChange={e => setECustomProfType(e.target.value)}
+                        placeholder="Qual sua área de atuação? (ex: Designer Gráfico)"
+                      />
+                    )}
                   </div>
                 </FormRow>
 
@@ -747,7 +764,7 @@ export default function DirectoryView({ autoOpenOwnProfile }: DirectoryViewProps
             <PanelCard title="Especialidades & Atuação" icon={Stethoscope} description="Selecione todas que se aplicam à sua prática">
               <div className="space-y-5">
                 {/* Grupos temáticos */}
-                {(SPEC_GROUPS_BY_TYPE[eProfType] ?? SPEC_GROUPS_BY_TYPE['Outro']).map(group => (
+                {(SPEC_GROUPS_BY_TYPE[eProfType] ?? SPEC_GROUPS_BY_TYPE['Outra área']).map(group => (
                   <div key={group.label}>
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{group.label}</p>
@@ -1952,7 +1969,7 @@ function ProfessionalPublicSite({ prof, onBack, onSchedule }: {
           </div>
           <div className="px-5 py-3.5" style={{ background: '#f9f3ec' }}>
             <p className="text-[11px] text-[#6b5a4a] leading-relaxed">
-              Este profissional é membro verificado da comunidade <strong>Espalhe Melodias</strong> — uma rede comprometida com saúde mental e conexões humanas.
+              Este profissional é membro verificado da comunidade <strong>Espalhe Melodias</strong> — uma rede comprometida com conexões profissionais reais e cuidado humano.
             </p>
           </div>
         </div>

@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { PublicBlogPost, HealthEvent } from '../types';
 import { memberRequestsApi, newsletterApi, contactApi, resolveUploadUrl, blogsApi } from '../lib/api';
+import { PROFESSION_TYPES } from '../lib/professionTypes';
 import { usePublicSiteData, convertBlogPost } from '../hooks/usePublicSiteData';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { InstagramStories } from './InstagramStories';
@@ -90,15 +91,7 @@ interface PublicSiteProps {
   onGoToLogin: () => void;
 }
 
-const ESPECIALIDADES_PUBLIC = [
-  { value: 'Psicólogo(a)',            label: 'Psicólogo(a)' },
-  { value: 'Psicopedagogo(a)',        label: 'Psicopedagogo(a)' },
-  { value: 'Pediatra',               label: 'Pediatra' },
-  { value: 'Psiquiatra',             label: 'Psiquiatra' },
-  { value: 'Terapeuta Ocupacional',  label: 'Terapeuta Ocupacional' },
-  { value: 'Médico(a)',              label: 'Médico(a)' },
-  { value: 'outro',                  label: 'Outro...' },
-];
+const ESPECIALIDADES_PUBLIC = PROFESSION_TYPES;
 
 
 interface RequestForm {
